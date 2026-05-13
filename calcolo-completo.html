@@ -267,6 +267,23 @@
       td{grid-template-columns:1fr;gap:6px}
       .calc{text-align:left}
     }
+
+    .rate-button{
+      grid-column:1 / -1;
+      width:100%;
+      border-color:rgba(3,90,139,.25);
+      background:linear-gradient(135deg, #035A8B, #1476B8);
+      color:#fff;
+    }
+    .rate-status{
+      grid-column:1 / -1;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+      text-align:center;
+      margin-top:-2px;
+    }
+
   </style>
 </head>
 <body>
@@ -340,6 +357,8 @@
             <label>Cambio USD → EUR</label>
             <input id="usdRate" type="text" inputmode="decimal" value="0,92">
           </div>
+          <button id="refreshRate" class="rate-button" type="button">Aggiorna cambio USD/EUR</button>
+          <div id="rateStatus" class="rate-status">Cambio manuale o ultimo cambio salvato nel browser.</div>
           <div class="result-box" id="eurResult">USD → EUR: € 0,00</div>
 
           <div class="field">
@@ -1117,6 +1136,33 @@
     saveData();
   }
 
+  function refreshRate(){
+    var status = byId("rateStatus");
+    var btn = byId("refreshRate");
+    if(status){ status.innerHTML = "Aggiornamento cambio in corso..."; }
+    if(btn){ btn.disabled = true; btn.innerHTML = "Aggiorno..."; }
+
+    fetch("https://api.frankfurter.dev/v2/rates?base=USD&quotes=EUR")
+      .then(function(response){
+        if(!response.ok){ throw new Error("Errore API"); }
+        return response.json();
+      })
+      .then(function(data){
+        if(!data || !data.rates || !data.rates.EUR){ throw new Error("Cambio non disponibile"); }
+        var rate = Number(data.rates.EUR);
+        byId("usdRate").value = rate.toFixed(4).replace(".", ",");
+        var dateText = data.date ? data.date.split("-").reverse().join("/") : "oggi";
+        if(status){ status.innerHTML = "Cambio aggiornato da Frankfurter: " + dateText; }
+        updateConverter();
+      })
+      .catch(function(){
+        if(status){ status.innerHTML = "Non sono riuscito ad aggiornare il cambio. Resta valido il valore inserito manualmente."; }
+      })
+      .finally(function(){
+        if(btn){ btn.disabled = false; btn.innerHTML = "Aggiorna cambio USD/EUR"; }
+      });
+  }
+
   function saveData(){
     var data = {
       settings:{
@@ -1196,6 +1242,10 @@
     var convIds = ["usdPrice","eurPrice","usdRate"];
     for(var j=0;j<convIds.length;j++){
       byId(convIds[j]).addEventListener("input", updateConverter);
+    }
+
+    if(byId("refreshRate")){
+      byId("refreshRate").addEventListener("click", refreshRate);
     }
 
     byId("toggleSettings").addEventListener("click", function(){
