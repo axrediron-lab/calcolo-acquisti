@@ -382,20 +382,20 @@
     if(status){ status.innerHTML = "Aggiornamento cambio in corso..."; }
     if(btn){ btn.disabled = true; btn.innerHTML = "Aggiorno..."; }
 
-    fetch("https://api.frankfurter.dev/v2/rates?base=USD&quotes=EUR")
+    fetch("https://api.frankfurter.dev/v2/rate/USD/EUR")
       .then(function(response){
         if(!response.ok){ throw new Error("Errore API"); }
         return response.json();
       })
       .then(function(data){
-        if(!data || !data.rates || !data.rates.EUR){ throw new Error("Cambio non disponibile"); }
-        var rate = Number(data.rates.EUR);
+        if(!data || data.rate === undefined){ throw new Error("Cambio non disponibile"); }
+        var rate = Number(data.rate);
         byId("usdRate").value = rate.toFixed(4).replace(".", ",");
         var dateText = data.date ? data.date.split("-").reverse().join("/") : "oggi";
         if(status){ status.innerHTML = "Cambio aggiornato da Frankfurter: " + dateText; }
         convert();
       })
-      .catch(function(){
+      .catch(function(error){
         if(status){ status.innerHTML = "Non sono riuscito ad aggiornare il cambio. Resta valido il valore inserito manualmente."; }
       })
       .finally(function(){
