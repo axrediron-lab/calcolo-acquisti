@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Calcolatore rapido acquisti</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --panel:#ffffff;
+      --text:#101828;
+      --muted:#667085;
+      --line:#e4e7ec;
+      --brand:#035A8B;
+      --ok:#067647;
+      --warn:#b54708;
+      --bad:#b42318;
+      --shadow:0 10px 28px rgba(16,24,40,.08);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-text-size-adjust:100%;
+    }
+    .app{
+      width:100%;
+      max-width:720px;
+      margin:0 auto;
+      padding:16px 14px 28px;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:28px;
+      line-height:1.05;
+      letter-spacing:-.04em;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+    .top{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      margin-bottom:16px;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    button{
+      -webkit-appearance:none;
+      appearance:none;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+      padding:11px 14px;
+      border-radius:999px;
+      font-size:14px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .panel,.calc-card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      margin-bottom:14px;
+    }
+    .panel-head,.calc-card-head{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .panel-head h2{margin:0;font-size:16px}
+    .pill{
+      background:#eef4ff;
+      color:var(--brand);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .panel-body,.calc-card-body{
+      padding:14px 16px 16px;
+    }
+    .collapse{display:none}
+    .collapse.open{display:block}
+    .fields,.converter-grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+    }
+    .field label,.value-label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      margin-bottom:6px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+    input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:13px 12px;
+      font-size:16px;
+      outline:none;
+      background:#fff;
+      color:var(--text);
+      -webkit-appearance:none;
+      appearance:none;
+    }
+    input:focus{
+      border-color:var(--brand);
+      box-shadow:0 0 0 3px rgba(3,90,139,.12);
+    }
+    input[disabled]{
+      background:#f8fafc;
+      color:var(--muted);
+      opacity:1;
+    }
+    .note{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+      margin-top:12px;
+    }
+    .result-box,.value-output{
+      background:#f8fafc;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      font-size:17px;
+      font-weight:900;
+      min-height:48px;
+      display:flex;
+      align-items:center;
+    }
+    .result-box{
+      justify-content:center;
+      border-style:dashed;
+    }
+    .calc-card-body{
+      display:grid;
+      gap:14px;
+    }
+    .card-title{
+      font-size:14px;
+      font-weight:900;
+    }
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .bad{color:var(--bad)}
+    .muted{color:var(--muted)}
+    @media (min-width: 640px){
+      .fields,.converter-grid{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div>
+        <h1>Calcolatore rapido acquisti</h1>
+        <p class="sub">Versione verticale compatibile con iPhone. Inserisci i dati e controlla subito i margini.</p>
+      </div>
+      <div class="actions">
+        <button id="toggleSettings" type="button">Impostazioni</button>
+        <button id="toggleConverter" type="button">Convertitore</button>
+        <button id="resetAll" type="button">Pulisci</button>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Impostazioni</h2>
+        <span class="pill">Base attuale</span>
+      </div>
+      <div id="settingsBox" class="panel-body collapse">
+        <div class="fields">
+          <div class="field"><label for="fee12">Commissione 12%</label><input id="fee12" type="text" inputmode="decimal" value="12"></div>
+          <div class="field"><label for="fee5">Commissione 5%</label><input id="fee5" type="text" inputmode="decimal" value="5"></div>
+          <div class="field"><label for="investorFee">Fee investitore %</label><input id="investorFee" type="text" inputmode="decimal" value="0"></div>
+          <div class="field"><label for="storfundFee">Fee Storfund %</label><input id="storfundFee" type="text" inputmode="decimal" value="2,30"></div>
+          <div class="field"><label for="paymentFee">Commissioni pagamenti %</label><input id="paymentFee" type="text" inputmode="decimal" value="1"></div>
+          <div class="field"><label for="importFee">Commissione importazione €</label><input id="importFee" type="text" inputmode="decimal" value="7"></div>
+          <div class="field"><label for="shipping">Spedizione €</label><input id="shipping" type="text" inputmode="decimal" value="16,50"></div>
+          <div class="field"><label for="targetMargin">Margine target prezzo suggerito %</label><input id="targetMargin" type="text" inputmode="decimal" value="7,50"></div>
+        </div>
+        <div class="note">Rosso sotto 3,5% • giallo da 3,5% a 5% • verde oltre 5%.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Convertitore</h2>
+        <span class="pill">USD / EUR</span>
+      </div>
+      <div id="converterBox" class="panel-body collapse">
+        <div class="converter-grid">
+          <div class="field"><label for="usdPrice">Prezzo fornitore USD</label><input id="usdPrice" type="text" inputmode="decimal" placeholder="es. 450"></div>
+          <div class="field"><label for="usdRate">Cambio USD → EUR</label><input id="usdRate" type="text" inputmode="decimal" value="0,92"></div>
+        </div>
+        <div class="result-box" id="eurResult" style="margin-top:12px;">USD → EUR: € 0,00</div>
+        <div class="converter-grid" style="margin-top:14px;">
+          <div class="field"><label for="eurPrice">Prezzo EUR</label><input id="eurPrice" type="text" inputmode="decimal" placeholder="es. 450"></div>
+          <div class="field"><label>Conversione inversa</label><input value="EUR → USD" disabled></div>
+        </div>
+        <div class="result-box" id="usdResult" style="margin-top:12px;">EUR → USD: $ 0,00</div>
+      </div>
+    </section>
+
+    <section class="calc-card">
+      <div class="calc-card-head">
+        <div class="card-title">Calcolo rapido</div>
+        <span class="pill">1 scheda</span>
+      </div>
+      <div class="calc-card-body">
+        <div><label class="value-label" for="model">Modello</label><input id="model" placeholder="Modello libero"></div>
+        <div><label class="value-label" for="backbox">Prezzo BackBox</label><input id="backbox" type="text" inputmode="decimal" placeholder="€"></div>
+        <div><div class="value-label">Prezzo suggerito</div><div id="suggestedValue" class="value-output muted">—</div></div>
+        <div><label class="value-label" for="purchase">Prezzo reale acquisto</label><input id="purchase" type="text" inputmode="decimal" placeholder="€"></div>
+        <div><div class="value-label">Guadagno paesi 12%</div><div id="margin12Value" class="value-output muted">—</div></div>
+        <div><div class="value-label">Guadagno paesi 5%</div><div id="margin5Value" class="value-output muted">—</div></div>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function(){
+  var STORAGE_KEY = "quick_purchase_iphone_safe_v2";
+
+  function byId(id){ return document.getElementById(id); }
+
+  function toNumber(value){
+    if(value === null || value === undefined) return 0;
+    var s = String(value);
+    s = s.replace(/\s/g, "");
+    s = s.replace("€", "");
+    s = s.replace("$", "");
+    s = s.replace(",", ".");
+    var n = parseFloat(s);
+    if(isNaN(n)) return 0;
+    return n;
+  }
+
+  function asPercent(id){
+    return toNumber(byId(id).value) / 100;
+  }
+
+  function moneyEUR(n){
+    if(isNaN(n) || !isFinite(n)) return "—";
+    return "€ " + n.toFixed(2).replace(".", ",");
+  }
+
+  function moneyUSD(n){
+    if(isNaN(n) || !isFinite(n)) return "—";
+    return "$ " + n.toFixed(2).replace(".", ",");
+  }
+
+  function percentText(n){
+    if(isNaN(n) || !isFinite(n)) return "—";
+    return n.toFixed(2).replace(".", ",") + "%";
+  }
+
+  function extraPercentFees(){
+    return asPercent("investorFee") + asPercent("storfundFee") + asPercent("paymentFee");
+  }
+
+  function getFixedCosts(){
+    return toNumber(byId("shipping").value) + toNumber(byId("importFee").value);
+  }
+
+  function setOutput(id, text, colorClass){
+    var node = byId(id);
+    node.className = "value-output " + colorClass;
+    node.innerHTML = text;
+  }
+
+  function colorClassForMargin(percent){
+    if(percent < 3.5) return "bad";
+    if(percent <= 5) return "warn";
+    return "ok";
+  }
+
+  function calculate(){
+    var backbox = toNumber(byId("backbox").value);
+    var purchase = toNumber(byId("purchase").value);
+
+    var fee12 = asPercent("fee12");
+    var fee5 = asPercent("fee5");
+    var target = asPercent("targetMargin");
+    var extra = extraPercentFees();
+    var fixed = getFixedCosts();
+
+    if(backbox <= 0){
+      byId("suggestedValue").className = "value-output muted";
+      byId("suggestedValue").innerHTML = "—";
+      setOutput("margin12Value", "—", "muted");
+      setOutput("margin5Value", "—", "muted");
+      saveData();
+      return;
+    }
+
+    var suggested = backbox * (1 - fee12 - extra - target) - fixed;
+    byId("suggestedValue").className = "value-output";
+    byId("suggestedValue").innerHTML = moneyEUR(suggested);
+
+    if(purchase <= 0){
+      setOutput("margin12Value", "—", "muted");
+      setOutput("margin5Value", "—", "muted");
+      saveData();
+      return;
+    }
+
+    var euro12 = backbox - (backbox * fee12) - (backbox * extra) - fixed - purchase;
+    var perc12 = (euro12 / backbox) * 100;
+    setOutput("margin12Value", percentText(perc12) + " (" + moneyEUR(euro12) + ")", colorClassForMargin(perc12));
+
+    var euro5 = backbox - (backbox * fee5) - (backbox * extra) - fixed - purchase;
+    var perc5 = (euro5 / backbox) * 100;
+    setOutput("margin5Value", percentText(perc5) + " (" + moneyEUR(euro5) + ")", colorClassForMargin(perc5));
+
+    saveData();
+  }
+
+  function convert(){
+    var usdValue = toNumber(byId("usdPrice").value);
+    var eurValue = toNumber(byId("eurPrice").value);
+    var rate = toNumber(byId("usdRate").value);
+
+    byId("eurResult").innerHTML = "USD → EUR: " + moneyEUR(usdValue * rate);
+
+    if(rate <= 0){
+      byId("usdResult").innerHTML = "EUR → USD: —";
+    } else {
+      byId("usdResult").innerHTML = "EUR → USD: " + moneyUSD(eurValue / rate);
+    }
+
+    saveData();
+  }
+
+  function saveData(){
+    var ids = [
+      "fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin",
+      "usdPrice","usdRate","eurPrice","model","backbox","purchase"
+    ];
+    var data = {};
+    var i;
+    for(i=0;i<ids.length;i++){
+      data[ids[i]] = byId(ids[i]).value;
+    }
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }catch(e){}
+  }
+
+  function loadData(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+      var key;
+      for(key in data){
+        if(data.hasOwnProperty(key) && byId(key)){
+          byId(key).value = data[key];
+        }
+      }
+    }catch(e){}
+  }
+
+  function bindInput(id, fn){
+    var node = byId(id);
+    if(!node) return;
+    node.oninput = fn;
+    node.onchange = fn;
+    node.onkeyup = fn;
+  }
+
+  function bindAll(){
+    var calcIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","model","backbox","purchase"];
+    var convIds = ["usdPrice","usdRate","eurPrice"];
+    var i;
+
+    for(i=0;i<calcIds.length;i++){
+      bindInput(calcIds[i], calculate);
+    }
+    for(i=0;i<convIds.length;i++){
+      bindInput(convIds[i], convert);
+    }
+
+    byId("toggleSettings").onclick = function(){
+      var box = byId("settingsBox");
+      if(box.className.indexOf("open") === -1){
+        box.className = "panel-body collapse open";
+      } else {
+        box.className = "panel-body collapse";
+      }
+    };
+
+    byId("toggleConverter").onclick = function(){
+      var box = byId("converterBox");
+      if(box.className.indexOf("open") === -1){
+        box.className = "panel-body collapse open";
+      } else {
+        box.className = "panel-body collapse";
+      }
+    };
+
+    byId("resetAll").onclick = function(){
+      if(!confirm("Vuoi pulire il calcolatore?")) return;
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+
+      byId("fee12").value = "12";
+      byId("fee5").value = "5";
+      byId("investorFee").value = "0";
+      byId("storfundFee").value = "2,30";
+      byId("paymentFee").value = "1";
+      byId("importFee").value = "7";
+      byId("shipping").value = "16,50";
+      byId("targetMargin").value = "7,50";
+      byId("usdRate").value = "0,92";
+      byId("usdPrice").value = "";
+      byId("eurPrice").value = "";
+      byId("model").value = "";
+      byId("backbox").value = "";
+      byId("purchase").value = "";
+
+      calculate();
+      convert();
+    };
+  }
+
+  loadData();
+  bindAll();
+  calculate();
+  convert();
+})();
+</script>
+</body>
+</html>

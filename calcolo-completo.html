@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calcolo acquisti completo</title>
+  <style>
+    :root{
+      --bg:#f6f7f9;
+      --panel:#ffffff;
+      --text:#101828;
+      --muted:#667085;
+      --line:#e4e7ec;
+      --brand:#035A8B;
+      --ok:#067647;
+      --warn:#b54708;
+      --bad:#b42318;
+      --shadow:0 10px 28px rgba(16,24,40,.08);
+      --r:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{
+      width:min(1500px,96vw);
+      margin:0 auto;
+      padding:24px 0 42px;
+    }
+    header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:18px;
+      margin-bottom:18px;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:clamp(26px,3vw,40px);
+      letter-spacing:-.04em;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    button{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--text);
+      border-radius:999px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:800;
+      box-shadow:0 1px 2px rgba(16,24,40,.04);
+    }
+    button.primary{
+      background:var(--brand);
+      border-color:var(--brand);
+      color:#fff;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 360px;
+      gap:16px;
+      align-items:start;
+      margin-bottom:16px;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel-head{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+    .panel-head h2{
+      margin:0;
+      font-size:16px;
+      letter-spacing:-.02em;
+    }
+    .settings{
+      padding:14px 16px 16px;
+      display:none;
+      grid-template-columns:repeat(4,1fr);
+      gap:12px;
+    }
+    .settings.open{display:grid}
+    .converter{
+      padding:14px 16px 16px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .field label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      margin-bottom:6px;
+    }
+    input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 11px;
+      font-size:14px;
+      outline:none;
+      background:#fff;
+      color:var(--text);
+    }
+    input:focus{
+      border-color:var(--brand);
+      box-shadow:0 0 0 3px rgba(3,90,139,.12);
+    }
+    input[disabled]{
+      background:#f8fafc;
+      color:var(--muted);
+      opacity:1;
+    }
+    .note{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+      padding:0 16px 16px;
+    }
+    .result-box{
+      grid-column:1 / -1;
+      background:#f8fafc;
+      border:1px dashed var(--line);
+      border-radius:12px;
+      padding:12px;
+      font-weight:900;
+      text-align:center;
+    }
+    .tools{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+    }
+    .search{
+      max-width:420px;
+    }
+    .table-wrap{
+      overflow:auto;
+      max-height:72vh;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:1050px;
+    }
+    th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:#f9fafb;
+      color:#344054;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+      text-align:left;
+      border-bottom:1px solid var(--line);
+      padding:12px;
+      white-space:nowrap;
+    }
+    td{
+      border-bottom:1px solid var(--line);
+      padding:10px 12px;
+      vertical-align:middle;
+      background:#fff;
+    }
+    tr:hover td{background:#fcfcfd}
+    .model{
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .moneyInput{
+      width:130px;
+    }
+    .calc{
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .bad{color:var(--bad)}
+    .muted{color:var(--muted)}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 9px;
+      border-radius:999px;
+      background:#f2f4f7;
+      color:#344054;
+      font-size:12px;
+      font-weight:900;
+    }
+    @media (max-width: 980px){
+      header{display:block}
+      .actions{justify-content:flex-start;margin-top:14px}
+      .grid{grid-template-columns:1fr}
+      .settings{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width: 760px){
+      .wrap{width:100%;padding:16px 12px 36px}
+      .tools{display:block}
+      .search{max-width:none;margin-bottom:10px}
+      .table-wrap{overflow:visible;max-height:none}
+      table{min-width:0}
+      thead{display:none}
+      tbody, tr, td{display:block;width:100%}
+      tbody tr{
+        margin:12px 0;
+        border:1px solid var(--line);
+        border-radius:16px;
+        overflow:hidden;
+        box-shadow:0 4px 16px rgba(16,24,40,.06);
+      }
+      td{
+        display:grid;
+        grid-template-columns:130px 1fr;
+        gap:10px;
+        align-items:center;
+        border-bottom:1px solid var(--line);
+      }
+      td:last-child{border-bottom:0}
+      td::before{
+        content:attr(data-label);
+        font-size:12px;
+        color:var(--muted);
+        font-weight:900;
+        text-transform:uppercase;
+        letter-spacing:.03em;
+      }
+      .moneyInput{width:100%}
+      .calc{white-space:normal;text-align:right}
+    }
+    @media (max-width: 520px){
+      .settings,.converter{grid-template-columns:1fr}
+      .result-box{grid-column:auto}
+      td{grid-template-columns:1fr;gap:6px}
+      .calc{text-align:left}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Calcolo acquisti completo</h1>
+        <p class="sub">Inserisci il prezzo BackBox e il prezzo reale d’acquisto. Il file calcola prezzo suggerito e margini per commissione 12% e 5%.</p>
+      </div>
+      <div class="actions">
+        <button id="toggleSettings" type="button">Impostazioni</button>
+        <button id="exportCsv" type="button">Esporta CSV</button>
+        <button id="resetData" type="button">Reset dati</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Impostazioni calcolo</h2>
+          <span class="pill">Salvataggio automatico</span>
+        </div>
+        <div id="settingsPanel" class="settings">
+          <div class="field">
+            <label>Commissione standard 12%</label>
+            <input id="fee12" type="text" inputmode="decimal" value="12">
+          </div>
+          <div class="field">
+            <label>Commissione ridotta 5%</label>
+            <input id="fee5" type="text" inputmode="decimal" value="5">
+          </div>
+          <div class="field">
+            <label>Fee investitore %</label>
+            <input id="investorFee" type="text" inputmode="decimal" value="0">
+          </div>
+          <div class="field">
+            <label>Fee Storfund %</label>
+            <input id="storfundFee" type="text" inputmode="decimal" value="2,30">
+          </div>
+          <div class="field">
+            <label>Commissioni pagamenti %</label>
+            <input id="paymentFee" type="text" inputmode="decimal" value="1">
+          </div>
+          <div class="field">
+            <label>Commissione importazione €</label>
+            <input id="importFee" type="text" inputmode="decimal" value="7">
+          </div>
+          <div class="field">
+            <label>Spedizione €</label>
+            <input id="shipping" type="text" inputmode="decimal" value="16,50">
+          </div>
+          <div class="field">
+            <label>Margine target prezzo suggerito %</label>
+            <input id="targetMargin" type="text" inputmode="decimal" value="7,50">
+          </div>
+        </div>
+        <p class="note">Il prezzo suggerito usa la commissione standard 12%, più fee investitore, fee Storfund, commissioni pagamenti, commissione importazione, spedizione e margine target. Colori: rosso sotto 3,5%, giallo da 3,5% a 5%, verde oltre 5%.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Convertitore</h2>
+          <span class="pill">USD / EUR</span>
+        </div>
+        <div class="converter">
+          <div class="field">
+            <label>Prezzo fornitore USD</label>
+            <input id="usdPrice" type="text" inputmode="decimal" placeholder="es. 450">
+          </div>
+          <div class="field">
+            <label>Cambio USD → EUR</label>
+            <input id="usdRate" type="text" inputmode="decimal" value="0,92">
+          </div>
+          <div class="result-box" id="eurResult">USD → EUR: € 0,00</div>
+
+          <div class="field">
+            <label>Prezzo EUR</label>
+            <input id="eurPrice" type="text" inputmode="decimal" placeholder="es. 450">
+          </div>
+          <div class="field">
+            <label>Conversione inversa</label>
+            <input value="EUR → USD" disabled>
+          </div>
+          <div class="result-box" id="usdResult">EUR → USD: $ 0,00</div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="tools">
+        <input id="searchInput" class="search" placeholder="Cerca modello, es. 15 PRO MAX 256">
+        <span class="pill">77 righe</span>
+      </div>
+      <div class="table-wrap">
+        <table id="calcTable">
+          <thead>
+            <tr>
+              <th>Modello</th>
+              <th>Prezzo BackBox</th>
+              <th>Prezzo suggerito</th>
+              <th>Prezzo reale acquisto</th>
+              <th>Guadagno paesi 12%</th>
+              <th>Guadagno paesi 5%</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-index="0" data-model="iphone 13 128gb">
+              <td data-label="Modello" class="model">IPHONE 13 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="0" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="0" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="1" data-model="iphone 13 256gb">
+              <td data-label="Modello" class="model">IPHONE 13 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="1" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="1" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="2" data-model="iphone 13 512gb">
+              <td data-label="Modello" class="model">IPHONE 13 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="2" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="2" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="3" data-model="iphone 14 128gb">
+              <td data-label="Modello" class="model">IPHONE 14 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="3" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="3" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="4" data-model="iphone 14 256gb">
+              <td data-label="Modello" class="model">IPHONE 14 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="4" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="4" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="5" data-model="iphone 14 512gb">
+              <td data-label="Modello" class="model">IPHONE 14 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="5" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="5" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="6" data-model="iphone 14 pro 128gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="6" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="6" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="7" data-model="iphone 14 pro 256gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="7" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="7" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="8" data-model="iphone 14 pro 512gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="8" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="8" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="9" data-model="iphone 14 pro 1000gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="9" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="9" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="10" data-model="iphone 14 pro max 128gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO MAX 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="10" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="10" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="11" data-model="iphone 14 pro max 256gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO MAX 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="11" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="11" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="12" data-model="iphone 14 pro max 512gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO MAX 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="12" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="12" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="13" data-model="iphone 14 pro max 1000gb">
+              <td data-label="Modello" class="model">IPHONE 14 PRO MAX 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="13" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="13" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="14" data-model="iphone 15 128gb">
+              <td data-label="Modello" class="model">IPHONE 15 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="14" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="14" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="15" data-model="iphone 15 256gb">
+              <td data-label="Modello" class="model">IPHONE 15 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="15" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="15" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="16" data-model="iphone 15 512gb">
+              <td data-label="Modello" class="model">IPHONE 15 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="16" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="16" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="17" data-model="iphone 15 plus 128gb">
+              <td data-label="Modello" class="model">IPHONE 15 PLUS 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="17" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="17" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="18" data-model="iphone 15 plus 256gb">
+              <td data-label="Modello" class="model">IPHONE 15 PLUS 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="18" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="18" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="19" data-model="iphone 15 plus 512gb">
+              <td data-label="Modello" class="model">IPHONE 15 PLUS 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="19" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="19" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="20" data-model="iphone 15 pro 128gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="20" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="20" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="21" data-model="iphone 15 pro 256gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="21" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="21" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="22" data-model="iphone 15 pro 512gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="22" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="22" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="23" data-model="iphone 15 pro 1000gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="23" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="23" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="24" data-model="iphone 15 pro max 128gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO MAX 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="24" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="24" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="25" data-model="iphone 15 pro max 256gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO MAX 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="25" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="25" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="26" data-model="iphone 15 pro max 512gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO MAX 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="26" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="26" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="27" data-model="iphone 15 pro max 1000gb">
+              <td data-label="Modello" class="model">IPHONE 15 PRO MAX 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="27" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="27" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="28" data-model="iphone 16 128gb esim">
+              <td data-label="Modello" class="model">IPHONE 16 128GB ESIM</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="28" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="28" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="29" data-model="iphone 16 256gb esim">
+              <td data-label="Modello" class="model">IPHONE 16 256GB ESIM</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="29" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="29" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="30" data-model="iphone 16 512gb esim">
+              <td data-label="Modello" class="model">IPHONE 16 512GB ESIM</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="30" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="30" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="31" data-model="iphone 16 128gb">
+              <td data-label="Modello" class="model">IPHONE 16 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="31" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="31" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="32" data-model="iphone 16 256gb">
+              <td data-label="Modello" class="model">IPHONE 16 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="32" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="32" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="33" data-model="iphone 16 512gb">
+              <td data-label="Modello" class="model">IPHONE 16 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="33" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="33" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="34" data-model="iphone 16 plus 128gb">
+              <td data-label="Modello" class="model">IPHONE 16 PLUS 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="34" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="34" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="35" data-model="iphone 16 plus 256gb">
+              <td data-label="Modello" class="model">IPHONE 16 PLUS 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="35" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="35" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="36" data-model="iphone 16 plus 512gb">
+              <td data-label="Modello" class="model">IPHONE 16 PLUS 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="36" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="36" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="37" data-model="iphone 16e esim 128gb">
+              <td data-label="Modello" class="model">IPHONE 16e ESIM 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="37" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="37" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="38" data-model="iphone 16e esim 256gb">
+              <td data-label="Modello" class="model">IPHONE 16e ESIM 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="38" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="38" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="39" data-model="iphone 16e esim 512gb">
+              <td data-label="Modello" class="model">IPHONE 16e ESIM 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="39" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="39" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="40" data-model="iphone 16e 128gb">
+              <td data-label="Modello" class="model">IPHONE 16e 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="40" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="40" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="41" data-model="iphone 16e 256gb">
+              <td data-label="Modello" class="model">IPHONE 16e 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="41" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="41" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="42" data-model="iphone 16e 512gb">
+              <td data-label="Modello" class="model">IPHONE 16e 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="42" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="42" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="43" data-model="iphone 16 pro 128gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="43" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="43" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="44" data-model="iphone 16 pro 256gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="44" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="44" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="45" data-model="iphone 16 pro 512gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="45" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="45" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="46" data-model="iphone 16 pro 1000gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="46" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="46" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="47" data-model="iphone 16 pro max 256gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO MAX 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="47" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="47" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="48" data-model="iphone 16 pro max 512gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO MAX 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="48" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="48" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="49" data-model="iphone 16 pro max 1000gb">
+              <td data-label="Modello" class="model">IPHONE 16 PRO MAX 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="49" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="49" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="50" data-model="iphone 17 256gb">
+              <td data-label="Modello" class="model">IPHONE 17 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="50" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="50" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="51" data-model="iphone 17 512gb">
+              <td data-label="Modello" class="model">IPHONE 17 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="51" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="51" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="52" data-model="iphone 17 1000gb">
+              <td data-label="Modello" class="model">IPHONE 17 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="52" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="52" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="53" data-model="iphone 17 air 256gb">
+              <td data-label="Modello" class="model">IPHONE 17 Air 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="53" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="53" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="54" data-model="iphone 17 air 512gb">
+              <td data-label="Modello" class="model">IPHONE 17 Air 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="54" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="54" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="55" data-model="iphone 17 air 512gb">
+              <td data-label="Modello" class="model">IPHONE 17 Air 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="55" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="55" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="56" data-model="iphone 17 pro 256gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="56" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="56" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="57" data-model="iphone 17 pro 512gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="57" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="57" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="58" data-model="iphone 17 pro 1000gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="58" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="58" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="59" data-model="iphone 17 pro max 256gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO MAX 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="59" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="59" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="60" data-model="iphone 17 pro max 512gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO MAX 512GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="60" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="60" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="61" data-model="iphone 17 pro max 1000gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO MAX 1000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="61" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="61" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="62" data-model="iphone 17 pro max 2000gb">
+              <td data-label="Modello" class="model">IPHONE 17 PRO MAX 2000GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="62" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="62" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="63" data-model="ipad air 13 256">
+              <td data-label="Modello" class="model">IPAD AIR 13 256</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="63" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="63" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="64" data-model="ipad air 13 128">
+              <td data-label="Modello" class="model">IPAD AIR 13 128</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="64" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="64" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="65" data-model="ipad air 11 256">
+              <td data-label="Modello" class="model">IPAD AIR 11 256</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="65" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="65" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="66" data-model="ipad air 11 128">
+              <td data-label="Modello" class="model">IPAD AIR 11 128</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="66" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="66" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="67" data-model="samsung s22 128gb">
+              <td data-label="Modello" class="model">SAMSUNG S22 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="67" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="67" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="68" data-model="samsung s23 128gb">
+              <td data-label="Modello" class="model">SAMSUNG S23 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="68" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="68" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="69" data-model="samsung s24 128gb">
+              <td data-label="Modello" class="model">SAMSUNG S24 128GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="69" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="69" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="70" data-model="samsung s24 plus 256gb">
+              <td data-label="Modello" class="model">SAMSUNG S24 PLUS 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="70" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="70" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="71" data-model="samsung s24 ultra 256gb">
+              <td data-label="Modello" class="model">SAMSUNG S24 ULTRA 256GB</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="71" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="71" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="72" data-model="articolo 1">
+              <td data-label="Modello" class="model">ARTICOLO 1</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="72" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="72" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="73" data-model="articolo 2">
+              <td data-label="Modello" class="model">ARTICOLO 2</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="73" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="73" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="74" data-model="articolo 3">
+              <td data-label="Modello" class="model">ARTICOLO 3</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="74" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="74" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="75" data-model="articolo 4">
+              <td data-label="Modello" class="model">ARTICOLO 4</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="75" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="75" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+            <tr data-index="76" data-model="articolo 5">
+              <td data-label="Modello" class="model">ARTICOLO 5</td>
+              <td data-label="Prezzo BackBox"><input class="moneyInput" type="text" inputmode="decimal" data-field="backbox" data-index="76" placeholder="€"></td>
+              <td data-label="Prezzo suggerito" class="calc suggested muted">—</td>
+              <td data-label="Prezzo reale acquisto"><input class="moneyInput" type="text" inputmode="decimal" data-field="purchase" data-index="76" placeholder="€"></td>
+              <td data-label="Guadagno 12%" class="calc margin12 muted">—</td>
+              <td data-label="Guadagno 5%" class="calc margin5 muted">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+(function(){
+  var STORAGE_KEY = "calcolo_acquisti_completo_v1";
+  var MODELS = ["IPHONE 13 128GB", "IPHONE 13 256GB", "IPHONE 13 512GB", "IPHONE 14 128GB", "IPHONE 14 256GB", "IPHONE 14 512GB", "IPHONE 14 PRO 128GB", "IPHONE 14 PRO 256GB", "IPHONE 14 PRO 512GB", "IPHONE 14 PRO 1000GB", "IPHONE 14 PRO MAX 128GB", "IPHONE 14 PRO MAX 256GB", "IPHONE 14 PRO MAX 512GB", "IPHONE 14 PRO MAX 1000GB", "IPHONE 15 128GB", "IPHONE 15 256GB", "IPHONE 15 512GB", "IPHONE 15 PLUS 128GB", "IPHONE 15 PLUS 256GB", "IPHONE 15 PLUS 512GB", "IPHONE 15 PRO 128GB", "IPHONE 15 PRO 256GB", "IPHONE 15 PRO 512GB", "IPHONE 15 PRO 1000GB", "IPHONE 15 PRO MAX 128GB", "IPHONE 15 PRO MAX 256GB", "IPHONE 15 PRO MAX 512GB", "IPHONE 15 PRO MAX 1000GB", "IPHONE 16 128GB ESIM", "IPHONE 16 256GB ESIM", "IPHONE 16 512GB ESIM", "IPHONE 16 128GB", "IPHONE 16 256GB", "IPHONE 16 512GB", "IPHONE 16 PLUS 128GB", "IPHONE 16 PLUS 256GB", "IPHONE 16 PLUS 512GB", "IPHONE 16e ESIM 128GB", "IPHONE 16e ESIM 256GB", "IPHONE 16e ESIM 512GB", "IPHONE 16e 128GB", "IPHONE 16e 256GB", "IPHONE 16e 512GB", "IPHONE 16 PRO 128GB", "IPHONE 16 PRO 256GB", "IPHONE 16 PRO 512GB", "IPHONE 16 PRO 1000GB", "IPHONE 16 PRO MAX 256GB", "IPHONE 16 PRO MAX 512GB", "IPHONE 16 PRO MAX 1000GB", "IPHONE 17 256GB", "IPHONE 17 512GB", "IPHONE 17 1000GB", "IPHONE 17 Air 256GB", "IPHONE 17 Air 512GB", "IPHONE 17 Air 512GB", "IPHONE 17 PRO 256GB", "IPHONE 17 PRO 512GB", "IPHONE 17 PRO 1000GB", "IPHONE 17 PRO MAX 256GB", "IPHONE 17 PRO MAX 512GB", "IPHONE 17 PRO MAX 1000GB", "IPHONE 17 PRO MAX 2000GB", "IPAD AIR 13 256", "IPAD AIR 13 128", "IPAD AIR 11 256", "IPAD AIR 11 128", "SAMSUNG S22 128GB", "SAMSUNG S23 128GB", "SAMSUNG S24 128GB", "SAMSUNG S24 PLUS 256GB", "SAMSUNG S24 ULTRA 256GB", "ARTICOLO 1", "ARTICOLO 2", "ARTICOLO 3", "ARTICOLO 4", "ARTICOLO 5"];
+
+  var rows = MODELS.map(function(name){ return { name:name, backbox:"", purchase:"" }; });
+
+  function byId(id){ return document.getElementById(id); }
+
+  function toNumber(value){
+    if(value === null || value === undefined) return 0;
+    var s = String(value);
+    s = s.replace(/\s/g, "");
+    s = s.replace("€", "");
+    s = s.replace("$", "");
+    s = s.replace(",", ".");
+    var n = parseFloat(s);
+    if(isNaN(n)) return 0;
+    return n;
+  }
+
+  function pctValue(id){ return toNumber(byId(id).value) / 100; }
+
+  function moneyEUR(n){
+    if(isNaN(n) || !isFinite(n)) return "—";
+    return "€ " + n.toFixed(2).replace(".", ",");
+  }
+
+  function moneyUSD(n){
+    if(isNaN(n) || !isFinite(n)) return "—";
+    return "$ " + n.toFixed(2).replace(".", ",");
+  }
+
+  function percentText(n){
+    if(isNaN(n) || !isFinite(n)) return "—";
+    return n.toFixed(2).replace(".", ",") + "%";
+  }
+
+  function extraFees(){
+    return pctValue("investorFee") + pctValue("storfundFee") + pctValue("paymentFee");
+  }
+
+  function fixedCosts(){
+    return toNumber(byId("shipping").value) + toNumber(byId("importFee").value);
+  }
+
+  function marginClass(percent){
+    if(percent < 3.5) return "bad";
+    if(percent <= 5) return "warn";
+    return "ok";
+  }
+
+  function setCell(cell, text, cls){
+    cell.className = cell.className.replace(/\b(ok|warn|bad|muted)\b/g, "").trim();
+    cell.className += " " + cls;
+    cell.innerHTML = text;
+  }
+
+  function calculateRow(index){
+    var tr = document.querySelector('tr[data-index="' + index + '"]');
+    if(!tr) return;
+
+    var backbox = toNumber(rows[index].backbox);
+    var purchase = toNumber(rows[index].purchase);
+    var fee12 = pctValue("fee12");
+    var fee5 = pctValue("fee5");
+    var target = pctValue("targetMargin");
+    var extra = extraFees();
+    var fixed = fixedCosts();
+
+    var suggestedCell = tr.querySelector(".suggested");
+    var margin12Cell = tr.querySelector(".margin12");
+    var margin5Cell = tr.querySelector(".margin5");
+
+    if(backbox <= 0){
+      setCell(suggestedCell, "—", "muted");
+      setCell(margin12Cell, "—", "muted");
+      setCell(margin5Cell, "—", "muted");
+      return;
+    }
+
+    var suggested = backbox * (1 - fee12 - extra - target) - fixed;
+    setCell(suggestedCell, moneyEUR(suggested), "");
+
+    if(purchase <= 0){
+      setCell(margin12Cell, "—", "muted");
+      setCell(margin5Cell, "—", "muted");
+      return;
+    }
+
+    var euro12 = backbox - (backbox * fee12) - (backbox * extra) - fixed - purchase;
+    var perc12 = (euro12 / backbox) * 100;
+    setCell(margin12Cell, percentText(perc12) + " (" + moneyEUR(euro12) + ")", marginClass(perc12));
+
+    var euro5 = backbox - (backbox * fee5) - (backbox * extra) - fixed - purchase;
+    var perc5 = (euro5 / backbox) * 100;
+    setCell(margin5Cell, percentText(perc5) + " (" + moneyEUR(euro5) + ")", marginClass(perc5));
+  }
+
+  function calculateAll(){
+    for(var i=0;i<rows.length;i++){
+      calculateRow(i);
+    }
+    saveData();
+  }
+
+  function updateConverter(){
+    var usdValue = toNumber(byId("usdPrice").value);
+    var eurValue = toNumber(byId("eurPrice").value);
+    var rate = toNumber(byId("usdRate").value);
+
+    byId("eurResult").innerHTML = "USD → EUR: " + moneyEUR(usdValue * rate);
+
+    if(rate <= 0){
+      byId("usdResult").innerHTML = "EUR → USD: —";
+    } else {
+      byId("usdResult").innerHTML = "EUR → USD: " + moneyUSD(eurValue / rate);
+    }
+
+    saveData();
+  }
+
+  function saveData(){
+    var data = {
+      settings:{
+        fee12:byId("fee12").value,
+        fee5:byId("fee5").value,
+        investorFee:byId("investorFee").value,
+        storfundFee:byId("storfundFee").value,
+        paymentFee:byId("paymentFee").value,
+        importFee:byId("importFee").value,
+        shipping:byId("shipping").value,
+        targetMargin:byId("targetMargin").value,
+        usdRate:byId("usdRate").value,
+        usdPrice:byId("usdPrice").value,
+        eurPrice:byId("eurPrice").value
+      },
+      rows:rows
+    };
+
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }catch(e){}
+  }
+
+  function loadData(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+
+      if(data.settings){
+        var keys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","usdRate","usdPrice","eurPrice"];
+        for(var i=0;i<keys.length;i++){
+          var k = keys[i];
+          if(data.settings[k] !== undefined && byId(k)){
+            byId(k).value = data.settings[k];
+          }
+        }
+      }
+
+      if(data.rows && data.rows.length){
+        for(var j=0;j<rows.length;j++){
+          if(data.rows[j]){
+            rows[j].backbox = data.rows[j].backbox || "";
+            rows[j].purchase = data.rows[j].purchase || "";
+          }
+        }
+      }
+    }catch(e){}
+  }
+
+  function syncInputsFromState(){
+    for(var i=0;i<rows.length;i++){
+      var b = document.querySelector('input[data-field="backbox"][data-index="' + i + '"]');
+      var p = document.querySelector('input[data-field="purchase"][data-index="' + i + '"]');
+      if(b) b.value = rows[i].backbox || "";
+      if(p) p.value = rows[i].purchase || "";
+    }
+  }
+
+  function bindInputs(){
+    var table = byId("calcTable");
+    table.addEventListener("input", function(e){
+      var t = e.target;
+      if(!t || !t.getAttribute("data-index")) return;
+      var index = parseInt(t.getAttribute("data-index"),10);
+      var field = t.getAttribute("data-field");
+      rows[index][field] = t.value;
+      calculateRow(index);
+      saveData();
+    });
+
+    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin"];
+    for(var i=0;i<settingIds.length;i++){
+      byId(settingIds[i]).addEventListener("input", calculateAll);
+    }
+
+    var convIds = ["usdPrice","eurPrice","usdRate"];
+    for(var j=0;j<convIds.length;j++){
+      byId(convIds[j]).addEventListener("input", updateConverter);
+    }
+
+    byId("toggleSettings").addEventListener("click", function(){
+      var panel = byId("settingsPanel");
+      if(panel.className.indexOf("open") === -1){
+        panel.className += " open";
+      } else {
+        panel.className = panel.className.replace(" open", "");
+      }
+    });
+
+    byId("searchInput").addEventListener("input", function(){
+      var q = byId("searchInput").value.toLowerCase().trim();
+      var trs = document.querySelectorAll("#calcTable tbody tr");
+      for(var k=0;k<trs.length;k++){
+        var model = trs[k].getAttribute("data-model") || "";
+        trs[k].style.display = model.indexOf(q) >= 0 ? "" : "none";
+      }
+    });
+
+    byId("resetData").addEventListener("click", function(){
+      if(!confirm("Vuoi cancellare tutti i dati inseriti?")) return;
+      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+
+      byId("fee12").value = "12";
+      byId("fee5").value = "5";
+      byId("investorFee").value = "0";
+      byId("storfundFee").value = "2,30";
+      byId("paymentFee").value = "1";
+      byId("importFee").value = "7";
+      byId("shipping").value = "16,50";
+      byId("targetMargin").value = "7,50";
+      byId("usdRate").value = "0,92";
+      byId("usdPrice").value = "";
+      byId("eurPrice").value = "";
+
+      rows = MODELS.map(function(name){ return { name:name, backbox:"", purchase:"" }; });
+      syncInputsFromState();
+      calculateAll();
+      updateConverter();
+    });
+
+    byId("exportCsv").addEventListener("click", exportCsv);
+  }
+
+  function exportCsv(){
+    var lines = [];
+    lines.push(["Modello","Prezzo BackBox","Prezzo suggerito","Prezzo reale acquisto","Guadagno 12%","Guadagno 5%"].join(";"));
+
+    for(var i=0;i<rows.length;i++){
+      var tr = document.querySelector('tr[data-index="' + i + '"]');
+      var suggested = tr.querySelector(".suggested").textContent;
+      var m12 = tr.querySelector(".margin12").textContent;
+      var m5 = tr.querySelector(".margin5").textContent;
+      var cells = [
+        rows[i].name,
+        rows[i].backbox,
+        suggested,
+        rows[i].purchase,
+        m12,
+        m5
+      ];
+      for(var j=0;j<cells.length;j++){
+        cells[j] = '"' + String(cells[j]).replace(/"/g, '""') + '"';
+      }
+      lines.push(cells.join(";"));
+    }
+
+    var blob = new Blob([lines.join("\n")], {type:"text/csv;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "calcolo-acquisti-completo.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  loadData();
+  syncInputsFromState();
+  bindInputs();
+  calculateAll();
+  updateConverter();
+})();
+</script>
+</body>
+</html>
