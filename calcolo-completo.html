@@ -6,18 +6,22 @@
   <title>Calcolo acquisti completo</title>
   <style>
     :root{
-      --bg:#f6f7f9;
-      --panel:#ffffff;
-      --text:#101828;
-      --muted:#667085;
-      --line:#e4e7ec;
-      --brand:#035A8B;
-      --ok:#067647;
-      --warn:#b54708;
-      --bad:#b42318;
-      --shadow:0 10px 28px rgba(16,24,40,.08);
-      --r:16px;
-    }
+  --bg:#F4F7FB;
+  --panel:#FFFFFF;
+  --text:#0B1220;
+  --muted:#64748B;
+  --line:#DDE5EF;
+
+  --brand:#035A8B;
+  --brand-soft:#EAF5FB;
+
+  --ok:#11845B;
+  --warn:#C97A12;
+  --bad:#C0362C;
+
+  --shadow:0 14px 34px rgba(15,23,42,.10);
+  --r:18px;
+}
     *{box-sizing:border-box}
     body{
       margin:0;
@@ -65,10 +69,10 @@
       box-shadow:0 1px 2px rgba(16,24,40,.04);
     }
     button.primary{
-      background:var(--brand);
-      border-color:var(--brand);
-      color:#fff;
-    }
+  background:linear-gradient(135deg, #035A8B, #1476B8);
+  border-color:#035A8B;
+  color:#fff;
+}
     .grid{
       display:grid;
       grid-template-columns:1fr 360px;
@@ -208,15 +212,15 @@
     .bad{color:var(--bad)}
     .muted{color:var(--muted)}
     .pill{
-      display:inline-flex;
-      align-items:center;
-      padding:6px 9px;
-      border-radius:999px;
-      background:#f2f4f7;
-      color:#344054;
-      font-size:12px;
-      font-weight:900;
-    }
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  background:var(--brand-soft);
+  color:var(--brand);
+  font-size:12px;
+  font-weight:900;
+}
     @media (max-width: 980px){
       header{display:block}
       .actions{justify-content:flex-start;margin-top:14px}
