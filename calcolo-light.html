@@ -196,7 +196,7 @@
     <div class="top">
       <div>
         <h1>Calcolatore rapido acquisti</h1>
-        <p class="sub">Versione verticale compatibile con iPhone. Inserisci i dati e controlla subito i margini.</p>
+        <p class="sub">Versione light. Inserisci prezzi e controlla subito prezzo suggerito e margini.</p>
       </div>
       <div class="actions">
         <button id="toggleSettings" type="button">Impostazioni</button>
@@ -238,6 +238,7 @@
           <div id="rateStatus" class="rate-status">Cambio manuale o ultimo cambio salvato nel browser.</div>
         </div>
         <div class="result-box" id="eurResult" style="margin-top:12px;">USD → EUR: € 0,00</div>
+        <button id="useConvertedPurchase" class="rate-button" type="button" style="margin-top:12px;">Usa conversione come prezzo acquisto</button>
         <div class="converter-grid" style="margin-top:14px;">
           <div class="field"><label for="eurPrice">Prezzo EUR</label><input id="eurPrice" type="text" inputmode="decimal" placeholder="es. 450"></div>
           <div class="field"><label>Conversione inversa</label><input value="EUR → USD" disabled></div>
@@ -252,7 +253,6 @@
         <span class="pill">1 scheda</span>
       </div>
       <div class="calc-card-body">
-        <div><label class="value-label" for="model">Modello</label><input id="model" placeholder="Modello libero"></div>
         <div><label class="value-label" for="backbox">Prezzo BackBox</label><input id="backbox" type="text" inputmode="decimal" placeholder="€"></div>
         <div><div class="value-label">Prezzo suggerito</div><div id="suggestedValue" class="value-output muted">—</div></div>
         <div><label class="value-label" for="purchase">Prezzo reale acquisto</label><input id="purchase" type="text" inputmode="decimal" placeholder="€"></div>
@@ -376,6 +376,22 @@
     saveData();
   }
 
+
+  function useConvertedAsPurchase(){
+    var usdValue = toNumber(byId("usdPrice").value);
+    var rate = toNumber(byId("usdRate").value);
+    var converted = usdValue * rate;
+
+    if(usdValue <= 0 || rate <= 0){
+      alert("Inserisci prima un prezzo fornitore USD e un cambio valido.");
+      return;
+    }
+
+    byId("purchase").value = converted.toFixed(2).replace(".", ",");
+    calculate();
+  }
+
+
   function refreshRate(){
     var status = byId("rateStatus");
     var btn = byId("refreshRate");
@@ -406,7 +422,7 @@
   function saveData(){
     var ids = [
       "fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin",
-      "usdPrice","usdRate","eurPrice","model","backbox","purchase"
+      "usdPrice","usdRate","eurPrice","backbox","purchase"
     ];
     var data = {};
     var i;
@@ -441,7 +457,7 @@
   }
 
   function bindAll(){
-    var calcIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","model","backbox","purchase"];
+    var calcIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","backbox","purchase"];
     var convIds = ["usdPrice","usdRate","eurPrice"];
     var i;
 
@@ -454,6 +470,10 @@
 
     if(byId("refreshRate")){
       byId("refreshRate").onclick = refreshRate;
+    }
+
+    if(byId("useConvertedPurchase")){
+      byId("useConvertedPurchase").onclick = useConvertedAsPurchase;
     }
 
     byId("toggleSettings").onclick = function(){
@@ -489,7 +509,6 @@
       byId("usdRate").value = "0,92";
       byId("usdPrice").value = "";
       byId("eurPrice").value = "";
-      byId("model").value = "";
       byId("backbox").value = "";
       byId("purchase").value = "";
 
