@@ -188,10 +188,6 @@ function validListingId(value) {
   return /^[A-Za-z0-9-]{6,100}$/.test(value);
 }
 
-function validMarket(value) {
-  return /^[A-Z]{2}$/.test(value);
-}
-
 async function catalogResponse(url, env, ctx) {
   const refresh = url.searchParams.get("refresh") === "1";
   const cacheKey = "https://calcolo-cache.internal/catalog";
@@ -208,18 +204,26 @@ async function backboxResponse(url, listingId, env, ctx) {
   if (!validListingId(listingId)) {
     throw new HttpError(400, "Identificativo inserzione non valido", "INVALID_LISTING_ID");
   }
-  const market = String(url.searchParams.get("market") || "IT").toUpperCase();
-  if (!validMarket(market)) {
-    throw new HttpError(400, "Mercato non valido", "INVALID_MARKET");
-  }
-  const cacheKey = `https://calcolo-cache.internal/backbox/${encodeURIComponent(listingId)}?market=${market}`;
+  const cacheKey = `https://calcolo-cache.internal/backbox/${encodeURIComponent(listingId)}`;
   const cached = await readCache(cacheKey);
   if (cached) return jsonResponse(cached);
 
-  const upstream = absoluteBackMarketUrl(`/ws/backbox/v1/competitors/${encodeURIComponent(listingId)}?market=${encodeURIComponent(market)}`, env);
-  const payload = await backMarketJson(upstream, env);
-  writeCache(cacheKey, payload, BACKBOX_TTL_SECONDS, ctx);
-  return jsonResponse(payload);
+  const upstream = absoluteBackMarketUrl(`/ws/backbox/v1/competitors/${encodeURIComponent(listingId)}`, env);
+  let payload;
+  try {
+    payload = await backMarketJson(upstream, env);
+  } catch (error) {
+    if (error instanceof HttpError && error.details.upstream_status === 404) {
+      payload = [];
+    } else {
+      throw error;
+    }
+  }
+
+  const competitors = Array.isArray(payload) ? payload : [];
+  const result = { competitors };
+  writeCache(cacheKey, result, BACKBOX_TTL_SECONDS, ctx);
+  return jsonResponse(result);
 }
 
 function preflightResponse(request, env) {

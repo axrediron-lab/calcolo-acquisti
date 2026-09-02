@@ -24,6 +24,9 @@ test("la pagina BuyBox carica soltanto dati API e non contiene cataloghi dimostr
   const script = read("buybox.js");
   assert.match(html, /read-only-badge/);
   assert.match(script, /\/api\/catalog/);
+  assert.match(script, /data-market-toggle/);
+  assert.match(script, /BuyBox per paese/);
+  assert.match(script, /listing\.quantity/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });
 

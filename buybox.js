@@ -10,6 +10,7 @@
     purchases:readJson(config.purchaseCacheKey) || {},
     buyboxes:{},
     openFamilies:{},
+    openListings:{},
     loadingFamilies:{},
     updatedAt:null,
     source:"live"
@@ -118,13 +119,26 @@
     if(value < settings.targetMargin) return "warn";
     return "ok";
   }
-  function buyboxAmount(entry,field){
-    var source = entry && (entry.competitor || entry);
-    var value = source && source[field];
+  function competitorsFromEntry(entry){
+    if(!entry || entry.loading || entry.error) return [];
+    if(Array.isArray(entry.competitors)) return entry.competitors;
+    if(Array.isArray(entry)) return entry;
+    if(entry.competitor) return [entry.competitor];
+    return [];
+  }
+  function competitorForMarket(entry,market){
+    var target = String(market || config.market || "IT").toUpperCase();
+    return competitorsFromEntry(entry).find(function(competitor){
+      return String(competitor && competitor.market || "").toUpperCase() === target;
+    }) || null;
+  }
+  function buyboxAmount(competitor,field){
+    var value = competitor && competitor[field];
     return value && value.amount !== undefined ? core.toNumber(value.amount) : value !== undefined && value !== null ? core.toNumber(value) : null;
   }
-  function listingEconomics(listing,feeKey){
-    var backbox = buyboxAmount(state.buyboxes[listing.id],"winner_price");
+  function listingEconomics(listing,feeKey,competitor){
+    competitor = competitor || competitorForMarket(state.buyboxes[listing.id],config.market);
+    var backbox = buyboxAmount(competitor,"winner_price");
     var purchase = core.toNumber(state.purchases[listing.id]);
     if(!backbox || !purchase) return null;
     var numeric = core.numericSettings(state.settings);
@@ -142,34 +156,82 @@
     if(!entry) return '<span class="loading-cell">Apri la famiglia per caricare</span>';
     if(entry.loading) return '<span class="loading-cell">Caricamento BuyBox…</span>';
     if(entry.error) return '<span class="error-cell">'+escapeHtml(entry.error)+'</span>';
-    var winner = buyboxAmount(entry,"winner_price");
-    var toWin = buyboxAmount(entry,"price_to_win");
-    if(!winner) return '<span class="loading-cell">Nessuna BuyBox IT disponibile</span>';
+    var competitor = competitorForMarket(entry,config.market);
+    var winner = buyboxAmount(competitor,"winner_price");
+    var toWin = buyboxAmount(competitor,"price_to_win");
+    if(!competitor) return '<span class="loading-cell">Nessun dato '+escapeHtml(config.market)+'</span>';
+    if(!winner) return '<span class="loading-cell">Nessuna BuyBox '+escapeHtml(config.market)+'</span>';
     return '<span class="backbox-value">'+escapeHtml(core.formatMoney(winner,listing.currency))+'</span>'+
       (toWin ? '<span class="subvalue">Per vincere: '+escapeHtml(core.formatMoney(toWin,listing.currency))+'</span>' : '');
   }
 
-  function suggestedHtml(listing){
-    var winner = buyboxAmount(state.buyboxes[listing.id],"winner_price");
+  function suggestedHtml(listing,competitor){
+    competitor = competitor || competitorForMarket(state.buyboxes[listing.id],config.market);
+    var winner = buyboxAmount(competitor,"winner_price");
     if(!winner) return "—";
     var suggested = core.suggestedPurchase(winner,core.numericSettings(state.settings).fee12,state.settings);
     return core.formatMoney(suggested,listing.currency);
   }
 
+  var MARKET_NAMES = {
+    AT:"Austria", BE:"Belgio", DE:"Germania", ES:"Spagna", FI:"Finlandia",
+    FR:"Francia", GR:"Grecia", IE:"Irlanda", IT:"Italia", NL:"Paesi Bassi",
+    PT:"Portogallo", SE:"Svezia", SK:"Slovacchia"
+  };
+
+  function marketLabel(code){
+    var market = String(code || "—").toUpperCase();
+    return (MARKET_NAMES[market] || market) + (market === "—" ? "" : " · " + market);
+  }
+
+  function marketRowsHtml(listing){
+    var entry = state.buyboxes[listing.id];
+    if(!entry || entry.loading) return '<div class="market-empty">Caricamento dei mercati…</div>';
+    if(entry.error) return '<div class="market-empty error-cell">'+escapeHtml(entry.error)+'</div>';
+    var competitors = competitorsFromEntry(entry).slice().sort(function(a,b){
+      var marketA = String(a && a.market || "");
+      var marketB = String(b && b.market || "");
+      if(marketA === config.market) return -1;
+      if(marketB === config.market) return 1;
+      return marketA.localeCompare(marketB,"it");
+    });
+    if(!competitors.length) return '<div class="market-empty">Nessuna BuyBox disponibile per questa inserzione.</div>';
+    return '<div class="market-panel"><div class="market-panel-title">BuyBox per paese <span>'+competitors.length+' mercati</span></div><div class="market-table-wrap"><table class="market-table"><thead><tr>'+
+      '<th>Mercato</th><th>Prezzo attuale</th><th>BuyBox</th><th>Prezzo da battere</th><th>Acquisto suggerito</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
+      '</tr></thead><tbody>'+competitors.map(function(competitor){
+        var winner = buyboxAmount(competitor,"winner_price");
+        var current = buyboxAmount(competitor,"price");
+        var toWin = buyboxAmount(competitor,"price_to_win");
+        var result12 = listingEconomics(listing,"fee12",competitor);
+        var result5 = listingEconomics(listing,"fee5",competitor);
+        return '<tr><td><span class="market-code">'+escapeHtml(marketLabel(competitor.market))+'</span></td>'+
+          '<td>'+escapeHtml(current ? core.formatMoney(current,listing.currency) : "—")+'</td>'+
+          '<td><strong>'+escapeHtml(winner ? core.formatMoney(winner,listing.currency) : "Nessuna")+'</strong></td>'+
+          '<td>'+escapeHtml(toWin ? core.formatMoney(toWin,listing.currency) : "—")+'</td>'+
+          '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing,competitor))+'</span></td>'+
+          '<td>'+marginHtml(result12)+'</td><td>'+marginHtml(result5)+'</td></tr>';
+      }).join("")+'</tbody></table></div></div>';
+  }
+
   function variantRow(listing){
     var result12 = listingEconomics(listing,"fee12");
     var result5 = listingEconomics(listing,"fee5");
-    return '<tr data-listing-id="'+escapeHtml(listing.id)+'">'+
-      '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></td>'+
+    var open = Boolean(state.openListings[listing.id]);
+    var entry = state.buyboxes[listing.id];
+    var marketCount = competitorsFromEntry(entry).length;
+    var marketButtonLabel = entry && entry.loading ? "Caricamento mercati…" : marketCount ? marketCount+" paesi" : "Mostra paesi";
+    return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
+      '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><button class="market-toggle" type="button" data-market-toggle="'+escapeHtml(listing.id)+'" aria-expanded="'+open+'">'+escapeHtml(marketButtonLabel)+' <span>⌄</span></button></td>'+
       '<td>'+escapeHtml(listing.color)+'</td>'+
       '<td>'+escapeHtml(listing.capacity)+'</td>'+
       '<td><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span></div></td>'+
+      '<td><span class="quantity-value">'+escapeHtml(listing.quantity)+'</span></td>'+
       '<td>'+backboxHtml(listing)+'</td>'+
       '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing))+'</span></td>'+
       '<td><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="€" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></td>'+
       '<td>'+marginHtml(result12)+'</td>'+
       '<td>'+marginHtml(result5)+'</td>'+
-    '</tr>';
+    '</tr>'+(open ? '<tr class="market-detail-row"><td colspan="10">'+marketRowsHtml(listing)+'</td></tr>' : '');
   }
 
   function familyCard(name,items){
@@ -180,8 +242,8 @@
         '<span class="family-main"><span class="family-icon">▣</span><span><span class="family-name">'+escapeHtml(name)+'</span><span class="family-meta"><span class="count-chip">'+items.length+' varianti</span>'+capacities.map(function(value){ return '<span class="meta-chip">'+escapeHtml(value)+'</span>'; }).join("")+'</span></span></span>'+
         '<span class="chevron">⌄</span>'+
       '</button>'+
-      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:22%"><col style="width:9%"><col style="width:8%"><col style="width:15%"><col style="width:12%"><col style="width:10%"><col style="width:9%"><col style="width:8%"><col style="width:8%"></colgroup><thead><tr>'+
-        '<th>Modello</th><th>Colore</th><th>Capacità</th><th>Qualità</th><th>BackBox</th><th>Prezzo suggerito</th><th>Prezzo d’acquisto</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
+      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:21%"><col style="width:8%"><col style="width:7%"><col style="width:14%"><col style="width:5%"><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%"></colgroup><thead><tr>'+
+        '<th>Modello</th><th>Colore</th><th>Capacità</th><th>Qualità</th><th>Quantità</th><th>BackBox '+escapeHtml(config.market)+'</th><th>Prezzo suggerito</th><th>Prezzo d’acquisto</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
       '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
   }
 
@@ -207,6 +269,13 @@
         }
       });
     });
+    document.querySelectorAll("[data-market-toggle]").forEach(function(button){
+      button.addEventListener("click",function(){
+        var id = button.getAttribute("data-market-toggle");
+        state.openListings[id] = !state.openListings[id];
+        renderCatalog();
+      });
+    });
     document.querySelectorAll("[data-purchase-id]").forEach(function(input){
       input.addEventListener("input",function(){
         var id = input.getAttribute("data-purchase-id");
@@ -229,7 +298,7 @@
       state.buyboxes[listing.id] = {loading:true};
       renderCatalog();
       try{
-        state.buyboxes[listing.id] = await apiFetch("/api/backbox/"+encodeURIComponent(listing.id)+"?market="+encodeURIComponent(config.market));
+        state.buyboxes[listing.id] = await apiFetch("/api/backbox/"+encodeURIComponent(listing.id));
       }catch(error){
         if(error.code === "ACCESS_REQUIRED"){
           state.buyboxes[listing.id] = {error:"Accesso richiesto"};

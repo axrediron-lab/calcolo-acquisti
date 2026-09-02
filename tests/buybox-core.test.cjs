@@ -61,6 +61,7 @@ test("normalizza modello, capacità, colore, grado e batteria dalla listing", ()
   assert.equal(listing.quality, "Eccellente");
   assert.equal(listing.batteryLabel, "Batteria nuova");
   assert.equal(listing.currentPrice, 399.99);
+  assert.equal(listing.quantity, 4);
 });
 
 test("gestisce numeri italiani e internazionali", () => {

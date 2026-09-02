@@ -175,9 +175,17 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .variant-table tbody tr:hover td{background:#fcfdff}
 .product-title{font-weight:900;font-size:13px;line-height:1.35}
 .sku{font-size:11px;color:var(--muted);margin-top:4px;word-break:break-word}
+.market-toggle{
+  display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:5px 8px;
+  border:1px solid #cbd9e7;border-radius:999px;background:#fff;color:var(--brand);
+  font-size:10px;font-weight:900;cursor:pointer;
+}
+.market-toggle span{font-size:13px;transition:transform .18s ease}
+.market-toggle[aria-expanded="true"] span{transform:rotate(180deg)}
 .variant-stack{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .quality-chip{background:#eef2f6;color:#334155}
 .battery-chip{background:#e9f8ef;color:#18714f}
+.quantity-value{display:inline-grid;place-items:center;min-width:36px;padding:7px 9px;border-radius:10px;background:#eef5fb;color:var(--brand);font-weight:950}
 .backbox-value{font-weight:950;color:var(--accent);white-space:nowrap}
 .subvalue{display:block;margin-top:4px;color:var(--muted);font-size:10px;line-height:1.3}
 .purchase-input{width:105px;border:1px solid var(--line);border-radius:10px;padding:9px 10px;outline:none;color:var(--text);font-weight:850}
@@ -189,6 +197,17 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .margin-pill.bad{background:var(--bad-soft);color:var(--bad);border:1px solid #f2c5c0}
 .loading-cell{color:var(--muted);font-size:12px}
 .error-cell{color:var(--bad);font-size:12px;font-weight:750}
+.variant-table .market-detail-row>td{padding:0;background:#f6f8fc!important}
+.market-panel{padding:15px 18px 18px;border-left:4px solid var(--brand-2)}
+.market-panel-title{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:950;color:var(--text)}
+.market-panel-title span{padding:4px 7px;border-radius:999px;background:#e6eff8;color:var(--brand);font-size:10px}
+.market-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+.market-table{width:100%;min-width:900px;border-collapse:collapse}
+.market-table th{position:static;background:#eef3f8;padding:9px 10px;font-size:10px}
+.market-table td{padding:10px;border-bottom:1px solid var(--line);font-size:12px;background:#fff}
+.market-table tbody tr:last-child td{border-bottom:0}
+.market-code{font-weight:900;white-space:nowrap;color:#27374a}
+.market-empty{padding:17px 18px;color:var(--muted);font-size:12px;background:#f6f8fc;border-left:4px solid #cbd5e1}
 .empty-state{
   text-align:center;
   padding:60px 20px;

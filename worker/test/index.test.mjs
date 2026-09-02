@@ -76,12 +76,18 @@ test("legge la BackBox della singola listing e inoltra il mercato", async () => 
   let capturedUrl = "";
   globalThis.fetch = async (url) => {
     capturedUrl = String(url);
-    return new Response(JSON.stringify({
-      competitor: {
+    return new Response(JSON.stringify([
+      {
+        market: "FR",
+        winner_price: { amount: "420.00", currency: "EUR" },
+        price_to_win: { amount: "418.00", currency: "EUR" },
+      },
+      {
+        market: "IT",
         winner_price: { amount: "399.00", currency: "EUR" },
         price_to_win: { amount: "397.00", currency: "EUR" },
       },
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    ]), { status: 200, headers: { "Content-Type": "application/json" } });
   };
 
   const response = await handleRequest(new Request("https://worker.test/api/backbox/listing-123?market=IT", {
@@ -93,8 +99,25 @@ test("legge la BackBox della singola listing e inoltra il mercato", async () => 
   const payload = await response.json();
 
   assert.equal(response.status, 200);
-  assert.match(capturedUrl, /\/ws\/backbox\/v1\/competitors\/listing-123\?market=IT$/);
-  assert.equal(payload.competitor.winner_price.amount, "399.00");
+  assert.match(capturedUrl, /\/ws\/backbox\/v1\/competitors\/listing-123$/);
+  assert.equal(payload.competitors.length, 2);
+  assert.equal(payload.competitors[0].market, "FR");
+  assert.equal(payload.competitors[1].winner_price.amount, "399.00");
+});
+
+test("tratta una BackBox assente come risultato vuoto", async () => {
+  globalThis.fetch = async () => new Response("", { status: 404 });
+
+  const response = await handleRequest(new Request("https://worker.test/api/backbox/listing-404?market=IT", {
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(payload, { competitors: [] });
 });
 
 test("non espone endpoint di scrittura", async () => {
