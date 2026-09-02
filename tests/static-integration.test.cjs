@@ -27,6 +27,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(script, /\/api\/catalog/);
   assert.match(script, /data-open-detail/);
   assert.match(script, /productDetailHtml/);
+  assert.match(script, /detail-economics-inline/);
   assert.match(script, /searchParams\.set\("listing"/);
   assert.match(script, /popstate/);
   assert.match(script, /Prezzi per Paese/);
@@ -48,7 +49,9 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.doesNotMatch(script, /Per vincere:/);
   assert.doesNotMatch(script, /commission-chip/);
   assert.doesNotMatch(script, /market-detail-row/);
+  assert.doesNotMatch(script, /<section class="detail-economics"/);
   assert.match(css, /width:min\(1840px,98vw\)/);
+  assert.match(css, /width:min\(100%,1600px\)/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });
 
