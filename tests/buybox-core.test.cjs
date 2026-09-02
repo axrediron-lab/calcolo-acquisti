@@ -91,6 +91,20 @@ test("calcola minimo e target per mercato rispettando il limite BackPricer", () 
   assert.ok(sweden.target <= sweden.minimum * 1.08 + 1e-9);
 });
 
+test("applica margini personalizzati al singolo prodotto", () => {
+  const plan = core.marketPricePlan(100, "IT", settings, { minimum: "8", target: "10" });
+  const minimumResult = core.calculateMargin(plan.minimum, 100, 0.12, settings);
+  const targetResult = core.calculateMargin(plan.target, 100, 0.12, settings);
+  assert.ok(minimumResult.margin >= 0.08);
+  assert.ok(targetResult.margin >= 0.10);
+});
+
+test("calcola l'acquisto consigliato dalla media delle due BackBox", () => {
+  const averageBackbox = (334 + 305) / 2;
+  const suggested = core.suggestedPurchaseForMargin(averageBackbox, 0.12, 0.075, settings);
+  assert.ok(Math.abs(suggested - 230.4735) < 1e-9);
+});
+
 test("riconosce la batteria 100% dal testo della listing", () => {
   const listing = core.normalizeListing({
     id: "listing-battery-100",

@@ -8,6 +8,7 @@
     listings:[],
     settings:settingsApi.load(),
     purchases:readJson(config.purchaseCacheKey) || {},
+    productMargins:readJson(config.productMarginCacheKey) || {},
     quantityDrafts:{},
     priceDrafts:{},
     buyboxes:{},
@@ -136,10 +137,21 @@
     });
   }
 
-  function marginClass(value){
-    var settings = core.numericSettings(state.settings);
-    if(value < settings.minimumMargin) return "bad";
-    if(value < settings.targetMargin) return "warn";
+  function productMarginValues(listingId){
+    var defaults = core.numericSettings(state.settings);
+    var saved = state.productMargins[listingId] || {};
+    return {
+      minimum:saved.minimum !== undefined ? saved.minimum : (defaults.minimumMargin*100).toFixed(2).replace(".",","),
+      target:saved.target !== undefined ? saved.target : (defaults.targetMargin*100).toFixed(2).replace(".",",")
+    };
+  }
+
+  function marginClass(value,listingId){
+    var margins = productMarginValues(listingId);
+    var minimum = core.toNumber(margins.minimum)/100;
+    var target = core.toNumber(margins.target)/100;
+    if(value < minimum) return "bad";
+    if(value < target) return "warn";
     return "ok";
   }
   function competitorsFromEntry(entry){
@@ -202,21 +214,31 @@
     var amount = buyboxAmount(competitor,field);
     return amount ? core.formatMoney(amount,buyboxCurrency(competitor,field,fallbackCurrency)) : "—";
   }
+  function priceEconomics(listing,market,amount,currency){
+    var fee = core.marketFee(state.settings,market);
+    var amountEuro = core.amountToEuro(amount,currency,state.settings);
+    var purchase = core.toNumber(state.purchases[listing.id]);
+    if(!amountEuro || !purchase || fee === null) return null;
+    return core.calculateMargin(amountEuro,purchase,fee,state.settings);
+  }
+
   function listingEconomics(listing,competitor){
     competitor = competitor || competitorForMarket(displayEntryForListing(listing).entry,config.market);
     var backbox = buyboxAmount(competitor,"winner_price");
     var market = String(competitor && competitor.market || config.market).toUpperCase();
-    var fee = core.marketFee(state.settings,market);
-    var backboxEuro = core.amountToEuro(backbox,buyboxCurrency(competitor,"winner_price",listing.currency),state.settings);
-    var purchase = core.toNumber(state.purchases[listing.id]);
-    if(!backboxEuro || !purchase || fee === null) return null;
-    return core.calculateMargin(backboxEuro,purchase,fee,state.settings);
+    return priceEconomics(listing,market,backbox,buyboxCurrency(competitor,"winner_price",listing.currency));
   }
 
-  function marginHtml(result){
+  function marginHtml(result,listingId){
     if(!result) return '<span class="loading-cell">—</span>';
-    return '<span class="margin-pill '+marginClass(result.margin)+'">'+
+    return '<span class="margin-pill '+marginClass(result.margin,listingId)+'">'+
       escapeHtml(core.formatMoney(result.profit))+'<small>'+escapeHtml(core.formatPercent(result.margin))+'</small></span>';
+  }
+
+  function compactMarginHtml(result,listingId){
+    if(!result) return '<span class="price-result empty">—</span>';
+    return '<span class="price-result '+marginClass(result.margin,listingId)+'">'+
+      escapeHtml(core.formatMoney(result.profit,"EUR"))+' · '+escapeHtml(core.formatPercent(result.margin))+'</span>';
   }
 
   function winLossHtml(listing){
@@ -233,15 +255,26 @@
     return '<span class="win-count" title="BuyBox vinte">'+wins+'</span><span class="loss-count" title="BuyBox perse">'+losses+'</span>';
   }
 
+  function averageBackboxEuro(listing,competitor){
+    if(!competitor) return null;
+    var values = ["winner_price","price_to_win"].map(function(field){
+      var amount = buyboxAmount(competitor,field);
+      if(!amount) return null;
+      return core.amountToEuro(amount,buyboxCurrency(competitor,field,listing.currency),state.settings);
+    }).filter(function(value){ return Number.isFinite(value) && value > 0; });
+    if(!values.length) return null;
+    return values.reduce(function(total,value){ return total+value; },0)/values.length;
+  }
+
   function suggestedHtml(listing,competitor){
     competitor = competitor || competitorForMarket(displayEntryForListing(listing).entry,config.market);
-    var winner = buyboxAmount(competitor,"winner_price");
-    if(!winner) return "—";
+    var referenceEuro = averageBackboxEuro(listing,competitor);
+    if(!referenceEuro) return "—";
     var market = String(competitor && competitor.market || config.market).toUpperCase();
     var fee = core.marketFee(state.settings,market);
-    var winnerEuro = core.amountToEuro(winner,buyboxCurrency(competitor,"winner_price",listing.currency),state.settings);
-    if(winnerEuro === null || fee === null) return "Da configurare";
-    var suggested = core.suggestedPurchase(winnerEuro,fee,state.settings);
+    if(fee === null) return "Da configurare";
+    var targetMargin = core.toNumber(productMarginValues(listing.id).target)/100;
+    var suggested = core.suggestedPurchaseForMargin(referenceEuro,fee,targetMargin,state.settings);
     return core.formatMoney(suggested,"EUR");
   }
 
@@ -255,12 +288,6 @@
     var market = String(code || "—").toUpperCase();
     var rule = core.marketRule(market);
     return ((rule && rule.name) || MARKET_NAMES[market] || market) + (market === "—" ? "" : " · " + market);
-  }
-
-  function flagForMarket(market){
-    var code = String(market || "").toUpperCase();
-    if(!/^[A-Z]{2}$/.test(code)) return "";
-    return String.fromCodePoint(code.charCodeAt(0)+127397,code.charCodeAt(1)+127397);
   }
 
   function inputNumber(value){
@@ -294,12 +321,13 @@
     var signature = String(baseline.minimum)+":"+String(baseline.target);
     var draft = state.priceDrafts[key];
     if(!draft){
-      draft = {minimum:inputNumber(baseline.minimum),target:inputNumber(baseline.target),baseline:signature,dirty:false,message:""};
+      draft = {minimum:inputNumber(baseline.minimum),target:inputNumber(baseline.target),baseline:signature,dirty:false,message:"",source:"baseline"};
       state.priceDrafts[key] = draft;
     }else if(!draft.dirty && draft.baseline !== signature){
       draft.minimum = inputNumber(baseline.minimum);
       draft.target = inputNumber(baseline.target);
       draft.baseline = signature;
+      draft.source = "baseline";
     }
     return draft;
   }
@@ -311,37 +339,40 @@
     return state.quantityDrafts[listing.id];
   }
 
-  function marketStatusHtml(competitor,view,currency){
+  function currentBackboxHtml(competitor,view,currency){
     if(!competitor) return '<span class="market-status neutral">Nessun dato BuyBox</span>';
     var label = view.isReference ? "Riferimento" : competitor.is_winning ? "Vinta" : "Persa";
     var winner = buyboxAmount(competitor,"winner_price");
-    var toWin = buyboxAmount(competitor,"price_to_win");
     var detail = winner ? '<strong>'+escapeHtml(buyboxMoney(competitor,"winner_price",currency))+'</strong>' : '<strong>Nessuna</strong>';
-    if(toWin && !competitor.is_winning) detail += '<small>Per vincere: '+escapeHtml(buyboxMoney(competitor,"price_to_win",currency))+'</small>';
-    else if(competitor.is_winning && !view.isReference) detail += '<small>Stai vincendo la BuyBox</small>';
     return '<div class="backbox-state"><span class="market-status">'+escapeHtml(label)+'</span>'+detail+'</div>';
+  }
+
+  function backboxToBeatHtml(competitor,currency){
+    var toWin = buyboxAmount(competitor,"price_to_win");
+    if(!toWin) return '<span class="loading-cell">—</span>';
+    return '<span class="backbox-target">'+escapeHtml(buyboxMoney(competitor,"price_to_win",currency))+'</span>';
   }
 
   function marketRowHtml(listing,market,competitor,view){
     var rule = core.marketRule(market);
     var currency = rule ? rule.currency : buyboxCurrency(competitor,"winner_price",listing.currency);
     var draft = priceDraft(listing,market,competitor,view);
-    var plan = core.marketPricePlan(state.purchases[listing.id],market,state.settings);
     var economics = listingEconomics(listing,competitor);
+    var minimumEconomics = priceEconomics(listing,market,draft.minimum,currency);
+    var targetEconomics = priceEconomics(listing,market,draft.target,currency);
     var statusClass = !competitor || view.isReference ? "market-reference" : competitor.is_winning ? "market-winning" : "market-losing";
     var loadingDetail = state.loadingListingMarkets[listing.id] && state.loadingListingMarkets[listing.id][market];
-    var commission = rule ? '<span class="commission-chip">BM '+rule.commission+'%</span>' : '<span class="commission-chip missing">Fee da configurare</span>';
-    var minimumHint = plan ? 'Calcolato: '+core.formatMoney(plan.minimum,plan.currency) : 'Inserisci il costo d’acquisto';
-    var targetHint = plan ? 'Calcolato: '+core.formatMoney(plan.target,plan.currency)+(plan.targetCapped?' · limite 8%':'') : 'Margine obiettivo dalle impostazioni';
     var sendDisabled = !draft.dirty || !draft.minimum || !draft.target;
     var actionMessage = draft.message ? '<small class="action-message">'+escapeHtml(draft.message)+'</small>' : '';
     return '<tr class="'+statusClass+'" data-market-row="'+escapeHtml(market)+'">'+
-      '<td><div class="market-name"><span class="market-flag">'+escapeHtml(flagForMarket(market))+'</span><span><strong>'+escapeHtml(marketLabel(market))+'</strong>'+commission+'</span></div></td>'+
-      '<td><label class="price-box"><span>Min. ('+escapeHtml(currency)+')</span><input data-price-field="minimum" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.minimum)+'"></label><small class="price-hint">'+escapeHtml(loadingDetail?'Lettura prezzo…':minimumHint)+'</small></td>'+
-      '<td><label class="price-box"><span>Target ('+escapeHtml(currency)+')</span><input data-price-field="target" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.target)+'"></label><small class="price-hint">'+escapeHtml(targetHint)+'</small><button class="row-send-button" data-send-price="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" type="button"'+(sendDisabled?' disabled':'')+'>Invia prezzo</button>'+actionMessage+'</td>'+
-      '<td>'+marketStatusHtml(competitor,view,currency)+'</td>'+
-      '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing,competitor))+'</span><small class="cell-note">al margine obiettivo</small></td>'+
-      '<td>'+marginHtml(economics)+'</td></tr>';
+      '<td><div class="market-name"><strong>'+escapeHtml(marketLabel(market))+'</strong></div></td>'+
+      '<td><label class="price-box"><span>Min. ('+escapeHtml(currency)+')</span><input data-price-field="minimum" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.minimum)+'"></label><span data-price-result="minimum">'+(loadingDetail?'<span class="price-result empty">Lettura…</span>':compactMarginHtml(minimumEconomics,listing.id))+'</span></td>'+
+      '<td><label class="price-box"><span>Target ('+escapeHtml(currency)+')</span><input data-price-field="target" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.target)+'"></label><span data-price-result="target">'+compactMarginHtml(targetEconomics,listing.id)+'</span></td>'+
+      '<td>'+currentBackboxHtml(competitor,view,currency)+'</td>'+
+      '<td>'+backboxToBeatHtml(competitor,currency)+'</td>'+
+      '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing,competitor))+'</span></td>'+
+      '<td>'+marginHtml(economics,listing.id)+'</td>'+
+      '<td class="send-cell"><button class="row-send-button" data-send-price="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" type="button"'+(sendDisabled?' disabled':'')+'>Invia</button>'+actionMessage+'</td></tr>';
   }
 
   function marketRowsHtml(listing){
@@ -365,8 +396,8 @@
         : '<em>Riferimento: '+escapeHtml(view.source.sku || view.source.title)+'</em>';
     }
     var errorText = entry && entry.error ? '<em class="panel-warning">'+escapeHtml(entry.error)+'</em>' : '';
-    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-panel-title"><div>Prezzi per Paese <span>'+markets.length+' mercati</span>'+referenceText+errorText+'</div><div class="market-actions"><button type="button" data-calculate-prices="'+escapeHtml(listing.id)+'">Calcola prezzi</button><button type="button" data-send-all-prices="'+escapeHtml(listing.id)+'">Invia modifiche</button></div></div><div class="market-table-wrap"><table class="market-table"><colgroup><col style="width:18%"><col style="width:18%"><col style="width:20%"><col style="width:18%"><col style="width:13%"><col style="width:13%"></colgroup><thead><tr>'+
-      '<th>Mercato</th><th>Prezzo minimo</th><th>Prezzo target</th><th>Prezzo BackBox</th><th>Acquisto massimo</th><th>Guadagno alla BackBox</th>'+
+    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-panel-title"><div>Prezzi per Paese <span>'+markets.length+' mercati</span>'+referenceText+errorText+'</div><div class="market-actions"><button type="button" data-send-all-prices="'+escapeHtml(listing.id)+'">Invia modifiche</button></div></div><div class="market-table-wrap"><table class="market-table"><colgroup><col style="width:13%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:8%"></colgroup><thead><tr>'+
+      '<th>Mercato</th><th title="Prezzo minimo">Min</th><th title="Prezzo target">Target</th><th title="BackBox attuale">BB att.</th><th title="BackBox da battere">BB da battere</th><th title="Acquisto consigliato">Acq. cons.</th><th title="Utile netto alla BackBox attuale">Utile BB</th><th>Invia</th>'+
       '</tr></thead><tbody>'+markets.map(function(market){ return marketRowHtml(listing,market,competitorForMarket(entry,market),view); }).join("")+'</tbody></table></div></div>';
   }
 
@@ -377,12 +408,14 @@
     var marketCount = competitorsFromEntry(entry).length;
     var marketButtonLabel = entry && entry.loading ? "Caricamento…" : marketCount ? marketCount+" BuyBox"+(view.isReference?" · riferimento":"") : "12 paesi";
     var quantity = quantityDraft(listing);
+    var margins = productMarginValues(listing.id);
+    var purchaseMissing = !core.toNumber(state.purchases[listing.id]);
     return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
       '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></td>'+
       '<td><div class="specification"><strong>'+escapeHtml(listing.color)+'</strong><span>'+escapeHtml(listing.capacity)+'</span></div><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span></div></td>'+
       '<td><div class="quantity-editor"><input data-quantity-id="'+escapeHtml(listing.id)+'" inputmode="numeric" value="'+escapeHtml(quantity.value)+'"><button type="button" data-send-quantity="'+escapeHtml(listing.id)+'"'+(quantity.dirty?'':' disabled')+'>Salva</button></div>'+(quantity.message?'<small class="action-message">'+escapeHtml(quantity.message)+'</small>':'')+'</td>'+
       '<td><div class="win-loss-summary">'+winLossHtml(listing)+'</div></td>'+
-      '<td><label class="purchase-box"><span>Costo (€)</span><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label></td>'+
+      '<td><div class="economics-editor"><label class="purchase-box"><span>Costo (€)</span><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label><label class="margin-box"><span>Min. %</span><input data-margin-field="minimum" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.minimum)+'"></label><label class="margin-box"><span>Target %</span><input data-margin-field="target" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.target)+'"></label><button class="recalculate-button" type="button" data-calculate-prices="'+escapeHtml(listing.id)+'">Ricalcola</button></div>'+(purchaseMissing?'<small class="economics-note">Inserisci il costo per calcolare i prezzi</small>':'')+'</td>'+
       '<td><button class="market-toggle" type="button" data-market-toggle="'+escapeHtml(listing.id)+'" aria-expanded="'+open+'">'+escapeHtml(marketButtonLabel)+' <span>⌄</span></button></td>'+
     '</tr>'+(open ? '<tr class="market-detail-row"><td colspan="6">'+marketRowsHtml(listing)+'</td></tr>' : '');
   }
@@ -396,8 +429,8 @@
         '<span class="family-main"><span class="family-icon">▣</span><span><span class="family-name">'+escapeHtml(name)+'</span><span class="family-meta"><span class="stock-chip">'+escapeHtml(totalQuantity)+' unità</span><span class="count-chip">'+items.length+' varianti</span>'+capacities.map(function(value){ return '<span class="meta-chip">'+escapeHtml(value)+'</span>'; }).join("")+'</span></span></span>'+
         '<span class="chevron">⌄</span>'+
       '</button>'+
-      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:30%"><col style="width:26%"><col style="width:12%"><col style="width:10%"><col style="width:13%"><col style="width:9%"></colgroup><thead><tr>'+
-        '<th>Prodotto</th><th>Specifiche</th><th>Quantità</th><th><span class="header-win">Vinte</span> / <span class="header-loss">Perse</span></th><th>Prezzo d’acquisto</th><th>Paesi</th>'+
+      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:25%"><col style="width:19%"><col style="width:10%"><col style="width:9%"><col style="width:29%"><col style="width:8%"></colgroup><thead><tr>'+
+        '<th>Prodotto</th><th>Specifiche</th><th>Quantità</th><th><span class="header-win">Vinte</span> / <span class="header-loss">Perse</span></th><th>Economia</th><th>Paesi</th>'+
       '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
   }
 
@@ -444,6 +477,17 @@
         renderCatalog();
       });
     });
+    document.querySelectorAll("[data-margin-id]").forEach(function(input){
+      input.addEventListener("input",function(){
+        var id = input.getAttribute("data-margin-id");
+        var field = input.getAttribute("data-margin-field");
+        var margins = productMarginValues(id);
+        margins[field] = input.value;
+        state.productMargins[id] = margins;
+        writeJson(config.productMarginCacheKey,state.productMargins);
+      });
+      input.addEventListener("change",function(){ renderCatalog(); });
+    });
     document.querySelectorAll("[data-quantity-id]").forEach(function(input){
       input.addEventListener("input",function(){
         var id = input.getAttribute("data-quantity-id");
@@ -466,7 +510,14 @@
         var draft = state.priceDrafts[priceDraftKey(id,market)];
         draft[field] = input.value;
         draft.dirty = true;
+        draft.source = "manual";
         draft.message = "";
+        var listing = listingById(id);
+        var rule = core.marketRule(market);
+        var resultNode = input.closest("td").querySelector('[data-price-result="'+field+'"]');
+        if(resultNode && listing && rule){
+          resultNode.innerHTML = compactMarginHtml(priceEconomics(listing,market,input.value,rule.currency),id);
+        }
         var button = document.querySelector('[data-send-price="'+CSS.escape(id)+'"][data-market="'+CSS.escape(market)+'"]');
         if(button) button.disabled = !draft.minimum || !draft.target;
       });
@@ -521,16 +572,29 @@
       window.alert("Inserisci prima il prezzo d’acquisto della variante.");
       return;
     }
+    var margins = productMarginValues(id);
+    var minimumMargin = core.toNumber(margins.minimum);
+    var targetMargin = core.toNumber(margins.target);
+    if(minimumMargin < 0 || targetMargin < minimumMargin){
+      window.alert("Controlla i margini del prodotto: il target deve essere uguale o superiore al minimo.");
+      return;
+    }
+    var manualDrafts = Object.keys(core.MARKET_RULES).filter(function(market){
+      var draft = state.priceDrafts[priceDraftKey(id,market)];
+      return draft && draft.dirty && draft.source === "manual";
+    });
+    if(manualDrafts.length && !window.confirm("Ricalcolare i prezzi sostituendo le correzioni manuali non ancora inviate per "+manualDrafts.length+" mercati?")) return;
     var view = displayEntryForListing(listing);
     Object.keys(core.MARKET_RULES).forEach(function(market){
       var competitor = competitorForMarket(view.entry,market);
       var draft = priceDraft(listing,market,competitor,view);
-      var plan = core.marketPricePlan(purchase,market,state.settings);
+      var plan = core.marketPricePlan(purchase,market,state.settings,margins);
       if(plan){
         draft.minimum = inputNumber(plan.minimum);
         draft.target = inputNumber(plan.target);
         draft.dirty = true;
-        draft.message = "Bozza calcolata";
+        draft.source = "calculated";
+        draft.message = "";
       }
     });
     renderCatalog();
@@ -560,6 +624,7 @@
       draft.target = inputNumber(target);
       draft.baseline = String(minimum)+":"+String(target);
       draft.dirty = false;
+      draft.source = "saved";
       draft.message = "Prezzi aggiornati";
       var view = displayEntryForListing(listing);
       if(!view.isReference){

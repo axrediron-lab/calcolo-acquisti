@@ -95,11 +95,15 @@
     };
   }
 
-  function suggestedPurchase(salePrice, marketplaceFee, settings){
+  function suggestedPurchaseForMargin(salePrice, marketplaceFee, desiredMargin, settings){
     var sale = toNumber(salePrice);
     var fee = typeof marketplaceFee === "number" ? marketplaceFee : percent(marketplaceFee);
-    var target = numericSettings(settings).targetMargin;
+    var target = typeof desiredMargin === "number" ? desiredMargin : percent(desiredMargin);
     return sale * (1 - fee - extraRate(settings) - target) - fixedCosts(settings);
+  }
+
+  function suggestedPurchase(salePrice, marketplaceFee, settings){
+    return suggestedPurchaseForMargin(salePrice,marketplaceFee,numericSettings(settings).targetMargin,settings);
   }
 
   function salePriceForMargin(purchasePrice, marketplaceFee, desiredMargin, settings){
@@ -145,14 +149,17 @@
     return Number.isFinite(number) ? Math.ceil((number - 1e-9) * 100) / 100 : null;
   }
 
-  function marketPricePlan(purchasePrice,market,settings){
+  function marketPricePlan(purchasePrice,market,settings,margins){
     var rule = marketRule(market);
     var purchase = toNumber(purchasePrice);
     if(!rule || !purchase) return null;
     var numeric = numericSettings(settings);
     var fee = numeric[rule.feeKey];
-    var minimumEuro = salePriceForMargin(purchase,fee,numeric.minimumMargin,settings);
-    var targetEuro = salePriceForMargin(purchase,fee,numeric.targetMargin,settings);
+    var minimumMargin = margins && margins.minimum !== undefined ? percent(margins.minimum) : numeric.minimumMargin;
+    var targetMargin = margins && margins.target !== undefined ? percent(margins.target) : numeric.targetMargin;
+    if(minimumMargin < 0 || targetMargin < minimumMargin) return null;
+    var minimumEuro = salePriceForMargin(purchase,fee,minimumMargin,settings);
+    var targetEuro = salePriceForMargin(purchase,fee,targetMargin,settings);
     if(minimumEuro === null || targetEuro === null) return null;
     var minimum = roundPriceUp(amountFromEuro(minimumEuro,rule.currency,settings));
     var requestedTarget = roundPriceUp(amountFromEuro(targetEuro,rule.currency,settings));
@@ -164,8 +171,8 @@
       minimum:minimum,
       target:target,
       targetCapped:requestedTarget > maximumTarget,
-      minimumMargin:numeric.minimumMargin,
-      targetMargin:numeric.targetMargin
+      minimumMargin:minimumMargin,
+      targetMargin:targetMargin
     };
   }
 
@@ -266,6 +273,7 @@
     numericSettings:numericSettings,
     calculateMargin:calculateMargin,
     suggestedPurchase:suggestedPurchase,
+    suggestedPurchaseForMargin:suggestedPurchaseForMargin,
     salePriceForMargin:salePriceForMargin,
     marketRule:marketRule,
     marketFee:marketFee,
