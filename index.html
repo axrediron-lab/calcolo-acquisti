@@ -58,7 +58,7 @@
     }
     .grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
       gap:14px;
       margin-top:24px;
     }
@@ -140,6 +140,11 @@ a:hover::after{
       <a href="calcolo-light.html">
         <span class="title">Calcolatore Mobile</span>
         <span class="desc">Per controllo di un singolo prodotto, import fee incluse. Convertitore USD EUR.</span>
+      </a>
+
+      <a href="buybox.html">
+        <span class="title">Monitor BuyBox</span>
+        <span class="desc">Catalogo Back Market automatico, ricerca per variante e controllo BackBox in sola lettura.</span>
       </a>
     </div>
 

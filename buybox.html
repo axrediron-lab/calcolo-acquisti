@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monitor BuyBox</title>
+  <link rel="stylesheet" href="buybox.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <div class="heading-block">
+        <a class="home-button" href="index.html" aria-label="Torna alla Home">← Home</a>
+        <div>
+          <h1>Monitor BuyBox</h1>
+          <p>Catalogo Back Market in sola lettura, raggruppato per famiglia e variante.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="secondary-button" href="calcolo-completo.html">Impostazioni economiche</a>
+        <button id="refreshCatalog" class="primary-button" type="button">Aggiorna catalogo</button>
+      </div>
+    </header>
+
+    <section class="settings-strip" aria-label="Impostazioni economiche attive">
+      <div>
+        <span class="eyebrow">Calcolo condiviso</span>
+        <strong>Le fee vengono lette dalle impostazioni del Calcolo completo.</strong>
+      </div>
+      <div id="settingsSummary" class="settings-summary"></div>
+    </section>
+
+    <section class="filter-panel">
+      <div class="search-field">
+        <label for="searchInput">Cerca famiglia o prodotto</label>
+        <input id="searchInput" type="search" placeholder="iPhone 14, Galaxy S23, 128 GB, Mezzanotte..." autocomplete="off">
+      </div>
+      <div class="filter-field">
+        <label for="brandFilter">Marca</label>
+        <select id="brandFilter"><option value="">Tutte</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="capacityFilter">Capacità</label>
+        <select id="capacityFilter"><option value="">Tutte</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="colorFilter">Colore</label>
+        <select id="colorFilter"><option value="">Tutti</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="qualityFilter">Qualità</label>
+        <select id="qualityFilter"><option value="">Tutte</option></select>
+      </div>
+      <button id="clearFilters" class="clear-button" type="button">Reimposta</button>
+    </section>
+
+    <section class="status-row" aria-live="polite">
+      <div>
+        <strong id="resultCount">0 inserzioni</strong>
+        <span id="catalogStatus">Connessione al catalogo…</span>
+      </div>
+      <span class="read-only-badge">Sola lettura</span>
+    </section>
+
+    <section id="catalog" class="catalog" aria-label="Catalogo prodotti"></section>
+
+    <section id="emptyState" class="empty-state" hidden>
+      <div class="empty-icon">⌕</div>
+      <h2>Nessun prodotto da mostrare</h2>
+      <p id="emptyMessage">Il catalogo verrà visualizzato dopo il collegamento dell’API Back Market.</p>
+    </section>
+  </main>
+
+  <dialog id="accessDialog" class="access-dialog">
+    <form id="accessForm">
+      <span class="eyebrow">Accesso protetto</span>
+      <h2>Apri il Monitor BuyBox</h2>
+      <p>Inserisci il codice di accesso della Worker. Rimane soltanto in questa sessione del browser.</p>
+      <label for="accessKey">Codice di accesso</label>
+      <input id="accessKey" type="password" autocomplete="off" required>
+      <p id="accessError" class="form-error" hidden>Codice non valido o servizio non configurato.</p>
+      <div class="dialog-actions">
+        <a href="index.html" class="secondary-button">Annulla</a>
+        <button class="primary-button" type="submit">Continua</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="shared-settings.js"></script>
+  <script src="buybox-core.js"></script>
+  <script src="buybox-config.js"></script>
+  <script src="buybox.js"></script>
+</body>
+</html>

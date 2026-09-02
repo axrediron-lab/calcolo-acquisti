@@ -58,7 +58,7 @@
       flex-wrap:wrap;
       justify-content:flex-end;
     }
-    button{
+    button,.home-link{
       border:1px solid var(--line);
       background:#fff;
       color:var(--text);
@@ -67,6 +67,7 @@
       cursor:pointer;
       font-weight:800;
       box-shadow:0 1px 2px rgba(16,24,40,.04);
+      text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
     }
     button.primary{
   background:linear-gradient(135deg, #035A8B, #1476B8);
@@ -294,6 +295,7 @@
         <p class="sub">Inserisci il prezzo BackBox e il prezzo reale d’acquisto. Il file calcola prezzo suggerito e margini per commissione 12% e 5%.</p>
       </div>
       <div class="actions">
+        <a class="home-link" href="index.html">← Home</a>
         <button id="toggleSettings" type="button">Impostazioni</button>
         <button id="exportCsv" type="button">Esporta CSV</button>
         <button id="resetData" type="button">Reset dati</button>
@@ -336,11 +338,15 @@
             <input id="shipping" type="text" inputmode="decimal" value="16,50">
           </div>
           <div class="field">
-            <label>Margine target prezzo suggerito %</label>
+            <label>Margine minimo netto %</label>
+            <input id="minimumMargin" type="text" inputmode="decimal" value="5">
+          </div>
+          <div class="field">
+            <label>Margine obiettivo netto %</label>
             <input id="targetMargin" type="text" inputmode="decimal" value="7,50">
           </div>
         </div>
-        <p class="note">Il prezzo suggerito usa la commissione standard 12%, fee investitore, fee Storfund, commissioni pagamenti, commissione importazione, spedizione e margine target.</p>
+        <p class="note">Queste impostazioni sono condivise con il Monitor BuyBox. Il margine è sempre netto di commissione Back Market, fee aggiuntive, importazione e spedizione.</p>
       </section>
 
       <section class="panel">
@@ -1014,6 +1020,7 @@
     </section>
   </div>
 
+<script src="shared-settings.js"></script>
 <script>
 (function(){
   var STORAGE_KEY = "calcolo_acquisti_completo_v1";
@@ -1173,6 +1180,7 @@
         paymentFee:byId("paymentFee").value,
         importFee:byId("importFee").value,
         shipping:byId("shipping").value,
+        minimumMargin:byId("minimumMargin").value,
         targetMargin:byId("targetMargin").value,
         usdRate:byId("usdRate").value,
         usdPrice:byId("usdPrice").value,
@@ -1181,19 +1189,43 @@
       rows:rows
     };
 
+    if(window.CalcoloSettings){
+      window.CalcoloSettings.save({
+        fee12:data.settings.fee12,
+        fee5:data.settings.fee5,
+        investorFee:data.settings.investorFee,
+        storfundFee:data.settings.storfundFee,
+        paymentFee:data.settings.paymentFee,
+        importFee:data.settings.importFee,
+        shipping:data.settings.shipping,
+        minimumMargin:data.settings.minimumMargin,
+        targetMargin:data.settings.targetMargin,
+        usdRate:data.settings.usdRate
+      });
+    }
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }catch(e){}
   }
 
   function loadData(){
+    var sharedSettings = window.CalcoloSettings ? window.CalcoloSettings.load() : null;
+    if(sharedSettings){
+      var sharedKeys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin","usdRate"];
+      for(var sharedIndex=0;sharedIndex<sharedKeys.length;sharedIndex++){
+        var sharedKey = sharedKeys[sharedIndex];
+        if(sharedSettings[sharedKey] !== undefined && byId(sharedKey)){
+          byId(sharedKey).value = sharedSettings[sharedKey];
+        }
+      }
+    }
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
       if(!raw) return;
       var data = JSON.parse(raw);
 
       if(data.settings){
-        var keys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","usdRate","usdPrice","eurPrice"];
+        var keys = sharedSettings ? ["usdPrice","eurPrice"] : ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","usdRate","usdPrice","eurPrice"];
         for(var i=0;i<keys.length;i++){
           var k = keys[i];
           if(data.settings[k] !== undefined && byId(k)){
@@ -1234,7 +1266,7 @@
       saveData();
     });
 
-    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin"];
+    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin"];
     for(var i=0;i<settingIds.length;i++){
       byId(settingIds[i]).addEventListener("input", calculateAll);
     }
@@ -1272,16 +1304,18 @@
 
       byId("fee12").value = "12";
       byId("fee5").value = "5";
-      byId("investorFee").value = "0";
-      byId("storfundFee").value = "2,30";
+      byId("investorFee").value = "1";
+      byId("storfundFee").value = "1,20";
       byId("paymentFee").value = "1";
-      byId("importFee").value = "7";
+      byId("importFee").value = "0";
       byId("shipping").value = "16,50";
+      byId("minimumMargin").value = "5";
       byId("targetMargin").value = "7,50";
       byId("usdRate").value = "0,92";
       byId("usdPrice").value = "";
       byId("eurPrice").value = "";
 
+      if(window.CalcoloSettings){ window.CalcoloSettings.reset(); }
       rows = MODELS.map(function(name){ return { name:name, backbox:"", purchase:"" }; });
       syncInputsFromState();
       calculateAll();

@@ -1,0 +1,115 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { handleRequest } from "../src/index.js";
+
+const env = {
+  BACKMARKET_TOKEN: "test-token",
+  BACKMARKET_USER_AGENT: "BM-Test-CalcoloAcquisti;test@example.com",
+  APP_ACCESS_KEY: "a-long-test-access-key",
+  BACKMARKET_API_BASE: "https://www.backmarket.fr",
+  BACKMARKET_ACCEPT_LANGUAGE: "it-it",
+  ALLOWED_ORIGINS: "https://axrediron-lab.github.io,http://localhost:8000",
+};
+
+const originalFetch = globalThis.fetch;
+
+test.afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
+
+test("rifiuta richieste catalogo senza codice applicativo", async () => {
+  let upstreamCalls = 0;
+  globalThis.fetch = async () => {
+    upstreamCalls += 1;
+    return new Response("{}");
+  };
+  const response = await handleRequest(new Request("https://worker.test/api/catalog", {
+    headers: { Origin: "https://axrediron-lab.github.io" },
+  }), env);
+  assert.equal(response.status, 401);
+  assert.equal(upstreamCalls, 0);
+  assert.equal((await response.json()).code, "ACCESS_REQUIRED");
+});
+
+test("scarica tutte le pagine delle listings usando soltanto GET", async () => {
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    const pageTwo = String(url).includes("page=2");
+    return new Response(JSON.stringify(pageTwo ? {
+      count: 2,
+      next: null,
+      results: [{ id: "listing-b", sku: "B" }],
+    } : {
+      count: 2,
+      next: "/ws/listings?page=2&page-size=50",
+      results: [{ id: "listing-a", sku: "A" }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  const response = await handleRequest(new Request("https://worker.test/api/catalog?refresh=1", {
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.results.length, 2);
+  assert.equal(payload.pages, 2);
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.equal(call.options.method, "GET");
+    assert.equal(call.options.headers.Authorization, "Basic test-token");
+    assert.equal(call.options.headers["Accept-Language"], "it-it");
+  }
+});
+
+test("legge la BackBox della singola listing e inoltra il mercato", async () => {
+  let capturedUrl = "";
+  globalThis.fetch = async (url) => {
+    capturedUrl = String(url);
+    return new Response(JSON.stringify({
+      competitor: {
+        winner_price: { amount: "399.00", currency: "EUR" },
+        price_to_win: { amount: "397.00", currency: "EUR" },
+      },
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  const response = await handleRequest(new Request("https://worker.test/api/backbox/listing-123?market=IT", {
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.match(capturedUrl, /\/ws\/backbox\/v1\/competitors\/listing-123\?market=IT$/);
+  assert.equal(payload.competitor.winner_price.amount, "399.00");
+});
+
+test("non espone endpoint di scrittura", async () => {
+  const response = await handleRequest(new Request("https://worker.test/api/catalog", {
+    method: "POST",
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+  assert.equal(response.status, 405);
+  assert.equal(response.headers.get("Allow"), "GET, HEAD, OPTIONS");
+});
+
+test("la health mostra solo se i segreti sono configurati", async () => {
+  const response = await handleRequest(new Request("https://worker.test/health"), env);
+  const payload = await response.json();
+  assert.deepEqual(payload.configured, {
+    backmarket_token: true,
+    backmarket_user_agent: true,
+    app_access_key: true,
+  });
+  assert.doesNotMatch(JSON.stringify(payload), /test-token|test-access-key|test@example/);
+});

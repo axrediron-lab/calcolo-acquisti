@@ -1,0 +1,37 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..");
+const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+
+test("la Home collega il Monitor BuyBox", () => {
+  const html = read("index.html");
+  assert.match(html, /href="buybox\.html"/);
+  assert.match(html, /Monitor BuyBox/);
+});
+
+test("il Calcolo completo include Home e impostazioni condivise", () => {
+  const html = read("calcolo-completo.html");
+  assert.match(html, /href="index\.html"[^>]*>← Home/);
+  assert.match(html, /id="minimumMargin"/);
+  assert.match(html, /<script src="shared-settings\.js"><\/script>/);
+});
+
+test("la pagina BuyBox carica soltanto dati API e non contiene cataloghi dimostrativi", () => {
+  const html = read("buybox.html");
+  const script = read("buybox.js");
+  assert.match(html, /read-only-badge/);
+  assert.match(script, /\/api\/catalog/);
+  assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
+});
+
+test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
+  const publicFiles = ["index.html", "calcolo-completo.html", "buybox.html", "buybox.js", "buybox-config.js"];
+  for (const file of publicFiles) {
+    const content = read(file);
+    assert.doesNotMatch(content, /BACKMARKET_TOKEN\s*[:=]\s*["'][^"']+/i, file);
+    assert.doesNotMatch(content, /Authorization\s*:\s*["']Basic\s+[^$]/i, file);
+  }
+});

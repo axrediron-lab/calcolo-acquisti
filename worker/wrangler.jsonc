@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "calcolo-acquisti-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "vars": {
+    "BACKMARKET_API_BASE": "https://www.backmarket.fr",
+    "BACKMARKET_ACCEPT_LANGUAGE": "it-it",
+    "ALLOWED_ORIGINS": "https://axrediron-lab.github.io,http://localhost:8000,http://127.0.0.1:8000"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.05
+    }
+  }
+}
