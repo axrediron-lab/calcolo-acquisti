@@ -281,3 +281,9 @@ export async function handleRequest(request, env, ctx = {}) {
     return addCors(response, request, env);
   }
 }
+
+export default {
+  fetch(request, env, ctx) {
+    return handleRequest(request, env, ctx);
+  },
+};

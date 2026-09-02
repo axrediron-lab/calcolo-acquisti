@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleRequest } from "../src/index.js";
+import worker, { handleRequest } from "../src/index.js";
 
 const env = {
   BACKMARKET_TOKEN: "test-token",
@@ -15,6 +15,12 @@ const originalFetch = globalThis.fetch;
 
 test.afterEach(() => {
   globalThis.fetch = originalFetch;
+});
+
+test("espone il gestore fetch richiesto dal runtime Cloudflare", async () => {
+  const response = await worker.fetch(new Request("https://worker.test/health"), env, {});
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).ok, true);
 });
 
 test("rifiuta richieste catalogo senza codice applicativo", async () => {
