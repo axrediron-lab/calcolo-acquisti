@@ -21,7 +21,7 @@
   };
 
   var MARKET_RULES = Object.freeze({
-    IT:{name:"Italia",feeKey:"fee12",commission:12,currency:"EUR",locale:"it-it"},
+    IT:{name:"Italia",feeKey:"fee12",shippingKey:"shippingItaly",commission:12,currency:"EUR",locale:"it-it"},
     AT:{name:"Austria",feeKey:"fee5",commission:5,currency:"EUR",locale:"de-at"},
     BE:{name:"Belgio",feeKey:"fee12",commission:12,currency:"EUR",locale:"fr-be"},
     ES:{name:"Spagna",feeKey:"fee12",commission:12,currency:"EUR",locale:"es-es"},
@@ -37,6 +37,7 @@
 
   function toNumber(value){
     if(value === null || value === undefined || value === "") return 0;
+    if(typeof value === "number") return Number.isFinite(value) ? value : 0;
     var normalized = String(value).replace(/\s/g, "").replace(/[€$£]/g, "");
     if(normalized.indexOf(",") >= 0 && normalized.indexOf(".") >= 0){
       if(normalized.lastIndexOf(",") > normalized.lastIndexOf(".")) normalized = normalized.replace(/\./g, "").replace(",", ".");
@@ -62,6 +63,7 @@
       paymentFee:percent(settings.paymentFee),
       importFee:toNumber(settings.importFee),
       shipping:toNumber(settings.shipping),
+      shippingItaly:settings.shippingItaly === undefined ? toNumber(settings.shipping) : toNumber(settings.shippingItaly),
       minimumMargin:percent(settings.minimumMargin),
       targetMargin:percent(settings.targetMargin),
       sekRate:toNumber(settings.sekRate) || 0.09
@@ -73,17 +75,19 @@
     return value.investorFee + value.storfundFee + value.paymentFee;
   }
 
-  function fixedCosts(settings){
+  function fixedCosts(settings,market){
     var value = numericSettings(settings);
-    return value.importFee + value.shipping;
+    var rule = marketRule(market);
+    var shipping = rule && rule.shippingKey ? value[rule.shippingKey] : value.shipping;
+    return value.importFee + shipping;
   }
 
-  function calculateMargin(salePrice, purchasePrice, marketplaceFee, settings){
+  function calculateMargin(salePrice, purchasePrice, marketplaceFee, settings, market){
     var sale = toNumber(salePrice);
     var purchase = toNumber(purchasePrice);
     var fee = typeof marketplaceFee === "number" ? marketplaceFee : percent(marketplaceFee);
     var variableCosts = sale * (fee + extraRate(settings));
-    var fixed = fixedCosts(settings);
+    var fixed = fixedCosts(settings,market);
     var profit = sale - variableCosts - fixed - purchase;
     return {
       salePrice:sale,
@@ -95,24 +99,24 @@
     };
   }
 
-  function suggestedPurchaseForMargin(salePrice, marketplaceFee, desiredMargin, settings){
+  function suggestedPurchaseForMargin(salePrice, marketplaceFee, desiredMargin, settings, market){
     var sale = toNumber(salePrice);
     var fee = typeof marketplaceFee === "number" ? marketplaceFee : percent(marketplaceFee);
     var target = typeof desiredMargin === "number" ? desiredMargin : percent(desiredMargin);
-    return sale * (1 - fee - extraRate(settings) - target) - fixedCosts(settings);
+    return sale * (1 - fee - extraRate(settings) - target) - fixedCosts(settings,market);
   }
 
-  function suggestedPurchase(salePrice, marketplaceFee, settings){
-    return suggestedPurchaseForMargin(salePrice,marketplaceFee,numericSettings(settings).targetMargin,settings);
+  function suggestedPurchase(salePrice, marketplaceFee, settings, market){
+    return suggestedPurchaseForMargin(salePrice,marketplaceFee,numericSettings(settings).targetMargin,settings,market);
   }
 
-  function salePriceForMargin(purchasePrice, marketplaceFee, desiredMargin, settings){
+  function salePriceForMargin(purchasePrice, marketplaceFee, desiredMargin, settings, market){
     var purchase = toNumber(purchasePrice);
     var fee = typeof marketplaceFee === "number" ? marketplaceFee : percent(marketplaceFee);
     var margin = typeof desiredMargin === "number" ? desiredMargin : percent(desiredMargin);
     var denominator = 1 - fee - extraRate(settings) - margin;
     if(denominator <= 0) return null;
-    return (purchase + fixedCosts(settings)) / denominator;
+    return (purchase + fixedCosts(settings,market)) / denominator;
   }
 
   function marketRule(market){
@@ -146,7 +150,12 @@
 
   function roundPriceUp(value){
     var number = Number(value);
-    return Number.isFinite(number) ? Math.ceil((number - 1e-9) * 100) / 100 : null;
+    return Number.isFinite(number) ? Math.ceil((number - 1e-9) * 2) / 2 : null;
+  }
+
+  function roundPriceDown(value){
+    var number = Number(value);
+    return Number.isFinite(number) ? Math.floor((number + 1e-9) * 2) / 2 : null;
   }
 
   function marketPricePlan(purchasePrice,market,settings,margins){
@@ -158,12 +167,12 @@
     var minimumMargin = margins && margins.minimum !== undefined ? percent(margins.minimum) : numeric.minimumMargin;
     var targetMargin = margins && margins.target !== undefined ? percent(margins.target) : numeric.targetMargin;
     if(minimumMargin < 0 || targetMargin < minimumMargin) return null;
-    var minimumEuro = salePriceForMargin(purchase,fee,minimumMargin,settings);
-    var targetEuro = salePriceForMargin(purchase,fee,targetMargin,settings);
+    var minimumEuro = salePriceForMargin(purchase,fee,minimumMargin,settings,market);
+    var targetEuro = salePriceForMargin(purchase,fee,targetMargin,settings,market);
     if(minimumEuro === null || targetEuro === null) return null;
     var minimum = roundPriceUp(amountFromEuro(minimumEuro,rule.currency,settings));
     var requestedTarget = roundPriceUp(amountFromEuro(targetEuro,rule.currency,settings));
-    var maximumTarget = Math.floor((minimum * 1.08 + 1e-9) * 100) / 100;
+    var maximumTarget = roundPriceDown(minimum * 1.08);
     var target = Math.max(minimum,Math.min(requestedTarget,maximumTarget));
     return {
       market:String(market).toUpperCase(),

@@ -16,6 +16,7 @@
     paymentFee:"1",
     importFee:"0",
     shipping:"16,50",
+    shippingItaly:"7,50",
     minimumMargin:"5",
     targetMargin:"7,50",
     usdRate:"0,92",

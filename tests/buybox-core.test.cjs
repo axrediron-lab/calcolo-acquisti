@@ -10,6 +10,7 @@ const settings = {
   paymentFee: "1",
   importFee: "0",
   shipping: "16,50",
+  shippingItaly: "7,50",
   minimumMargin: "5",
   targetMargin: "7,50",
   sekRate: "0,090",
@@ -69,6 +70,8 @@ test("gestisce numeri italiani e internazionali", () => {
   assert.equal(core.toNumber("€ 1.249,90"), 1249.9);
   assert.equal(core.toNumber("399.99"), 399.99);
   assert.equal(core.toNumber("0.090"), 0.09);
+  assert.equal(core.toNumber(320.625), 320.625);
+  assert.equal(core.amountFromEuro(320.625, "EUR", settings), 320.625);
   assert.equal(core.toNumber(""), 0);
 });
 
@@ -82,21 +85,39 @@ test("applica la commissione corretta per Paese e converte la Svezia", () => {
 
 test("calcola minimo e target per mercato rispettando il limite BackPricer", () => {
   const italy = core.marketPricePlan(100, "IT", settings);
+  const belgium = core.marketPricePlan(100, "BE", settings);
   const sweden = core.marketPricePlan(100, "SE", settings);
   assert.equal(italy.currency, "EUR");
-  assert.equal(italy.minimum, 145.99);
-  assert.equal(italy.target, 150.72);
+  assert.equal(italy.minimum, 135);
+  assert.equal(italy.target, 139.5);
+  assert.ok(belgium.minimum > italy.minimum);
   assert.equal(sweden.currency, "SEK");
   assert.ok(sweden.target >= sweden.minimum);
   assert.ok(sweden.target <= sweden.minimum * 1.08 + 1e-9);
+  assert.equal(italy.minimum * 2, Math.round(italy.minimum * 2));
+  assert.equal(italy.target * 2, Math.round(italy.target * 2));
+});
+
+test("arrotonda minimo e target per eccesso a scatti di 0,50", () => {
+  const plan = core.marketPricePlan(241, "AT", settings, { minimum: "6", target: "7,50" });
+  assert.equal(plan.minimum * 2, Math.round(plan.minimum * 2));
+  assert.equal(plan.target * 2, Math.round(plan.target * 2));
+  assert.ok(plan.target <= plan.minimum * 1.08 + 1e-9);
 });
 
 test("applica margini personalizzati al singolo prodotto", () => {
   const plan = core.marketPricePlan(100, "IT", settings, { minimum: "8", target: "10" });
-  const minimumResult = core.calculateMargin(plan.minimum, 100, 0.12, settings);
-  const targetResult = core.calculateMargin(plan.target, 100, 0.12, settings);
+  const minimumResult = core.calculateMargin(plan.minimum, 100, 0.12, settings, "IT");
+  const targetResult = core.calculateMargin(plan.target, 100, 0.12, settings, "IT");
   assert.ok(minimumResult.margin >= 0.08);
   assert.ok(targetResult.margin >= 0.10);
+});
+
+test("usa la spedizione Italia da 7,50 euro solo per il mercato IT", () => {
+  const italy = core.calculateMargin(200, 100, 0.12, settings, "IT");
+  const austria = core.calculateMargin(200, 100, 0.05, settings, "AT");
+  assert.equal(italy.fixedCosts, 7.5);
+  assert.equal(austria.fixedCosts, 16.5);
 });
 
 test("calcola l'acquisto consigliato dalla media delle due BackBox", () => {

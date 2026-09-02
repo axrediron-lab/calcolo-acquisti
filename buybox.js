@@ -76,7 +76,8 @@
       "BM 12%: " + (settings.fee12*100).toFixed(2).replace(".",",") + "%",
       "BM 5%: " + (settings.fee5*100).toFixed(2).replace(".",",") + "%",
       "Fee extra: " + ((settings.investorFee+settings.storfundFee+settings.paymentFee)*100).toFixed(2).replace(".",",") + "%",
-      "Costi fissi: " + core.formatMoney(settings.shipping+settings.importFee),
+      "Fissi altri Paesi: " + core.formatMoney(settings.shipping+settings.importFee),
+      "Fissi Italia: " + core.formatMoney(settings.shippingItaly+settings.importFee),
       "Margine minimo: " + (settings.minimumMargin*100).toFixed(2).replace(".",",") + "%",
       "Margine obiettivo: " + (settings.targetMargin*100).toFixed(2).replace(".",",") + "%",
       "1 SEK: " + settings.sekRate.toFixed(3).replace(".",",") + " €"
@@ -220,7 +221,7 @@
     var amountEuro = core.amountToEuro(amount,currency,state.settings);
     var purchase = core.toNumber(state.purchases[listing.id]);
     if(!amountEuro || !purchase || fee === null) return null;
-    return core.calculateMargin(amountEuro,purchase,fee,state.settings);
+    return core.calculateMargin(amountEuro,purchase,fee,state.settings,market);
   }
 
   function listingEconomics(listing,competitor){
@@ -275,7 +276,7 @@
     var fee = core.marketFee(state.settings,market);
     if(fee === null) return "Da configurare";
     var targetMargin = core.toNumber(productMarginValues(listing.id).target)/100;
-    var suggested = core.suggestedPurchaseForMargin(referenceEuro,fee,targetMargin,state.settings);
+    var suggested = core.suggestedPurchaseForMargin(referenceEuro,fee,targetMargin,state.settings,market);
     return core.formatMoney(suggested,"EUR");
   }
 

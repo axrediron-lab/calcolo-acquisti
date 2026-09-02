@@ -108,7 +108,7 @@ button:disabled{cursor:not-allowed;opacity:.55}
   padding:0 12px;
   outline:none;
 }
-.search-field input:focus,.filter-field select:focus,.access-dialog input:focus,.purchase-input:focus{
+.search-field input:focus,.filter-field select:focus,.access-dialog input:focus{
   border-color:var(--brand);
   box-shadow:0 0 0 3px rgba(3,90,139,.12);
 }

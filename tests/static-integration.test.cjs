@@ -16,6 +16,7 @@ test("il Calcolo completo include Home e impostazioni condivise", () => {
   const html = read("calcolo-completo.html");
   assert.match(html, /href="index\.html"[^>]*>← Home/);
   assert.match(html, /id="minimumMargin"/);
+  assert.match(html, /id="shippingItaly"/);
   assert.match(html, /<script src="shared-settings\.js"><\/script>/);
 });
 
@@ -45,6 +46,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(script, /sendAllMarketPrices/);
   assert.match(script, /quantityB-quantityA/);
   assert.match(script, /buyboxCurrency/);
+  assert.match(script, /shippingItaly/);
   assert.doesNotMatch(script, /Bozza calcolata/);
   assert.doesNotMatch(script, /Per vincere:/);
   assert.doesNotMatch(script, /commission-chip/);

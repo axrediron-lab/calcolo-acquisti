@@ -334,8 +334,12 @@
             <input id="importFee" type="text" inputmode="decimal" value="0">
           </div>
           <div class="field">
-            <label>Spedizione €</label>
+            <label>Spedizione altri Paesi €</label>
             <input id="shipping" type="text" inputmode="decimal" value="16,50">
+          </div>
+          <div class="field">
+            <label>Spedizione Italia €</label>
+            <input id="shippingItaly" type="text" inputmode="decimal" value="7,50">
           </div>
           <div class="field">
             <label>Margine minimo netto %</label>
@@ -350,7 +354,7 @@
             <input id="sekRate" type="text" inputmode="decimal" value="0,090">
           </div>
         </div>
-        <p class="note">Queste impostazioni sono condivise con il Monitor BuyBox. Il margine è sempre netto di commissione Back Market, fee aggiuntive, importazione e spedizione.</p>
+        <p class="note">Queste impostazioni sono condivise con il Monitor BuyBox. Il margine è sempre netto di commissione Back Market, fee aggiuntive, importazione e spedizione; per l’Italia viene usato il costo dedicato.</p>
       </section>
 
       <section class="panel">
@@ -1184,6 +1188,7 @@
         paymentFee:byId("paymentFee").value,
         importFee:byId("importFee").value,
         shipping:byId("shipping").value,
+        shippingItaly:byId("shippingItaly").value,
         minimumMargin:byId("minimumMargin").value,
         targetMargin:byId("targetMargin").value,
         usdRate:byId("usdRate").value,
@@ -1203,6 +1208,7 @@
         paymentFee:data.settings.paymentFee,
         importFee:data.settings.importFee,
         shipping:data.settings.shipping,
+        shippingItaly:data.settings.shippingItaly,
         minimumMargin:data.settings.minimumMargin,
         targetMargin:data.settings.targetMargin,
         usdRate:data.settings.usdRate,
@@ -1217,7 +1223,7 @@
   function loadData(){
     var sharedSettings = window.CalcoloSettings ? window.CalcoloSettings.load() : null;
     if(sharedSettings){
-      var sharedKeys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin","usdRate","sekRate"];
+      var sharedKeys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","shippingItaly","minimumMargin","targetMargin","usdRate","sekRate"];
       for(var sharedIndex=0;sharedIndex<sharedKeys.length;sharedIndex++){
         var sharedKey = sharedKeys[sharedIndex];
         if(sharedSettings[sharedKey] !== undefined && byId(sharedKey)){
@@ -1231,7 +1237,7 @@
       var data = JSON.parse(raw);
 
       if(data.settings){
-        var keys = sharedSettings ? ["usdPrice","eurPrice"] : ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","usdRate","sekRate","usdPrice","eurPrice"];
+        var keys = sharedSettings ? ["usdPrice","eurPrice"] : ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","shippingItaly","targetMargin","usdRate","sekRate","usdPrice","eurPrice"];
         for(var i=0;i<keys.length;i++){
           var k = keys[i];
           if(data.settings[k] !== undefined && byId(k)){
@@ -1272,7 +1278,7 @@
       saveData();
     });
 
-    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin","sekRate"];
+    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","shippingItaly","minimumMargin","targetMargin","sekRate"];
     for(var i=0;i<settingIds.length;i++){
       byId(settingIds[i]).addEventListener("input", calculateAll);
     }
@@ -1315,6 +1321,7 @@
       byId("paymentFee").value = "1";
       byId("importFee").value = "0";
       byId("shipping").value = "16,50";
+      byId("shippingItaly").value = "7,50";
       byId("minimumMargin").value = "5";
       byId("targetMargin").value = "7,50";
       byId("usdRate").value = "0,92";
