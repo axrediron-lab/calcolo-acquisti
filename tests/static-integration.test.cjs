@@ -22,9 +22,13 @@ test("il Calcolo completo include Home e impostazioni condivise", () => {
 test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   const html = read("buybox.html");
   const script = read("buybox.js");
+  const css = read("buybox.css");
   assert.match(html, /write-enabled-badge/);
   assert.match(script, /\/api\/catalog/);
-  assert.match(script, /data-market-toggle/);
+  assert.match(script, /data-open-detail/);
+  assert.match(script, /productDetailHtml/);
+  assert.match(script, /searchParams\.set\("listing"/);
+  assert.match(script, /popstate/);
   assert.match(script, /Prezzi per Paese/);
   assert.match(script, /listing\.quantity/);
   assert.match(script, /Vinte/);
@@ -43,6 +47,8 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.doesNotMatch(script, /Bozza calcolata/);
   assert.doesNotMatch(script, /Per vincere:/);
   assert.doesNotMatch(script, /commission-chip/);
+  assert.doesNotMatch(script, /market-detail-row/);
+  assert.match(css, /width:min\(1840px,98vw\)/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });
 

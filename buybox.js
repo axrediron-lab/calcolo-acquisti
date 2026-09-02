@@ -17,8 +17,9 @@
     loadingListingMarkets:{},
     actionStatus:{},
     openFamilies:{},
-    openListings:{},
     loadingFamilies:{},
+    detailListingId:new URLSearchParams(window.location.search).get("listing") || "",
+    catalogScrollY:0,
     updatedAt:null,
     source:"live"
   };
@@ -401,23 +402,38 @@
       '</tr></thead><tbody>'+markets.map(function(market){ return marketRowHtml(listing,market,competitorForMarket(entry,market),view); }).join("")+'</tbody></table></div></div>';
   }
 
+  function economicsEditorHtml(listing){
+    var margins = productMarginValues(listing.id);
+    var purchaseMissing = !core.toNumber(state.purchases[listing.id]);
+    return '<div class="economics-editor"><label class="purchase-box"><span>Costo (€)</span><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label><label class="margin-box"><span>Min. %</span><input data-margin-field="minimum" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.minimum)+'"></label><label class="margin-box"><span>Target %</span><input data-margin-field="target" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.target)+'"></label><button class="recalculate-button" type="button" data-calculate-prices="'+escapeHtml(listing.id)+'">Ricalcola</button></div>'+(purchaseMissing?'<small class="economics-note">Inserisci il costo per calcolare i prezzi</small>':'');
+  }
+
+  function quantityEditorHtml(listing){
+    var quantity = quantityDraft(listing);
+    return '<div class="quantity-editor"><input data-quantity-id="'+escapeHtml(listing.id)+'" inputmode="numeric" value="'+escapeHtml(quantity.value)+'"><button type="button" data-send-quantity="'+escapeHtml(listing.id)+'"'+(quantity.dirty?'':' disabled')+'>Salva</button></div>'+(quantity.message?'<small class="action-message">'+escapeHtml(quantity.message)+'</small>':'');
+  }
+
   function variantRow(listing){
-    var open = Boolean(state.openListings[listing.id]);
     var view = displayEntryForListing(listing);
     var entry = view.entry;
     var marketCount = competitorsFromEntry(entry).length;
     var marketButtonLabel = entry && entry.loading ? "Caricamento…" : marketCount ? marketCount+" BuyBox"+(view.isReference?" · riferimento":"") : "12 paesi";
-    var quantity = quantityDraft(listing);
-    var margins = productMarginValues(listing.id);
-    var purchaseMissing = !core.toNumber(state.purchases[listing.id]);
     return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
       '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></td>'+
       '<td><div class="specification"><strong>'+escapeHtml(listing.color)+'</strong><span>'+escapeHtml(listing.capacity)+'</span></div><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span></div></td>'+
-      '<td><div class="quantity-editor"><input data-quantity-id="'+escapeHtml(listing.id)+'" inputmode="numeric" value="'+escapeHtml(quantity.value)+'"><button type="button" data-send-quantity="'+escapeHtml(listing.id)+'"'+(quantity.dirty?'':' disabled')+'>Salva</button></div>'+(quantity.message?'<small class="action-message">'+escapeHtml(quantity.message)+'</small>':'')+'</td>'+
+      '<td>'+quantityEditorHtml(listing)+'</td>'+
       '<td><div class="win-loss-summary">'+winLossHtml(listing)+'</div></td>'+
-      '<td><div class="economics-editor"><label class="purchase-box"><span>Costo (€)</span><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label><label class="margin-box"><span>Min. %</span><input data-margin-field="minimum" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.minimum)+'"></label><label class="margin-box"><span>Target %</span><input data-margin-field="target" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.target)+'"></label><button class="recalculate-button" type="button" data-calculate-prices="'+escapeHtml(listing.id)+'">Ricalcola</button></div>'+(purchaseMissing?'<small class="economics-note">Inserisci il costo per calcolare i prezzi</small>':'')+'</td>'+
-      '<td><button class="market-toggle" type="button" data-market-toggle="'+escapeHtml(listing.id)+'" aria-expanded="'+open+'">'+escapeHtml(marketButtonLabel)+' <span>⌄</span></button></td>'+
-    '</tr>'+(open ? '<tr class="market-detail-row"><td colspan="6">'+marketRowsHtml(listing)+'</td></tr>' : '');
+      '<td>'+economicsEditorHtml(listing)+'</td>'+
+      '<td><button class="market-toggle" type="button" data-open-detail="'+escapeHtml(listing.id)+'">'+escapeHtml(marketButtonLabel)+' <span>→</span></button></td>'+
+    '</tr>';
+  }
+
+  function productDetailHtml(listing){
+    return '<article class="product-detail-page">'+
+      '<div class="detail-toolbar"><button class="detail-back" type="button" data-detail-back>← Catalogo</button><span>Dettaglio prodotto</span></div>'+
+      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="meta-chip">'+escapeHtml(listing.color)+'</span><span class="meta-chip">'+escapeHtml(listing.capacity)+'</span></div></div><div class="detail-stock"><span class="detail-label">Quantità</span>'+quantityEditorHtml(listing)+'</div><div class="detail-score"><span class="detail-label">Vinte / Perse</span><div class="win-loss-summary">'+winLossHtml(listing)+'</div></div></header>'+
+      '<section class="detail-economics"><div><span class="detail-label">Economia prodotto</span><strong>Costo reale e margini per il ricalcolo</strong></div>'+economicsEditorHtml(listing)+'</section>'+
+      marketRowsHtml(listing)+'</article>';
   }
 
   function familyCard(name,items){
@@ -437,6 +453,19 @@
   function renderCatalog(){
     var filtered = filteredListings();
     var groups = groupListings(filtered);
+    var detailListing = state.detailListingId ? listingById(state.detailListingId) : null;
+    document.body.classList.toggle("detail-mode",Boolean(state.detailListingId));
+    byId("catalog").classList.toggle("detail-catalog",Boolean(state.detailListingId));
+    if(state.detailListingId){
+      byId("catalog").innerHTML = detailListing
+        ? productDetailHtml(detailListing)
+        : state.listings.length
+          ? '<div class="detail-loading"><strong>Prodotto non disponibile</strong><span>Potrebbe non essere più presente nel catalogo.</span><button class="detail-back" type="button" data-detail-back>← Catalogo</button></div>'
+          : '<div class="detail-loading">Caricamento del prodotto…</div>';
+      byId("emptyState").hidden = true;
+      bindRenderedCatalog();
+      return;
+    }
     byId("resultCount").textContent = filtered.length + (filtered.length === 1 ? " inserzione" : " inserzioni");
     byId("catalog").innerHTML = groups.map(function(group){ return familyCard(group[0],group[1]); }).join("");
     byId("emptyState").hidden = groups.length > 0;
@@ -456,16 +485,13 @@
         }
       });
     });
-    document.querySelectorAll("[data-market-toggle]").forEach(function(button){
+    document.querySelectorAll("[data-open-detail]").forEach(function(button){
       button.addEventListener("click",function(){
-        var id = button.getAttribute("data-market-toggle");
-        state.openListings[id] = !state.openListings[id];
-        renderCatalog();
-        if(state.openListings[id]){
-          var listing = state.listings.find(function(item){ return item.id === id; });
-          if(listing) loadListingMarketDetails(listing);
-        }
+        openListingDetail(button.getAttribute("data-open-detail"));
       });
+    });
+    document.querySelectorAll("[data-detail-back]").forEach(function(button){
+      button.addEventListener("click",closeListingDetail);
     });
     document.querySelectorAll("[data-purchase-id]").forEach(function(input){
       input.addEventListener("input",function(){
@@ -534,6 +560,39 @@
   }
 
   function listingById(id){ return state.listings.find(function(item){ return item.id === id; }); }
+
+  function ensureDetailData(){
+    var listing = listingById(state.detailListingId);
+    if(!listing) return;
+    loadFamilyBuyboxes(listing.family,[listing]);
+    loadListingMarketDetails(listing);
+  }
+
+  function openListingDetail(id){
+    var listing = listingById(id);
+    if(!listing) return;
+    state.catalogScrollY = window.scrollY;
+    state.detailListingId = id;
+    var url = new URL(window.location.href);
+    url.searchParams.set("listing",id);
+    history.pushState({buyboxDetail:true,listing:id},"",url.pathname+url.search+url.hash);
+    renderCatalog();
+    window.scrollTo({top:0,behavior:"auto"});
+    ensureDetailData();
+  }
+
+  function closeListingDetail(){
+    if(history.state && history.state.buyboxDetail){
+      history.back();
+      return;
+    }
+    var url = new URL(window.location.href);
+    url.searchParams.delete("listing");
+    history.replaceState(null,"",url.pathname+url.search+url.hash);
+    state.detailListingId = "";
+    renderCatalog();
+    window.scrollTo({top:state.catalogScrollY,behavior:"auto"});
+  }
 
   function validPriceDraft(draft){
     var minimum = core.toNumber(draft.minimum);
@@ -735,6 +794,7 @@
     state.source = source;
     renderFilters();
     renderCatalog();
+    if(state.detailListingId) ensureDetailData();
     var timestamp = new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(state.updatedAt));
     setStatus((source === "cache" ? "Ultima copia salvata · " : "Aggiornato · ") + timestamp);
   }
@@ -801,6 +861,16 @@
       state.settings = event.detail || settingsApi.load();
       renderSettings();
       renderCatalog();
+    });
+    window.addEventListener("popstate",function(){
+      state.detailListingId = new URLSearchParams(window.location.search).get("listing") || "";
+      renderCatalog();
+      if(state.detailListingId){
+        window.scrollTo({top:0,behavior:"auto"});
+        ensureDetailData();
+      }else{
+        setTimeout(function(){ window.scrollTo({top:state.catalogScrollY,behavior:"auto"}); },0);
+      }
     });
   }
 
