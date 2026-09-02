@@ -20,13 +20,32 @@
     "4":"Stallone"
   };
 
+  var MARKET_RULES = Object.freeze({
+    IT:{name:"Italia",feeKey:"fee12",commission:12,currency:"EUR",locale:"it-it"},
+    AT:{name:"Austria",feeKey:"fee5",commission:5,currency:"EUR",locale:"de-at"},
+    BE:{name:"Belgio",feeKey:"fee12",commission:12,currency:"EUR",locale:"fr-be"},
+    ES:{name:"Spagna",feeKey:"fee12",commission:12,currency:"EUR",locale:"es-es"},
+    FR:{name:"Francia",feeKey:"fee12",commission:12,currency:"EUR",locale:"fr-fr"},
+    FI:{name:"Finlandia",feeKey:"fee5",commission:5,currency:"EUR",locale:"fi-fi"},
+    GR:{name:"Grecia",feeKey:"fee12",commission:12,currency:"EUR",locale:"el-gr"},
+    IE:{name:"Irlanda",feeKey:"fee5",commission:5,currency:"EUR",locale:"en-ie"},
+    NL:{name:"Paesi Bassi",feeKey:"fee5",commission:5,currency:"EUR",locale:"nl-nl"},
+    PT:{name:"Portogallo",feeKey:"fee5",commission:5,currency:"EUR",locale:"pt-pt"},
+    SE:{name:"Svezia",feeKey:"fee5",commission:5,currency:"SEK",locale:"sv-se"},
+    SK:{name:"Slovacchia",feeKey:"fee12",commission:12,currency:"EUR",locale:"sk-sk"}
+  });
+
   function toNumber(value){
     if(value === null || value === undefined || value === "") return 0;
-    var normalized = String(value)
-      .replace(/\s/g, "")
-      .replace(/[€$£]/g, "")
-      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
-      .replace(",", ".");
+    var normalized = String(value).replace(/\s/g, "").replace(/[€$£]/g, "");
+    if(normalized.indexOf(",") >= 0 && normalized.indexOf(".") >= 0){
+      if(normalized.lastIndexOf(",") > normalized.lastIndexOf(".")) normalized = normalized.replace(/\./g, "").replace(",", ".");
+      else normalized = normalized.replace(/,/g, "");
+    }else if(normalized.indexOf(",") >= 0){
+      normalized = normalized.replace(",", ".");
+    }else if(/^\d{1,3}(?:\.\d{3})+$/.test(normalized) && !/^0\./.test(normalized)){
+      normalized = normalized.replace(/\./g, "");
+    }
     var number = Number.parseFloat(normalized);
     return Number.isFinite(number) ? number : 0;
   }
@@ -44,7 +63,8 @@
       importFee:toNumber(settings.importFee),
       shipping:toNumber(settings.shipping),
       minimumMargin:percent(settings.minimumMargin),
-      targetMargin:percent(settings.targetMargin)
+      targetMargin:percent(settings.targetMargin),
+      sekRate:toNumber(settings.sekRate) || 0.09
     };
   }
 
@@ -89,6 +109,64 @@
     var denominator = 1 - fee - extraRate(settings) - margin;
     if(denominator <= 0) return null;
     return (purchase + fixedCosts(settings)) / denominator;
+  }
+
+  function marketRule(market){
+    return MARKET_RULES[String(market || "").toUpperCase()] || null;
+  }
+
+  function marketFee(settings,market){
+    var rule = marketRule(market);
+    if(!rule) return null;
+    return numericSettings(settings)[rule.feeKey];
+  }
+
+  function amountToEuro(value,currency,settings){
+    var amount = toNumber(value);
+    var code = String(currency || "EUR").toUpperCase();
+    if(code === "EUR") return amount;
+    if(code === "SEK") return amount * numericSettings(settings).sekRate;
+    return null;
+  }
+
+  function amountFromEuro(value,currency,settings){
+    var amount = toNumber(value);
+    var code = String(currency || "EUR").toUpperCase();
+    if(code === "EUR") return amount;
+    if(code === "SEK"){
+      var rate = numericSettings(settings).sekRate;
+      return rate > 0 ? amount / rate : null;
+    }
+    return null;
+  }
+
+  function roundPriceUp(value){
+    var number = Number(value);
+    return Number.isFinite(number) ? Math.ceil((number - 1e-9) * 100) / 100 : null;
+  }
+
+  function marketPricePlan(purchasePrice,market,settings){
+    var rule = marketRule(market);
+    var purchase = toNumber(purchasePrice);
+    if(!rule || !purchase) return null;
+    var numeric = numericSettings(settings);
+    var fee = numeric[rule.feeKey];
+    var minimumEuro = salePriceForMargin(purchase,fee,numeric.minimumMargin,settings);
+    var targetEuro = salePriceForMargin(purchase,fee,numeric.targetMargin,settings);
+    if(minimumEuro === null || targetEuro === null) return null;
+    var minimum = roundPriceUp(amountFromEuro(minimumEuro,rule.currency,settings));
+    var requestedTarget = roundPriceUp(amountFromEuro(targetEuro,rule.currency,settings));
+    var maximumTarget = Math.floor((minimum * 1.08 + 1e-9) * 100) / 100;
+    var target = Math.max(minimum,Math.min(requestedTarget,maximumTarget));
+    return {
+      market:String(market).toUpperCase(),
+      currency:rule.currency,
+      minimum:minimum,
+      target:target,
+      targetCapped:requestedTarget > maximumTarget,
+      minimumMargin:numeric.minimumMargin,
+      targetMargin:numeric.targetMargin
+    };
   }
 
   function formatMoney(value, currency){
@@ -183,11 +261,17 @@
 
   return {
     GRADE_LABELS:GRADE_LABELS,
+    MARKET_RULES:MARKET_RULES,
     toNumber:toNumber,
     numericSettings:numericSettings,
     calculateMargin:calculateMargin,
     suggestedPurchase:suggestedPurchase,
     salePriceForMargin:salePriceForMargin,
+    marketRule:marketRule,
+    marketFee:marketFee,
+    amountToEuro:amountToEuro,
+    amountFromEuro:amountFromEuro,
+    marketPricePlan:marketPricePlan,
     formatMoney:formatMoney,
     formatPercent:formatPercent,
     normalizeListing:normalizeListing,

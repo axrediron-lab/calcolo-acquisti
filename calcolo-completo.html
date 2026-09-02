@@ -345,6 +345,10 @@
             <label>Margine obiettivo netto %</label>
             <input id="targetMargin" type="text" inputmode="decimal" value="7,50">
           </div>
+          <div class="field">
+            <label>Cambio SEK → EUR</label>
+            <input id="sekRate" type="text" inputmode="decimal" value="0,090">
+          </div>
         </div>
         <p class="note">Queste impostazioni sono condivise con il Monitor BuyBox. Il margine è sempre netto di commissione Back Market, fee aggiuntive, importazione e spedizione.</p>
       </section>
@@ -1183,6 +1187,7 @@
         minimumMargin:byId("minimumMargin").value,
         targetMargin:byId("targetMargin").value,
         usdRate:byId("usdRate").value,
+        sekRate:byId("sekRate").value,
         usdPrice:byId("usdPrice").value,
         eurPrice:byId("eurPrice").value
       },
@@ -1200,7 +1205,8 @@
         shipping:data.settings.shipping,
         minimumMargin:data.settings.minimumMargin,
         targetMargin:data.settings.targetMargin,
-        usdRate:data.settings.usdRate
+        usdRate:data.settings.usdRate,
+        sekRate:data.settings.sekRate
       });
     }
     try{
@@ -1211,7 +1217,7 @@
   function loadData(){
     var sharedSettings = window.CalcoloSettings ? window.CalcoloSettings.load() : null;
     if(sharedSettings){
-      var sharedKeys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin","usdRate"];
+      var sharedKeys = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin","usdRate","sekRate"];
       for(var sharedIndex=0;sharedIndex<sharedKeys.length;sharedIndex++){
         var sharedKey = sharedKeys[sharedIndex];
         if(sharedSettings[sharedKey] !== undefined && byId(sharedKey)){
@@ -1225,7 +1231,7 @@
       var data = JSON.parse(raw);
 
       if(data.settings){
-        var keys = sharedSettings ? ["usdPrice","eurPrice"] : ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","usdRate","usdPrice","eurPrice"];
+        var keys = sharedSettings ? ["usdPrice","eurPrice"] : ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","usdRate","sekRate","usdPrice","eurPrice"];
         for(var i=0;i<keys.length;i++){
           var k = keys[i];
           if(data.settings[k] !== undefined && byId(k)){
@@ -1266,7 +1272,7 @@
       saveData();
     });
 
-    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin"];
+    var settingIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","minimumMargin","targetMargin","sekRate"];
     for(var i=0;i<settingIds.length;i++){
       byId(settingIds[i]).addEventListener("input", calculateAll);
     }
@@ -1312,6 +1318,7 @@
       byId("minimumMargin").value = "5";
       byId("targetMargin").value = "7,50";
       byId("usdRate").value = "0,92";
+      byId("sekRate").value = "0,090";
       byId("usdPrice").value = "";
       byId("eurPrice").value = "";
 

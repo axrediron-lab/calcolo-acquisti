@@ -120,16 +120,93 @@ test("tratta una BackBox assente come risultato vuoto", async () => {
   assert.deepEqual(payload, { competitors: [] });
 });
 
-test("non espone endpoint di scrittura", async () => {
-  const response = await handleRequest(new Request("https://worker.test/api/catalog", {
+test("aggiorna prezzo minimo e target nel mercato selezionato", async () => {
+  let captured = null;
+  globalThis.fetch = async (url, options) => {
+    captured = { url: String(url), options };
+    return new Response(JSON.stringify({ id: "listing-123", price: "139.00", min_price: "129.00" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  const response = await handleRequest(new Request("https://worker.test/api/listings/listing-123", {
     method: "POST",
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ market: "BE", price: "139", min_price: "129", currency: "EUR" }),
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(captured.url, "https://www.backmarket.fr/ws/listings/listing-123");
+  assert.equal(captured.options.method, "POST");
+  assert.equal(captured.options.headers["Accept-Language"], "fr-be");
+  assert.deepEqual(JSON.parse(captured.options.body), { price: "139.00", min_price: "129.00", currency: "EUR" });
+});
+
+test("aggiorna la quantità globale senza confonderla con un mercato", async () => {
+  let captured = null;
+  globalThis.fetch = async (url, options) => {
+    captured = { url: String(url), options };
+    return new Response(JSON.stringify({ id: "listing-123", quantity: 7 }), { status: 200 });
+  };
+  const response = await handleRequest(new Request("https://worker.test/api/listings/listing-123", {
+    method: "POST",
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ quantity: 7 }),
+  }), env);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(JSON.parse(captured.options.body), { quantity: 7 });
+  assert.equal(captured.options.headers["Accept-Language"], "it-it");
+});
+
+test("legge i prezzi della listing esaurita nel singolo mercato", async () => {
+  let captured = null;
+  globalThis.fetch = async (url, options) => {
+    captured = { url: String(url), options };
+    return new Response(JSON.stringify({ id: "listing-123", quantity: 0, price: "1480", min_price: "1380" }), { status: 200 });
+  };
+  const response = await handleRequest(new Request("https://worker.test/api/listings/listing-123?market=SE", {
     headers: {
       Origin: "https://axrediron-lab.github.io",
       "X-App-Key": env.APP_ACCESS_KEY,
     },
   }), env);
-  assert.equal(response.status, 405);
-  assert.equal(response.headers.get("Allow"), "GET, HEAD, OPTIONS");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.market, "SE");
+  assert.equal(payload.listing.quantity, 0);
+  assert.equal(captured.options.headers["Accept-Language"], "sv-se");
+});
+
+test("rifiuta prezzi incompatibili con l'intervallo BackPricer", async () => {
+  let upstreamCalls = 0;
+  globalThis.fetch = async () => { upstreamCalls += 1; return new Response("{}"); };
+  const response = await handleRequest(new Request("https://worker.test/api/listings/listing-123", {
+    method: "POST",
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ market: "IT", price: "150", min_price: "100", currency: "EUR" }),
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.code, "INVALID_BACKPRICER_RANGE");
+  assert.equal(upstreamCalls, 0);
 });
 
 test("la health mostra solo se i segreti sono configurati", async () => {

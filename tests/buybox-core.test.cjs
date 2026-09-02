@@ -12,6 +12,7 @@ const settings = {
   shipping: "16,50",
   minimumMargin: "5",
   targetMargin: "7,50",
+  sekRate: "0,090",
 };
 
 test("calcola il margine netto includendo tutte le fee e i costi fissi", () => {
@@ -67,7 +68,27 @@ test("normalizza modello, capacità, colore, grado e batteria dalla listing", ()
 test("gestisce numeri italiani e internazionali", () => {
   assert.equal(core.toNumber("€ 1.249,90"), 1249.9);
   assert.equal(core.toNumber("399.99"), 399.99);
+  assert.equal(core.toNumber("0.090"), 0.09);
   assert.equal(core.toNumber(""), 0);
+});
+
+test("applica la commissione corretta per Paese e converte la Svezia", () => {
+  assert.equal(core.marketRule("IT").commission, 12);
+  assert.equal(core.marketRule("AT").commission, 5);
+  assert.equal(core.marketRule("SE").currency, "SEK");
+  assert.ok(Math.abs(core.amountToEuro(1380, "SEK", settings) - 124.2) < 1e-9);
+  assert.ok(Math.abs(core.amountFromEuro(124.2, "SEK", settings) - 1380) < 1e-9);
+});
+
+test("calcola minimo e target per mercato rispettando il limite BackPricer", () => {
+  const italy = core.marketPricePlan(100, "IT", settings);
+  const sweden = core.marketPricePlan(100, "SE", settings);
+  assert.equal(italy.currency, "EUR");
+  assert.equal(italy.minimum, 145.99);
+  assert.equal(italy.target, 150.72);
+  assert.equal(sweden.currency, "SEK");
+  assert.ok(sweden.target >= sweden.minimum);
+  assert.ok(sweden.target <= sweden.minimum * 1.08 + 1e-9);
 });
 
 test("riconosce la batteria 100% dal testo della listing", () => {

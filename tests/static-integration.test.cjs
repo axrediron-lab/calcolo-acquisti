@@ -19,16 +19,20 @@ test("il Calcolo completo include Home e impostazioni condivise", () => {
   assert.match(html, /<script src="shared-settings\.js"><\/script>/);
 });
 
-test("la pagina BuyBox carica soltanto dati API e non contiene cataloghi dimostrativi", () => {
+test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   const html = read("buybox.html");
   const script = read("buybox.js");
-  assert.match(html, /read-only-badge/);
+  assert.match(html, /write-enabled-badge/);
   assert.match(script, /\/api\/catalog/);
   assert.match(script, /data-market-toggle/);
-  assert.match(script, /BuyBox per paese/);
+  assert.match(script, /Prezzi per Paese/);
   assert.match(script, /listing\.quantity/);
   assert.match(script, /Vinte/);
-  assert.match(script, /Prezzo minimo per vincere/);
+  assert.match(script, /Prezzo minimo/);
+  assert.match(script, /Prezzo target/);
+  assert.match(script, /sendQuantity/);
+  assert.match(script, /sendAllMarketPrices/);
+  assert.match(script, /quantityB-quantityA/);
   assert.match(script, /buyboxCurrency/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });

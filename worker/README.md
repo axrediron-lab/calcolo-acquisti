@@ -1,6 +1,6 @@
 # Calcolo Acquisti API
 
-Proxy Cloudflare Worker in sola lettura tra GitHub Pages e le API venditore Back Market.
+Proxy Cloudflare Worker protetto tra GitHub Pages e le API venditore Back Market.
 
 ## Segreti richiesti
 
@@ -14,9 +14,11 @@ I valori non devono essere salvati nel repository:
 
 - `GET /health`: stato della configurazione, senza mostrare i valori dei segreti.
 - `GET /api/catalog`: scarica tutte le inserzioni del merchant, seguendo la paginazione.
-- `GET /api/backbox/:listingId?market=IT`: legge la BackBox per una singola inserzione.
+- `GET /api/backbox/:listingId`: legge le BuyBox di tutti i mercati per una singola inserzione.
+- `GET /api/listings/:listingId?market=IT`: legge prezzo, minimo e quantità della singola inserzione nel mercato scelto.
+- `POST /api/listings/:listingId`: aggiorna quantità globale oppure prezzo minimo e target di un mercato.
 
-Gli endpoint `/api/*` richiedono l'header `X-App-Key`. Non sono presenti chiamate di scrittura verso Back Market.
+Gli endpoint `/api/*` richiedono l'header `X-App-Key`. Le scritture convalidano mercato, valuta, quantità e intervallo BackPricer prima di essere inoltrate a Back Market; il token venditore rimane sempre nei segreti Cloudflare.
 
 ## Configurazione manuale dei segreti
 
