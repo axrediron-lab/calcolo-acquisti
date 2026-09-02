@@ -27,6 +27,9 @@ test("la pagina BuyBox carica soltanto dati API e non contiene cataloghi dimostr
   assert.match(script, /data-market-toggle/);
   assert.match(script, /BuyBox per paese/);
   assert.match(script, /listing\.quantity/);
+  assert.match(script, /Vinte/);
+  assert.match(script, /Prezzo minimo per vincere/);
+  assert.match(script, /buyboxCurrency/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });
 

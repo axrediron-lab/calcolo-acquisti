@@ -69,3 +69,15 @@ test("gestisce numeri italiani e internazionali", () => {
   assert.equal(core.toNumber("399.99"), 399.99);
   assert.equal(core.toNumber(""), 0);
 });
+
+test("riconosce la batteria 100% dal testo della listing", () => {
+  const listing = core.normalizeListing({
+    id: "listing-battery-100",
+    title: "Apple iPhone 14 128GB - Mezzanotte",
+    sku: "Apple iPhone 14 128GB - Mezzanotte Eccellente 100%",
+    grade: "EXCELLENT",
+    new_battery: false,
+  });
+  assert.equal(listing.battery100, true);
+  assert.equal(listing.batteryLabel, "Batteria 100%");
+});

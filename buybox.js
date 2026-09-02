@@ -132,13 +132,38 @@
       return String(competitor && competitor.market || "").toUpperCase() === target;
     }) || null;
   }
+  function displayEntryForListing(listing){
+    var direct = state.buyboxes[listing.id];
+    if(competitorsFromEntry(direct).length || (direct && direct.loading)){
+      return {entry:direct,isReference:false,source:null};
+    }
+    if(listing.quantity <= 0 && listing.productId){
+      var source = state.listings.find(function(candidate){
+        return candidate.id !== listing.id && candidate.productId === listing.productId &&
+          candidate.quality === listing.quality && competitorsFromEntry(state.buyboxes[candidate.id]).length;
+      });
+      if(source){
+        return {entry:state.buyboxes[source.id],isReference:true,source:source};
+      }
+    }
+    return {entry:direct,isReference:false,source:null};
+  }
   function buyboxAmount(competitor,field){
     var value = competitor && competitor[field];
     return value && value.amount !== undefined ? core.toNumber(value.amount) : value !== undefined && value !== null ? core.toNumber(value) : null;
   }
+  function buyboxCurrency(competitor,field,fallback){
+    var value = competitor && competitor[field];
+    return String(value && value.currency ? value.currency : fallback || "EUR").toUpperCase();
+  }
+  function buyboxMoney(competitor,field,fallbackCurrency){
+    var amount = buyboxAmount(competitor,field);
+    return amount ? core.formatMoney(amount,buyboxCurrency(competitor,field,fallbackCurrency)) : "—";
+  }
   function listingEconomics(listing,feeKey,competitor){
-    competitor = competitor || competitorForMarket(state.buyboxes[listing.id],config.market);
+    competitor = competitor || competitorForMarket(displayEntryForListing(listing).entry,config.market);
     var backbox = buyboxAmount(competitor,"winner_price");
+    if(buyboxCurrency(competitor,"winner_price",listing.currency) !== "EUR") return null;
     var purchase = core.toNumber(state.purchases[listing.id]);
     if(!backbox || !purchase) return null;
     var numeric = core.numericSettings(state.settings);
@@ -151,24 +176,25 @@
       escapeHtml(core.formatMoney(result.profit))+'<small>'+escapeHtml(core.formatPercent(result.margin))+'</small></span>';
   }
 
-  function backboxHtml(listing){
-    var entry = state.buyboxes[listing.id];
-    if(!entry) return '<span class="loading-cell">Apri la famiglia per caricare</span>';
-    if(entry.loading) return '<span class="loading-cell">Caricamento BuyBox…</span>';
-    if(entry.error) return '<span class="error-cell">'+escapeHtml(entry.error)+'</span>';
-    var competitor = competitorForMarket(entry,config.market);
-    var winner = buyboxAmount(competitor,"winner_price");
-    var toWin = buyboxAmount(competitor,"price_to_win");
-    if(!competitor) return '<span class="loading-cell">Nessun dato '+escapeHtml(config.market)+'</span>';
-    if(!winner) return '<span class="loading-cell">Nessuna BuyBox '+escapeHtml(config.market)+'</span>';
-    return '<span class="backbox-value">'+escapeHtml(core.formatMoney(winner,listing.currency))+'</span>'+
-      (toWin ? '<span class="subvalue">Per vincere: '+escapeHtml(core.formatMoney(toWin,listing.currency))+'</span>' : '');
+  function winLossHtml(listing){
+    var view = displayEntryForListing(listing);
+    var entry = view.entry;
+    if(!entry) return '<span class="loading-cell">Apri la famiglia</span>';
+    if(entry.loading) return '<span class="loading-cell">…</span>';
+    if(view.isReference) return '<span class="reference-chip" title="Dati da una variante equivalente">Rif.</span>';
+    if(entry.error) return '<span class="error-cell">—</span>';
+    var competitors = competitorsFromEntry(entry);
+    if(!competitors.length) return '<span class="loading-cell">—</span>';
+    var wins = competitors.filter(function(item){ return item && item.is_winning === true; }).length;
+    var losses = competitors.filter(function(item){ return item && item.is_winning === false; }).length;
+    return '<span class="win-count" title="BuyBox vinte">'+wins+'</span><span class="loss-count" title="BuyBox perse">'+losses+'</span>';
   }
 
   function suggestedHtml(listing,competitor){
-    competitor = competitor || competitorForMarket(state.buyboxes[listing.id],config.market);
+    competitor = competitor || competitorForMarket(displayEntryForListing(listing).entry,config.market);
     var winner = buyboxAmount(competitor,"winner_price");
     if(!winner) return "—";
+    if(buyboxCurrency(competitor,"winner_price",listing.currency) !== "EUR") return "Cambio richiesto";
     var suggested = core.suggestedPurchase(winner,core.numericSettings(state.settings).fee12,state.settings);
     return core.formatMoney(suggested,listing.currency);
   }
@@ -185,7 +211,8 @@
   }
 
   function marketRowsHtml(listing){
-    var entry = state.buyboxes[listing.id];
+    var view = displayEntryForListing(listing);
+    var entry = view.entry;
     if(!entry || entry.loading) return '<div class="market-empty">Caricamento dei mercati…</div>';
     if(entry.error) return '<div class="market-empty error-cell">'+escapeHtml(entry.error)+'</div>';
     var competitors = competitorsFromEntry(entry).slice().sort(function(a,b){
@@ -196,18 +223,20 @@
       return marketA.localeCompare(marketB,"it");
     });
     if(!competitors.length) return '<div class="market-empty">Nessuna BuyBox disponibile per questa inserzione.</div>';
-    return '<div class="market-panel"><div class="market-panel-title">BuyBox per paese <span>'+competitors.length+' mercati</span></div><div class="market-table-wrap"><table class="market-table"><thead><tr>'+
-      '<th>Mercato</th><th>Prezzo attuale</th><th>BuyBox</th><th>Prezzo da battere</th><th>Acquisto suggerito</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
+    var referenceText = view.isReference && view.source ? '<em>Riferimento: '+escapeHtml(view.source.sku || view.source.title)+'</em>' : '';
+    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-panel-title">BuyBox per paese <span>'+competitors.length+' mercati</span>'+referenceText+'</div><div class="market-table-wrap"><table class="market-table"><thead><tr>'+
+      '<th>Mercato</th><th>Stato</th><th>Prezzo attuale</th><th>BuyBox</th><th>Prezzo minimo per vincere</th><th>Acquisto suggerito</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
       '</tr></thead><tbody>'+competitors.map(function(competitor){
         var winner = buyboxAmount(competitor,"winner_price");
-        var current = buyboxAmount(competitor,"price");
-        var toWin = buyboxAmount(competitor,"price_to_win");
         var result12 = listingEconomics(listing,"fee12",competitor);
         var result5 = listingEconomics(listing,"fee5",competitor);
-        return '<tr><td><span class="market-code">'+escapeHtml(marketLabel(competitor.market))+'</span></td>'+
-          '<td>'+escapeHtml(current ? core.formatMoney(current,listing.currency) : "—")+'</td>'+
-          '<td><strong>'+escapeHtml(winner ? core.formatMoney(winner,listing.currency) : "Nessuna")+'</strong></td>'+
-          '<td>'+escapeHtml(toWin ? core.formatMoney(toWin,listing.currency) : "—")+'</td>'+
+        var statusClass = view.isReference ? "market-reference" : competitor.is_winning ? "market-winning" : "market-losing";
+        var statusLabel = view.isReference ? "Riferimento" : competitor.is_winning ? "Vinta" : "Persa";
+        return '<tr class="'+statusClass+'"><td><span class="market-code">'+escapeHtml(marketLabel(competitor.market))+'</span></td>'+
+          '<td><span class="market-status">'+escapeHtml(statusLabel)+'</span></td>'+
+          '<td>'+escapeHtml(buyboxMoney(competitor,"price",listing.currency))+'</td>'+
+          '<td><strong>'+escapeHtml(winner ? buyboxMoney(competitor,"winner_price",listing.currency) : "Nessuna")+'</strong></td>'+
+          '<td><strong class="price-to-win">'+escapeHtml(buyboxMoney(competitor,"price_to_win",listing.currency))+'</strong></td>'+
           '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing,competitor))+'</span></td>'+
           '<td>'+marginHtml(result12)+'</td><td>'+marginHtml(result5)+'</td></tr>';
       }).join("")+'</tbody></table></div></div>';
@@ -217,16 +246,17 @@
     var result12 = listingEconomics(listing,"fee12");
     var result5 = listingEconomics(listing,"fee5");
     var open = Boolean(state.openListings[listing.id]);
-    var entry = state.buyboxes[listing.id];
+    var view = displayEntryForListing(listing);
+    var entry = view.entry;
     var marketCount = competitorsFromEntry(entry).length;
-    var marketButtonLabel = entry && entry.loading ? "Caricamento mercati…" : marketCount ? marketCount+" paesi" : "Mostra paesi";
+    var marketButtonLabel = entry && entry.loading ? "Caricamento mercati…" : marketCount ? marketCount+" paesi"+(view.isReference?" · riferimento":"") : "Mostra paesi";
     return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
       '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><button class="market-toggle" type="button" data-market-toggle="'+escapeHtml(listing.id)+'" aria-expanded="'+open+'">'+escapeHtml(marketButtonLabel)+' <span>⌄</span></button></td>'+
       '<td>'+escapeHtml(listing.color)+'</td>'+
       '<td>'+escapeHtml(listing.capacity)+'</td>'+
       '<td><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span></div></td>'+
       '<td><span class="quantity-value">'+escapeHtml(listing.quantity)+'</span></td>'+
-      '<td>'+backboxHtml(listing)+'</td>'+
+      '<td><div class="win-loss-summary">'+winLossHtml(listing)+'</div></td>'+
       '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing))+'</span></td>'+
       '<td><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="€" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></td>'+
       '<td>'+marginHtml(result12)+'</td>'+
@@ -243,7 +273,7 @@
         '<span class="chevron">⌄</span>'+
       '</button>'+
       '<div class="family-body"><table class="variant-table"><colgroup><col style="width:21%"><col style="width:8%"><col style="width:7%"><col style="width:14%"><col style="width:5%"><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%"></colgroup><thead><tr>'+
-        '<th>Modello</th><th>Colore</th><th>Capacità</th><th>Qualità</th><th>Quantità</th><th>BackBox '+escapeHtml(config.market)+'</th><th>Prezzo suggerito</th><th>Prezzo d’acquisto</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
+        '<th>Modello</th><th>Colore</th><th>Capacità</th><th>Qualità</th><th>Quantità</th><th><span class="header-win">Vinte</span> / <span class="header-loss">Perse</span></th><th>Prezzo suggerito IT</th><th>Prezzo d’acquisto</th><th>Guadagno 12%</th><th>Guadagno 5%</th>'+
       '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
   }
 

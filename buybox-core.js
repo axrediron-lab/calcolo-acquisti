@@ -153,6 +153,7 @@
     var title = cleanText(listing.title || listing.sku || "Prodotto senza titolo");
     var gradeKey = String(listing.grade !== undefined ? listing.grade : listing.state || "").toUpperCase();
     var newBattery = listing.new_battery === true || String(listing.new_battery).toLowerCase() === "true";
+    var battery100 = /\b100\s*%/.test(cleanText([listing.title, listing.sku, listing.comment].join(" ")));
     return {
       id:String(listing.id || listing.listing_id || ""),
       productId:String(listing.product_id || listing.backmarket_id || ""),
@@ -164,7 +165,8 @@
       color:colorFromTitle(title),
       quality:GRADE_LABELS[gradeKey] || gradeKey || "Non indicata",
       newBattery:newBattery,
-      batteryLabel:newBattery ? "Batteria nuova" : "Batteria standard",
+      battery100:battery100,
+      batteryLabel:newBattery ? "Batteria nuova" : battery100 ? "Batteria 100%" : "Batteria standard",
       currency:listing.currency || "EUR",
       currentPrice:toNumber(listing.price),
       minPrice:listing.min_price == null ? null : toNumber(listing.min_price),
