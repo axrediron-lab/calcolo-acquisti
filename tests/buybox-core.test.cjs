@@ -62,6 +62,7 @@ test("normalizza modello, capacità, colore, grado e batteria dalla listing", ()
   assert.equal(listing.color, "Mezzanotte");
   assert.equal(listing.quality, "Eccellente");
   assert.equal(listing.batteryLabel, "Batteria nuova");
+  assert.equal(listing.simType, "P-SIM");
   assert.equal(listing.currentPrice, 399.99);
   assert.equal(listing.quantity, 4);
 });
@@ -136,4 +137,19 @@ test("riconosce la batteria 100% dal testo della listing", () => {
   });
   assert.equal(listing.battery100, true);
   assert.equal(listing.batteryLabel, "Batteria 100%");
+});
+
+test("riconosce E-SIM dallo SKU e usa P-SIM quando non è indicato", () => {
+  const esim = core.normalizeListing({
+    id: "listing-esim",
+    title: "Apple iPhone 14 128GB - Mezzanotte",
+    sku: "Apple iPhone 14 128GB - Mezzanotte E-SIM",
+  });
+  const physical = core.normalizeListing({
+    id: "listing-physical",
+    title: "Apple iPhone 14 128GB - Mezzanotte",
+    sku: "Apple iPhone 14 128GB - Mezzanotte",
+  });
+  assert.equal(esim.simType, "E-SIM");
+  assert.equal(physical.simType, "P-SIM");
 });

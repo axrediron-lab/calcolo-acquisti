@@ -171,7 +171,8 @@
   }
   function equivalentListing(candidate,listing){
     return candidate.id !== listing.id && candidate.productId === listing.productId &&
-      candidate.quality === listing.quality && candidate.batteryLabel === listing.batteryLabel;
+      candidate.quality === listing.quality && candidate.batteryLabel === listing.batteryLabel &&
+      candidate.simType === listing.simType;
   }
   function historicalEntry(listing){
     var saved = state.buyboxHistory[listing.id];
@@ -243,18 +244,22 @@
       escapeHtml(core.formatMoney(result.profit,"EUR"))+' · '+escapeHtml(core.formatPercent(result.margin))+'</span>';
   }
 
-  function winLossHtml(listing){
+  function winLossValueHtml(listing,kind){
     var view = displayEntryForListing(listing);
     var entry = view.entry;
-    if(!entry) return '<span class="loading-cell">Apri la famiglia</span>';
+    if(!entry) return '<span class="loading-cell" title="Apri la famiglia per caricare le BuyBox">—</span>';
     if(entry.loading) return '<span class="loading-cell">…</span>';
-    if(view.isReference) return '<span class="reference-chip" title="Dati da una variante equivalente">Rif.</span>';
+    if(view.isReference) return kind === "wins"
+      ? '<span class="reference-chip" title="Dati da una variante equivalente">Rif.</span>'
+      : '<span class="loading-cell">—</span>';
     if(entry.error) return '<span class="error-cell">—</span>';
     var competitors = competitorsFromEntry(entry);
     if(!competitors.length) return '<span class="loading-cell">—</span>';
     var wins = competitors.filter(function(item){ return item && item.is_winning === true; }).length;
     var losses = competitors.filter(function(item){ return item && item.is_winning === false; }).length;
-    return '<span class="win-count" title="BuyBox vinte">'+wins+'</span><span class="loss-count" title="BuyBox perse">'+losses+'</span>';
+    return kind === "wins"
+      ? '<span class="win-count" title="BuyBox vinte">'+wins+'</span>'
+      : '<span class="loss-count" title="BuyBox perse">'+losses+'</span>';
   }
 
   function averageBackboxEuro(listing,competitor){
@@ -368,8 +373,8 @@
     var actionMessage = draft.message ? '<small class="action-message">'+escapeHtml(draft.message)+'</small>' : '';
     return '<tr class="'+statusClass+'" data-market-row="'+escapeHtml(market)+'">'+
       '<td><div class="market-name"><strong>'+escapeHtml(marketLabel(market))+'</strong></div></td>'+
-      '<td><label class="price-box"><span>Min. ('+escapeHtml(currency)+')</span><input data-price-field="minimum" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.minimum)+'"></label><span data-price-result="minimum">'+(loadingDetail?'<span class="price-result empty">Lettura…</span>':compactMarginHtml(minimumEconomics,listing.id))+'</span></td>'+
-      '<td><label class="price-box"><span>Target ('+escapeHtml(currency)+')</span><input data-price-field="target" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.target)+'"></label><span data-price-result="target">'+compactMarginHtml(targetEconomics,listing.id)+'</span></td>'+
+      '<td><label class="price-box"><input aria-label="Prezzo minimo ('+escapeHtml(currency)+')" data-price-field="minimum" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.minimum)+'"><span class="currency-suffix">'+escapeHtml(currency)+'</span></label><span data-price-result="minimum">'+(loadingDetail?'<span class="price-result empty">Lettura…</span>':compactMarginHtml(minimumEconomics,listing.id))+'</span></td>'+
+      '<td><label class="price-box"><input aria-label="Prezzo target ('+escapeHtml(currency)+')" data-price-field="target" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.target)+'"><span class="currency-suffix">'+escapeHtml(currency)+'</span></label><span data-price-result="target">'+compactMarginHtml(targetEconomics,listing.id)+'</span></td>'+
       '<td>'+currentBackboxHtml(competitor,view,currency)+'</td>'+
       '<td>'+backboxToBeatHtml(competitor,currency)+'</td>'+
       '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing,competitor))+'</span></td>'+
@@ -399,14 +404,22 @@
     }
     var errorText = entry && entry.error ? '<em class="panel-warning">'+escapeHtml(entry.error)+'</em>' : '';
     return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-panel-title"><div>Prezzi per Paese <span>'+markets.length+' mercati</span>'+referenceText+errorText+'</div><div class="market-actions"><button type="button" data-send-all-prices="'+escapeHtml(listing.id)+'">Invia modifiche</button></div></div><div class="market-table-wrap"><table class="market-table"><colgroup><col style="width:13%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:8%"></colgroup><thead><tr>'+
-      '<th>Mercato</th><th title="Prezzo minimo">Min</th><th title="Prezzo target">Target</th><th title="BackBox attuale">BB att.</th><th title="BackBox da battere">BB da battere</th><th title="Acquisto consigliato">Acq. cons.</th><th title="Utile netto alla BackBox attuale">Utile BB</th><th>Invia</th>'+
+      '<th>Mercato</th><th title="Prezzo minimo">Min</th><th title="Prezzo target">Target</th><th title="BackBox attuale">BB att.</th><th title="BackBox da battere">BB da battere</th><th title="Acquisto consigliato">Acq. cons.</th><th title="Utile netto alla BackBox attuale">Utile BB</th><th aria-label="Invio"></th>'+
       '</tr></thead><tbody>'+markets.map(function(market){ return marketRowHtml(listing,market,competitorForMarket(entry,market),view); }).join("")+'</tbody></table></div></div>';
   }
 
-  function economicsEditorHtml(listing){
-    var margins = productMarginValues(listing.id);
+  function purchaseFieldHtml(listing){
     var purchaseMissing = !core.toNumber(state.purchases[listing.id]);
-    return '<div class="economics-editor"><label class="purchase-box"><span>Costo (€)</span><input class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label><label class="margin-box"><span>Min. %</span><input data-margin-field="minimum" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.minimum)+'"></label><label class="margin-box"><span>Target %</span><input data-margin-field="target" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins.target)+'"></label><button class="recalculate-button" type="button" data-calculate-prices="'+escapeHtml(listing.id)+'">Ricalcola</button></div>'+(purchaseMissing?'<small class="economics-note">Inserisci il costo per calcolare i prezzi</small>':'');
+    return '<div class="field-stack"><label class="purchase-box"><input aria-label="Costo di acquisto" class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label>'+(purchaseMissing?'<small class="economics-note">Costo mancante</small>':'')+'</div>';
+  }
+
+  function marginFieldHtml(listing,field,label){
+    var margins = productMarginValues(listing.id);
+    return '<label class="margin-box"><input aria-label="'+escapeHtml(label)+'" data-margin-field="'+escapeHtml(field)+'" data-margin-id="'+escapeHtml(listing.id)+'" inputmode="decimal" value="'+escapeHtml(margins[field])+'"></label>';
+  }
+
+  function recalculateButtonHtml(listing){
+    return '<button class="recalculate-button" type="button" data-calculate-prices="'+escapeHtml(listing.id)+'">Ricalcola</button>';
   }
 
   function quantityEditorHtml(listing){
@@ -421,18 +434,22 @@
     var marketButtonLabel = entry && entry.loading ? "Caricamento…" : marketCount ? marketCount+" BuyBox"+(view.isReference?" · riferimento":"") : "12 paesi";
     return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
       '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></td>'+
-      '<td><div class="specification"><strong>'+escapeHtml(listing.color)+'</strong><span>'+escapeHtml(listing.capacity)+'</span></div><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span></div></td>'+
-      '<td>'+quantityEditorHtml(listing)+'</td>'+
-      '<td><div class="win-loss-summary">'+winLossHtml(listing)+'</div></td>'+
-      '<td>'+economicsEditorHtml(listing)+'</td>'+
-      '<td><button class="market-toggle" type="button" data-open-detail="'+escapeHtml(listing.id)+'">'+escapeHtml(marketButtonLabel)+' <span>→</span></button></td>'+
+      '<td><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div></td>'+
+      '<td class="quantity-cell">'+quantityEditorHtml(listing)+'</td>'+
+      '<td class="score-cell">'+winLossValueHtml(listing,"wins")+'</td>'+
+      '<td class="score-cell">'+winLossValueHtml(listing,"losses")+'</td>'+
+      '<td class="field-cell">'+purchaseFieldHtml(listing)+'</td>'+
+      '<td class="field-cell">'+marginFieldHtml(listing,"minimum","Margine minimo percentuale")+'</td>'+
+      '<td class="field-cell">'+marginFieldHtml(listing,"target","Margine target percentuale")+'</td>'+
+      '<td class="action-cell">'+recalculateButtonHtml(listing)+'</td>'+
+      '<td class="action-cell"><button class="market-toggle" type="button" data-open-detail="'+escapeHtml(listing.id)+'">'+escapeHtml(marketButtonLabel)+' <span>→</span></button></td>'+
     '</tr>';
   }
 
   function productDetailHtml(listing){
     return '<article class="product-detail-page">'+
       '<div class="detail-toolbar"><button class="detail-back" type="button" data-detail-back>← Catalogo</button><span>Dettaglio prodotto</span></div>'+
-      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="variant-stack"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="meta-chip">'+escapeHtml(listing.color)+'</span><span class="meta-chip">'+escapeHtml(listing.capacity)+'</span></div></div><div class="detail-economics-inline">'+economicsEditorHtml(listing)+'</div><div class="detail-stock"><span class="detail-label">Quantità</span>'+quantityEditorHtml(listing)+'</div><div class="detail-score"><span class="detail-label">Vinte / Perse</span><div class="win-loss-summary">'+winLossHtml(listing)+'</div></div></header>'+
+      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div></div><div class="detail-controls-grid"><div class="detail-control"><span class="detail-label">Costo</span>'+purchaseFieldHtml(listing)+'</div><div class="detail-control"><span class="detail-label">Min %</span>'+marginFieldHtml(listing,"minimum","Margine minimo percentuale")+'</div><div class="detail-control"><span class="detail-label">Target %</span>'+marginFieldHtml(listing,"target","Margine target percentuale")+'</div><div class="detail-action">'+recalculateButtonHtml(listing)+'</div><div class="detail-control detail-stock"><span class="detail-label">Quantità</span>'+quantityEditorHtml(listing)+'</div><div class="detail-control detail-score"><span class="detail-label">Vinte</span>'+winLossValueHtml(listing,"wins")+'</div><div class="detail-control detail-score"><span class="detail-label">Perse</span>'+winLossValueHtml(listing,"losses")+'</div></div></header>'+
       marketRowsHtml(listing)+'</article>';
   }
 
@@ -445,8 +462,8 @@
         '<span class="family-main"><span class="family-icon">▣</span><span><span class="family-name">'+escapeHtml(name)+'</span><span class="family-meta"><span class="stock-chip">'+escapeHtml(totalQuantity)+' unità</span><span class="count-chip">'+items.length+' varianti</span>'+capacities.map(function(value){ return '<span class="meta-chip">'+escapeHtml(value)+'</span>'; }).join("")+'</span></span></span>'+
         '<span class="chevron">⌄</span>'+
       '</button>'+
-      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:25%"><col style="width:19%"><col style="width:10%"><col style="width:9%"><col style="width:29%"><col style="width:8%"></colgroup><thead><tr>'+
-        '<th>Prodotto</th><th>Specifiche</th><th>Quantità</th><th><span class="header-win">Vinte</span> / <span class="header-loss">Perse</span></th><th>Economia</th><th>Paesi</th>'+
+      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:23%"><col style="width:18%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:10%"><col style="width:7%"><col style="width:8%"><col style="width:7%"><col style="width:7%"></colgroup><thead><tr>'+
+        '<th>Prodotto</th><th>Specifiche</th><th>Quantità</th><th class="header-win">Vinte</th><th class="header-loss">Perse</th><th>Costo</th><th>Min %</th><th>Target %</th><th aria-label="Ricalcolo"></th><th aria-label="BuyBox"></th>'+
       '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
   }
 

@@ -245,13 +245,15 @@
   function normalizeListing(listing){
     listing = listing || {};
     var title = cleanText(listing.title || listing.sku || "Prodotto senza titolo");
+    var sku = cleanText(listing.sku);
     var gradeKey = String(listing.grade !== undefined ? listing.grade : listing.state || "").toUpperCase();
     var newBattery = listing.new_battery === true || String(listing.new_battery).toLowerCase() === "true";
     var battery100 = /\b100\s*%/.test(cleanText([listing.title, listing.sku, listing.comment].join(" ")));
+    var simType = /\bE[\s-]?SIM\b/i.test(sku) ? "E-SIM" : "P-SIM";
     return {
       id:String(listing.id || listing.listing_id || ""),
       productId:String(listing.product_id || listing.backmarket_id || ""),
-      sku:cleanText(listing.sku),
+      sku:sku,
       title:title,
       brand:brandFromTitle(title),
       family:familyFromTitle(title),
@@ -261,6 +263,7 @@
       newBattery:newBattery,
       battery100:battery100,
       batteryLabel:newBattery ? "Batteria nuova" : battery100 ? "Batteria 100%" : "Batteria standard",
+      simType:simType,
       currency:listing.currency || "EUR",
       currentPrice:toNumber(listing.price),
       minPrice:listing.min_price == null ? null : toNumber(listing.min_price),
@@ -271,7 +274,7 @@
   }
 
   function searchableText(listing){
-    return [listing.title, listing.sku, listing.brand, listing.family, listing.capacity, listing.color, listing.quality, listing.batteryLabel]
+    return [listing.title, listing.sku, listing.brand, listing.family, listing.capacity, listing.color, listing.quality, listing.batteryLabel, listing.simType]
       .join(" ").toLocaleLowerCase("it-IT");
   }
 
