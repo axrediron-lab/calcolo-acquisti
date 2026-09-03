@@ -12,6 +12,8 @@
     quantityDrafts:{},
     priceDrafts:{},
     buyboxes:{},
+    buyboxPromises:{},
+    buyboxRefreshStatus:{},
     buyboxHistory:readJson(config.buyboxHistoryCacheKey) || {},
     listingMarkets:{},
     loadingListingMarkets:{},
@@ -190,14 +192,14 @@
   }
 
   function filteredListings(){
-    var query = byId("searchInput").value.trim().toLocaleLowerCase("it-IT");
+    var query = byId("searchInput").value;
     var brand = byId("brandFilter").value;
     var capacity = byId("capacityFilter").value;
     var color = byId("colorFilter").value;
     var quality = byId("qualityFilter").value;
     var battery = byId("batteryFilter").value;
     return state.listings.filter(function(item){
-      return (!query || core.searchableText(item).indexOf(query) >= 0) &&
+      return core.matchesSearch(item,query) &&
         (!brand || item.brand === brand) && (!capacity || item.capacity === capacity) &&
         (!color || item.color === color) && (!quality || item.quality === quality) &&
         (!battery || item.batteryLabel === battery);
@@ -490,6 +492,8 @@
     var view = displayEntryForListing(listing);
     var entry = view.entry;
     var messages = [];
+    var refreshStatus = state.buyboxRefreshStatus[listing.id];
+    if(refreshStatus && refreshStatus.message) messages.push(escapeHtml(refreshStatus.message));
     if(view.isReference && view.source){
       messages.push(view.referenceKind === "history"
         ? 'Ultimo riferimento salvato'+(view.updatedAt?' · '+escapeHtml(new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(view.updatedAt))):'')
@@ -526,7 +530,8 @@
     var view = displayEntryForListing(listing);
     var entry = view.entry;
     var marketCount = competitorsFromEntry(entry).length;
-    var marketButtonLabel = entry && entry.loading ? "Caricamento…" : marketCount ? marketCount+" BuyBox"+(view.isReference?" · riferimento":"") : "12 paesi";
+    var refreshStatus = state.buyboxRefreshStatus[listing.id];
+    var marketButtonLabel = refreshStatus && refreshStatus.active ? "Aggiornamento…" : entry && entry.loading ? "Caricamento…" : marketCount ? marketCount+" BuyBox"+(view.isReference?" · riferimento":"") : "12 paesi";
     return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
       '<td class="product-cell">'+controlStackHtml('<div class="product-copy"><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></div>',"")+'</td>'+
       '<td class="specification-cell">'+controlStackHtml('<div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div>',"")+'</td>'+
@@ -678,8 +683,8 @@
   function ensureDetailData(){
     var listing = listingById(state.detailListingId);
     if(!listing) return;
-    loadFamilyBuyboxes(listing.family,[listing]);
-    loadListingMarketDetails(listing);
+    void loadListingBuybox(listing,false);
+    void loadListingMarketDetails(listing);
   }
 
   function openListingDetail(id){
@@ -723,7 +728,8 @@
       renderCatalog();
       return;
     }
-    var warning = quantity === 0 ? "La listing verrà messa offline in tutti i Paesi." : listing.quantity === 0 ? "La listing verrà riattivata con stock disponibile in tutti i Paesi." : "La quantità sarà aggiornata per tutti i Paesi.";
+    var previousQuantity = listing.quantity;
+    var warning = quantity === 0 ? "La listing verrà messa offline in tutti i Paesi." : previousQuantity === 0 ? "La listing verrà riattivata con stock disponibile in tutti i Paesi." : "La quantità sarà aggiornata per tutti i Paesi.";
     if(!window.confirm("Aggiornare “"+listing.title+"” da "+listing.quantity+" a "+quantity+" unità?\n\n"+warning)) return;
     draft.message = "Invio in corso…";
     renderCatalog();
@@ -733,7 +739,11 @@
       draft.value = String(quantity);
       draft.original = String(quantity);
       draft.dirty = false;
-      draft.message = "Quantità aggiornata";
+      draft.message = previousQuantity === 0 && quantity > 0 ? "Stock riattivato" : "Quantità aggiornata";
+      if(previousQuantity === 0 && quantity > 0){
+        delete state.buyboxes[id];
+        void refreshReactivatedBuybox(listing);
+      }
     }catch(error){ draft.message = error.message || "Aggiornamento non riuscito"; }
     renderCatalog();
   }
@@ -883,30 +893,93 @@
     writeJson(config.buyboxHistoryCacheKey,state.buyboxHistory);
   }
 
-  async function loadFamilyBuyboxes(family,items){
-    if(state.loadingFamilies[family]) return;
-    var pending = items.filter(function(item){ return !state.buyboxes[item.id] || state.buyboxes[item.id].error; });
-    if(!pending.length) return;
-    state.loadingFamilies[family] = true;
-    for(var index=0; index<pending.length; index+=1){
-      var listing = pending[index];
-      state.buyboxes[listing.id] = {loading:true};
-      renderCatalog();
+  async function loadListingBuybox(listing,force){
+    var id = listing.id;
+    var current = state.buyboxes[id];
+    if(!force && current && !current.error && !current.loading) return current;
+    if(state.buyboxPromises[id]) return state.buyboxPromises[id];
+    state.buyboxes[id] = {loading:true};
+    renderCatalog();
+    var operation = (async function(){
       try{
-        state.buyboxes[listing.id] = await apiFetch("/api/backbox/"+encodeURIComponent(listing.id));
-        saveBuyboxHistory(listing.id,state.buyboxes[listing.id]);
+        var payload = await apiFetch("/api/backbox/"+encodeURIComponent(id)+(force?"?refresh=1":""));
+        state.buyboxes[id] = payload;
+        saveBuyboxHistory(id,payload);
+        return payload;
       }catch(error){
         if(error.code === "ACCESS_REQUIRED"){
-          state.buyboxes[listing.id] = {error:"Accesso richiesto"};
+          state.buyboxes[id] = {error:"Accesso richiesto"};
           showAccessDialog();
-          break;
+        }else{
+          state.buyboxes[id] = {error:error.message || "BuyBox non disponibile"};
         }
-        state.buyboxes[listing.id] = {error:error.message || "BuyBox non disponibile"};
+        return null;
+      }finally{
+        delete state.buyboxPromises[id];
+        renderCatalog();
       }
-      renderCatalog();
-      if(index < pending.length-1) await sleep(550);
+    })();
+    state.buyboxPromises[id] = operation;
+    return operation;
+  }
+
+  async function refreshReactivatedBuybox(listing){
+    var id = listing.id;
+    var existing = state.buyboxRefreshStatus[id];
+    if(existing && existing.active) return;
+    var status = {active:true,message:"Stock riattivato · lettura BuyBox…"};
+    state.buyboxRefreshStatus[id] = status;
+    var delays = [0,2000,5000,10000,20000];
+    for(var attempt=0;attempt<delays.length;attempt+=1){
+      if(delays[attempt]){
+        status.message = "Back Market sta riattivando la BuyBox · nuovo tentativo…";
+        renderCatalog();
+        await sleep(delays[attempt]);
+      }
+      var payload = await loadListingBuybox(listing,true);
+      if(competitorsFromEntry(payload).length){
+        status.active = false;
+        status.message = "BuyBox aggiornata";
+        renderCatalog();
+        setTimeout(function(){
+          if(state.buyboxRefreshStatus[id] === status){
+            delete state.buyboxRefreshStatus[id];
+            renderCatalog();
+          }
+        },2500);
+        return;
+      }
+      if(!accessKey()) break;
     }
-    state.loadingFamilies[family] = false;
+    status.active = false;
+    status.message = "BuyBox non ancora pubblicata da Back Market";
+    renderCatalog();
+  }
+
+  async function loadFamilyBuyboxes(family,items){
+    if(state.loadingFamilies[family]) return;
+    var pending = items.filter(function(item){
+      var entry = state.buyboxes[item.id];
+      return !entry || entry.error;
+    });
+    if(!pending.length) return;
+    state.loadingFamilies[family] = true;
+    var cursor = 0;
+    var accessFailed = false;
+    async function runQueue(){
+      while(cursor < pending.length && !accessFailed){
+        var listing = pending[cursor];
+        cursor += 1;
+        await loadListingBuybox(listing,false);
+        if(!accessKey()) accessFailed = true;
+        if(cursor < pending.length) await sleep(220);
+      }
+    }
+    try{
+      await Promise.all([runQueue(),pending.length > 1 ? runQueue() : Promise.resolve()]);
+    }finally{
+      state.loadingFamilies[family] = false;
+    }
   }
 
   function setStatus(message){ byId("catalogStatus").textContent = message; }

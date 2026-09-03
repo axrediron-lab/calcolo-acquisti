@@ -307,6 +307,8 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .detail-title{font-size:24px;font-weight:950;letter-spacing:-.025em;line-height:1.2}
 .detail-product-main .specification-chips{margin-top:11px}
 .detail-label{display:block;margin:0;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.045em;line-height:13px}
+.detail-control:not(.detail-stock):not(.detail-score) .detail-label{padding-left:10px}
+.detail-stock .detail-label{text-align:center}
 .detail-controls-grid{display:grid;grid-template-columns:minmax(130px,1.2fr) minmax(76px,.7fr) minmax(88px,.8fr) auto minmax(115px,1fr) 48px 48px;align-items:start;gap:8px;min-width:0}
 .detail-control,.detail-action{display:grid;grid-template-rows:13px minmax(42px,auto);gap:7px;min-width:0;align-self:start}
 .detail-action::before{content:"";display:block;height:13px}

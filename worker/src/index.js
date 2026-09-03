@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
 const CATALOG_TTL_SECONDS = 300;
 const BACKBOX_TTL_SECONDS = 60;
+const EMPTY_BACKBOX_TTL_SECONDS = 8;
 const MAX_CATALOG_PAGES = 100;
 const MAX_REQUEST_BYTES = 16 * 1024;
 const MARKET_CONFIG = Object.freeze({
@@ -179,6 +180,7 @@ function writeCache(cacheKey, payload, ttlSeconds, ctx) {
   });
   const operation = caches.default.put(new Request(cacheKey), response);
   if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(operation);
+  else void operation;
 }
 
 function absoluteBackMarketUrl(value, env) {
@@ -240,9 +242,12 @@ async function backboxResponse(url, listingId, env, ctx) {
   if (!validListingId(listingId)) {
     throw new HttpError(400, "Identificativo inserzione non valido", "INVALID_LISTING_ID");
   }
+  const refresh = url.searchParams.get("refresh") === "1";
   const cacheKey = `https://calcolo-cache.internal/backbox/${encodeURIComponent(listingId)}`;
-  const cached = await readCache(cacheKey);
-  if (cached) return jsonResponse(cached);
+  if (!refresh) {
+    const cached = await readCache(cacheKey);
+    if (cached) return jsonResponse(cached);
+  }
 
   const upstream = absoluteBackMarketUrl(`/ws/backbox/v1/competitors/${encodeURIComponent(listingId)}`, env);
   let payload;
@@ -258,7 +263,7 @@ async function backboxResponse(url, listingId, env, ctx) {
 
   const competitors = Array.isArray(payload) ? payload : [];
   const result = { competitors };
-  writeCache(cacheKey, result, BACKBOX_TTL_SECONDS, ctx);
+  writeCache(cacheKey, result, competitors.length ? BACKBOX_TTL_SECONDS : EMPTY_BACKBOX_TTL_SECONDS, ctx);
   return jsonResponse(result);
 }
 
@@ -333,16 +338,15 @@ function updatePayload(body) {
   return { output, market };
 }
 
-function clearListingCaches(listingId, ctx) {
-  if (!cacheAvailable() || !ctx || typeof ctx.waitUntil !== "function") return;
-  const operations = [
+async function clearListingCaches(listingId) {
+  if (!cacheAvailable()) return;
+  await Promise.all([
     caches.default.delete(new Request("https://calcolo-cache.internal/catalog")),
     caches.default.delete(new Request(`https://calcolo-cache.internal/backbox/${encodeURIComponent(listingId)}`)),
-  ];
-  ctx.waitUntil(Promise.all(operations));
+  ]);
 }
 
-async function updateListingResponse(request, listingId, env, ctx) {
+async function updateListingResponse(request, listingId, env) {
   if (!validListingId(listingId)) {
     throw new HttpError(400, "Identificativo inserzione non valido", "INVALID_LISTING_ID");
   }
@@ -351,7 +355,7 @@ async function updateListingResponse(request, listingId, env, ctx) {
   const locale = update.market ? MARKET_CONFIG[update.market].locale : env.BACKMARKET_ACCEPT_LANGUAGE || "it-it";
   const upstream = absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env);
   const listing = await backMarketJson(upstream, env, { method: "POST", locale, body: update.output });
-  clearListingCaches(listingId, ctx);
+  await clearListingCaches(listingId);
   return jsonResponse({ ok: true, market: update.market, listing });
 }
 
@@ -398,7 +402,7 @@ export async function handleRequest(request, env, ctx = {}) {
       } else if (url.pathname.startsWith("/api/listings/")) {
         const listingId = decodeURIComponent(url.pathname.slice("/api/listings/".length));
         response = request.method === "POST"
-          ? await updateListingResponse(request, listingId, env, ctx)
+          ? await updateListingResponse(request, listingId, env)
           : await listingResponse(url, listingId, env);
       } else {
         throw new HttpError(404, "Endpoint non trovato", "NOT_FOUND");

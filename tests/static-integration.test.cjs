@@ -54,12 +54,16 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(script, /shippingItaly/);
   assert.match(script, /listing\.simType/);
   assert.match(script, /batteryLabel === battery/);
+  assert.match(script, /core\.matchesSearch/);
   assert.match(script, /initializeCustomSelects/);
   assert.match(script, /filter-dropdown-option/);
   assert.match(script, /draft\.sending = true/);
   assert.match(script, /if\(askConfirmation\) renderCatalog\(\)/);
   assert.match(script, /controlStackHtml/);
   assert.match(script, /purchase-note/);
+  assert.match(script, /refreshReactivatedBuybox/);
+  assert.match(script, /\?refresh=1/);
+  assert.match(script, /Promise\.all\(\[runQueue\(\)/);
   assert.match(coreScript, /P-SIM/);
   assert.match(coreScript, /E-SIM/);
   assert.doesNotMatch(script, /Bozza calcolata/);
@@ -76,6 +80,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(css, /\.filter-dropdown-menu/);
   assert.match(css, /\.control-status/);
   assert.match(css, /\.purchase-box\.missing \.purchase-content/);
+  assert.match(css, /\.detail-stock \.detail-label\{text-align:center\}/);
   assert.doesNotMatch(css, /width:min\(100%,1600px\)/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });

@@ -153,3 +153,15 @@ test("riconosce E-SIM dallo SKU e usa P-SIM quando non è indicato", () => {
   assert.equal(esim.simType, "E-SIM");
   assert.equal(physical.simType, "P-SIM");
 });
+
+test("trova un prodotto usando parole separate e in ordine diverso", () => {
+  const listing = core.normalizeListing({
+    id: "listing-search",
+    title: "Apple iPhone 15 128GB - Blu",
+    sku: "Apple iPhone 15 128GB Blu CN 100%",
+    grade: "EXCELLENT",
+  });
+  assert.equal(core.matchesSearch(listing, "iPhone 15 128 blu"), true);
+  assert.equal(core.matchesSearch(listing, "blu eccellente 128"), true);
+  assert.equal(core.matchesSearch(listing, "iphone 256 blu"), false);
+});

@@ -12,9 +12,12 @@ const env = {
 };
 
 const originalFetch = globalThis.fetch;
+const originalCaches = globalThis.caches;
 
 test.afterEach(() => {
   globalThis.fetch = originalFetch;
+  if (originalCaches === undefined) delete globalThis.caches;
+  else globalThis.caches = originalCaches;
 });
 
 test("espone il gestore fetch richiesto dal runtime Cloudflare", async () => {
@@ -120,6 +123,33 @@ test("tratta una BackBox assente come risultato vuoto", async () => {
   assert.deepEqual(payload, { competitors: [] });
 });
 
+test("può forzare la lettura BackBox ignorando una copia in cache", async () => {
+  let upstreamCalls = 0;
+  globalThis.caches = {
+    default: {
+      match: async () => new Response(JSON.stringify({ competitors: [{ market: "IT", cached: true }] })),
+      put: async () => undefined,
+      delete: async () => true,
+    },
+  };
+  globalThis.fetch = async () => {
+    upstreamCalls += 1;
+    return new Response(JSON.stringify([{ market: "IT", cached: false }]), { status: 200 });
+  };
+  const headers = {
+    Origin: "https://axrediron-lab.github.io",
+    "X-App-Key": env.APP_ACCESS_KEY,
+  };
+
+  const cachedResponse = await handleRequest(new Request("https://worker.test/api/backbox/listing-123", { headers }), env);
+  assert.equal((await cachedResponse.json()).competitors[0].cached, true);
+  assert.equal(upstreamCalls, 0);
+
+  const freshResponse = await handleRequest(new Request("https://worker.test/api/backbox/listing-123?refresh=1", { headers }), env);
+  assert.equal((await freshResponse.json()).competitors[0].cached, false);
+  assert.equal(upstreamCalls, 1);
+});
+
 test("aggiorna prezzo minimo e target nel mercato selezionato", async () => {
   let captured = null;
   globalThis.fetch = async (url, options) => {
@@ -151,6 +181,14 @@ test("aggiorna prezzo minimo e target nel mercato selezionato", async () => {
 
 test("aggiorna la quantità globale senza confonderla con un mercato", async () => {
   let captured = null;
+  const deletedKeys = [];
+  globalThis.caches = {
+    default: {
+      match: async () => undefined,
+      put: async () => undefined,
+      delete: async (request) => { deletedKeys.push(String(request.url)); return true; },
+    },
+  };
   globalThis.fetch = async (url, options) => {
     captured = { url: String(url), options };
     return new Response(JSON.stringify({ id: "listing-123", quantity: 7 }), { status: 200 });
@@ -168,6 +206,9 @@ test("aggiorna la quantità globale senza confonderla con un mercato", async () 
   assert.equal(response.status, 200);
   assert.deepEqual(JSON.parse(captured.options.body), { quantity: 7 });
   assert.equal(captured.options.headers["Accept-Language"], "it-it");
+  assert.equal(deletedKeys.length, 2);
+  assert.ok(deletedKeys.some((key) => key.endsWith("/catalog")));
+  assert.ok(deletedKeys.some((key) => key.endsWith("/backbox/listing-123")));
 });
 
 test("legge i prezzi della listing esaurita nel singolo mercato", async () => {

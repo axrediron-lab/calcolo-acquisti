@@ -274,8 +274,25 @@
   }
 
   function searchableText(listing){
-    return [listing.title, listing.sku, listing.brand, listing.family, listing.capacity, listing.color, listing.quality, listing.batteryLabel, listing.simType]
-      .join(" ").toLocaleLowerCase("it-IT");
+    return normalizeSearchText([listing.title, listing.sku, listing.brand, listing.family, listing.capacity, listing.color, listing.quality, listing.batteryLabel, listing.simType].join(" "));
+  }
+
+  function normalizeSearchText(value){
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .toLocaleLowerCase("it-IT")
+      .replace(/\b([ep])[\s-]+sim\b/g,"$1sim")
+      .replace(/[^a-z0-9%]+/g," ")
+      .trim()
+      .replace(/\s+/g," ");
+  }
+
+  function matchesSearch(listing,query){
+    var tokens = normalizeSearchText(query).split(" ").filter(Boolean);
+    if(!tokens.length) return true;
+    var haystack = searchableText(listing);
+    return tokens.every(function(token){ return haystack.indexOf(token) >= 0; });
   }
 
   return {
@@ -295,6 +312,8 @@
     formatMoney:formatMoney,
     formatPercent:formatPercent,
     normalizeListing:normalizeListing,
-    searchableText:searchableText
+    searchableText:searchableText,
+    normalizeSearchText:normalizeSearchText,
+    matchesSearch:matchesSearch
   };
 });
