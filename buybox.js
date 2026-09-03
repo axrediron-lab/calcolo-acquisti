@@ -505,7 +505,7 @@
 
   function purchaseFieldHtml(listing){
     var purchaseMissing = !core.toNumber(state.purchases[listing.id]);
-    return controlStackHtml('<label class="purchase-box'+(purchaseMissing?' missing':'')+'"><input aria-label="Costo di acquisto" class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label>',purchaseMissing ? "Costo mancante" : "","economics-note");
+    return controlStackHtml('<label class="purchase-box'+(purchaseMissing?' missing':'')+'"><span class="purchase-content"><input aria-label="Costo di acquisto" class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'">'+(purchaseMissing?'<small class="purchase-note">Costo mancante</small>':'')+'</span></label>',"","");
   }
 
   function marginFieldHtml(listing,field,label){
@@ -528,8 +528,8 @@
     var marketCount = competitorsFromEntry(entry).length;
     var marketButtonLabel = entry && entry.loading ? "Caricamento…" : marketCount ? marketCount+" BuyBox"+(view.isReference?" · riferimento":"") : "12 paesi";
     return '<tr class="variant-row" data-listing-id="'+escapeHtml(listing.id)+'">'+
-      '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></td>'+
-      '<td><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div></td>'+
+      '<td class="product-cell">'+controlStackHtml('<div class="product-copy"><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></div>',"")+'</td>'+
+      '<td class="specification-cell">'+controlStackHtml('<div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div>',"")+'</td>'+
       '<td class="quantity-cell">'+quantityEditorHtml(listing)+'</td>'+
       '<td class="score-cell">'+controlStackHtml(winLossValueHtml(listing,"wins"),"")+'</td>'+
       '<td class="score-cell">'+controlStackHtml(winLossValueHtml(listing,"losses"),"")+'</td>'+
