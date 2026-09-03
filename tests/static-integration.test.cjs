@@ -43,6 +43,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(script, /Acq\. cons\./);
   assert.match(script, /data-margin-field/);
   assert.match(script, /data-price-result/);
+  assert.match(script, /price-result-slot/);
   assert.match(script, /suggestedPurchaseForMargin/);
   assert.match(script, /sendQuantity/);
   assert.match(script, /sendAllMarketPrices/);
