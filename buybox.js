@@ -347,11 +347,12 @@
   }
 
   function currentBackboxHtml(competitor,view,currency){
-    if(!competitor) return '<span class="market-status neutral">Nessun dato BuyBox</span>';
+    if(!competitor) return '<span class="backbox-pill neutral" title="Nessun dato BuyBox" aria-label="Nessun dato BuyBox">—</span>';
     var label = view.isReference ? "Riferimento" : competitor.is_winning ? "Vinta" : "Persa";
     var winner = buyboxAmount(competitor,"winner_price");
-    var detail = winner ? '<strong>'+escapeHtml(buyboxMoney(competitor,"winner_price",currency))+'</strong>' : '<strong>Nessuna</strong>';
-    return '<div class="backbox-state"><span class="market-status">'+escapeHtml(label)+'</span>'+detail+'</div>';
+    var detail = winner ? buyboxMoney(competitor,"winner_price",currency) : "Nessuna";
+    var statusClass = view.isReference ? "reference" : competitor.is_winning ? "winning" : "losing";
+    return '<span class="backbox-pill '+statusClass+'" title="BuyBox '+escapeHtml(label.toLowerCase())+'" aria-label="BuyBox '+escapeHtml(label.toLowerCase())+': '+escapeHtml(detail)+'">'+escapeHtml(detail)+'</span>';
   }
 
   function backboxToBeatHtml(competitor,currency){
@@ -396,16 +397,22 @@
       if(b === config.market) return 1;
       return marketLabel(a).localeCompare(marketLabel(b),"it");
     });
-    var referenceText = "";
-    if(view.isReference && view.source){
-      referenceText = view.referenceKind === "history"
-        ? '<em>Ultimo riferimento salvato'+(view.updatedAt?' · '+escapeHtml(new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(view.updatedAt))):'')+'</em>'
-        : '<em>Riferimento: '+escapeHtml(view.source.sku || view.source.title)+'</em>';
-    }
-    var errorText = entry && entry.error ? '<em class="panel-warning">'+escapeHtml(entry.error)+'</em>' : '';
-    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-panel-title"><div>Prezzi per Paese <span>'+markets.length+' mercati</span>'+referenceText+errorText+'</div><div class="market-actions"><button type="button" data-send-all-prices="'+escapeHtml(listing.id)+'">Invia modifiche</button></div></div><div class="market-table-wrap"><table class="market-table"><colgroup><col style="width:13%"><col style="width:15%"><col style="width:15%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:8%"></colgroup><thead><tr>'+
-      '<th>Mercato</th><th title="Prezzo minimo">Min</th><th title="Prezzo target">Target</th><th title="BackBox attuale">BB att.</th><th title="BackBox da battere">BB da battere</th><th title="Acquisto consigliato">Acq. cons.</th><th title="Utile netto alla BackBox attuale">Utile BB</th><th aria-label="Invio"></th>'+
+    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-table-wrap"><table class="market-table"><colgroup><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup><thead><tr>'+
+      '<th>Mercato</th><th title="Prezzo minimo">Min</th><th title="Prezzo target">Target</th><th title="BackBox attuale">BB att.</th><th title="BackBox da battere">BB da battere</th><th title="Acquisto consigliato">Acq. cons.</th><th title="Utile netto alla BackBox attuale">Utile BB</th><th class="bulk-send-header"><button class="bulk-send-button" type="button" data-send-all-prices="'+escapeHtml(listing.id)+'">Invia modifiche</button></th>'+
       '</tr></thead><tbody>'+markets.map(function(market){ return marketRowHtml(listing,market,competitorForMarket(entry,market),view); }).join("")+'</tbody></table></div></div>';
+  }
+
+  function detailMarketContextHtml(listing){
+    var view = displayEntryForListing(listing);
+    var entry = view.entry;
+    var messages = [];
+    if(view.isReference && view.source){
+      messages.push(view.referenceKind === "history"
+        ? 'Ultimo riferimento salvato'+(view.updatedAt?' · '+escapeHtml(new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(view.updatedAt))):'')
+        : 'Riferimento: '+escapeHtml(view.source.sku || view.source.title));
+    }
+    if(entry && entry.error) messages.push(escapeHtml(entry.error));
+    return messages.length ? '<div class="detail-market-context">'+messages.map(function(message){ return '<span>'+message+'</span>'; }).join("")+'</div>' : '';
   }
 
   function purchaseFieldHtml(listing){
@@ -449,7 +456,7 @@
   function productDetailHtml(listing){
     return '<article class="product-detail-page">'+
       '<div class="detail-toolbar"><button class="detail-back" type="button" data-detail-back>← Catalogo</button><span>Dettaglio prodotto</span></div>'+
-      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div></div><div class="detail-controls-grid"><div class="detail-control"><span class="detail-label">Costo</span>'+purchaseFieldHtml(listing)+'</div><div class="detail-control"><span class="detail-label">Min %</span>'+marginFieldHtml(listing,"minimum","Margine minimo percentuale")+'</div><div class="detail-control"><span class="detail-label">Target %</span>'+marginFieldHtml(listing,"target","Margine target percentuale")+'</div><div class="detail-action">'+recalculateButtonHtml(listing)+'</div><div class="detail-control detail-stock"><span class="detail-label">Quantità</span>'+quantityEditorHtml(listing)+'</div><div class="detail-control detail-score"><span class="detail-label">Vinte</span>'+winLossValueHtml(listing,"wins")+'</div><div class="detail-control detail-score"><span class="detail-label">Perse</span>'+winLossValueHtml(listing,"losses")+'</div></div></header>'+
+      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div>'+detailMarketContextHtml(listing)+'</div><div class="detail-controls-grid"><div class="detail-control"><span class="detail-label">Costo</span><div class="detail-control-value">'+purchaseFieldHtml(listing)+'</div></div><div class="detail-control"><span class="detail-label">Min %</span><div class="detail-control-value">'+marginFieldHtml(listing,"minimum","Margine minimo percentuale")+'</div></div><div class="detail-control"><span class="detail-label">Target %</span><div class="detail-control-value">'+marginFieldHtml(listing,"target","Margine target percentuale")+'</div></div><div class="detail-action"><div class="detail-control-value">'+recalculateButtonHtml(listing)+'</div></div><div class="detail-control detail-stock"><span class="detail-label">Quantità</span><div class="detail-control-value">'+quantityEditorHtml(listing)+'</div></div><div class="detail-control detail-score"><span class="detail-label">Vinte</span><div class="detail-control-value">'+winLossValueHtml(listing,"wins")+'</div></div><div class="detail-control detail-score"><span class="detail-label">Perse</span><div class="detail-control-value">'+winLossValueHtml(listing,"losses")+'</div></div></div></header>'+
       marketRowsHtml(listing)+'</article>';
   }
 

@@ -193,7 +193,7 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .quantity-value{display:inline-grid;place-items:center;min-width:36px;padding:7px 9px;border-radius:10px;background:#eef5fb;color:var(--brand);font-weight:950}
 .quantity-editor{display:flex;align-items:center;gap:5px}
 .quantity-editor input{width:58px;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 8px;font-weight:900;color:var(--brand);outline:none}
-.quantity-editor button,.row-send-button,.market-actions button,.recalculate-button{border:1px solid #cbd9e7;border-radius:9px;background:#fff;color:var(--brand);font-size:10px;font-weight:900;cursor:pointer;padding:7px 9px;white-space:nowrap}
+.quantity-editor button,.row-send-button,.recalculate-button,.bulk-send-button{border:1px solid #cbd9e7;border-radius:9px;background:#fff;color:var(--brand);font-size:10px;font-weight:900;cursor:pointer;padding:7px 9px;white-space:nowrap}
 .quantity-editor button:disabled,.row-send-button:disabled{opacity:.4;cursor:not-allowed}
 .win-loss-summary{display:flex;align-items:center;justify-content:center;gap:7px}
 .win-count,.loss-count,.reference-chip{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:9px;font-weight:950}
@@ -225,17 +225,11 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .margin-pill.bad{background:var(--bad-soft);color:var(--bad);border:1px solid #f2c5c0}
 .loading-cell{color:var(--muted);font-size:12px}
 .error-cell{color:var(--bad);font-size:12px;font-weight:750}
-.market-panel{padding:16px 18px 19px;border-left:4px solid var(--brand-2)}
-.market-panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px;font-size:15px;font-weight:950;color:var(--text)}
-.market-panel-title span{padding:4px 7px;border-radius:999px;background:#e6eff8;color:var(--brand);font-size:10px}
-.market-panel-title em{font-style:normal;font-weight:700;color:var(--muted);font-size:11px}
-.market-panel-title .panel-warning{color:var(--bad)}
-.market-actions{display:flex;gap:7px;flex-shrink:0}
-.market-actions button:last-child{background:var(--brand);border-color:var(--brand);color:#fff}
-.market-panel.reference{border-left-color:#8796a8}
+.market-panel{padding:0;border-left:0}
+.market-panel.reference{border-left:0}
 .market-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
 .market-table{width:100%;min-width:1180px;border-collapse:collapse;table-layout:fixed;font-variant-numeric:tabular-nums}
-.market-table th{position:static;background:#eef3f8;padding:11px 12px;font-size:12px;line-height:1.15;vertical-align:middle;text-align:left}
+.market-table th{position:static;background:#eef3f8;padding:11px 12px;font-size:12px;line-height:1.15;vertical-align:middle;text-align:left;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .market-table th:nth-child(n+2){text-align:center}
 .market-table td{padding:12px;border-bottom:1px solid var(--line);font-size:14px;background:#fff;vertical-align:middle;height:80px}
 .market-table td:nth-child(n+2){text-align:center}
@@ -243,11 +237,6 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .market-table tr.market-winning td:first-child{box-shadow:inset 4px 0 var(--ok)}
 .market-table tr.market-losing td:first-child{box-shadow:inset 4px 0 var(--bad)}
 .market-table tr.market-reference td:first-child{box-shadow:inset 4px 0 #8796a8}
-.market-status{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:950}
-.market-winning .market-status{background:#d9f5e7;color:var(--ok)}
-.market-losing .market-status{background:#fde0dc;color:var(--bad)}
-.market-reference .market-status{background:#e8edf2;color:#526275}
-.market-status.neutral{background:#eef2f6;color:#526275}
 .market-losing .price-to-win{color:var(--bad)}
 .market-winning .price-to-win{color:var(--ok)}
 .market-code{font-weight:900;white-space:nowrap;color:#27374a}
@@ -264,9 +253,12 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .row-send-button{min-width:58px;padding:8px 10px}
 .send-cell{text-align:center}
 .send-cell .action-message{max-width:82px;margin-inline:auto}
-.backbox-state{display:grid;justify-items:center;gap:5px}
-.backbox-state strong{font-size:15px}
-.backbox-state small{color:var(--muted);font-size:10px}
+.backbox-pill{display:inline-grid;place-items:center;min-width:105px;min-height:48px;padding:7px 9px;border-radius:11px;font-size:15px;font-weight:950;line-height:1.15;white-space:nowrap}
+.backbox-pill.winning{background:var(--ok-soft);color:var(--ok);border:1px solid #bcead7}
+.backbox-pill.losing{background:var(--bad-soft);color:var(--bad);border:1px solid #f2c5c0}
+.backbox-pill.reference,.backbox-pill.neutral{background:#eef2f6;color:#526275;border:1px solid #d8e0e8}
+.bulk-send-header{padding:6px!important}
+.bulk-send-button{background:var(--brand);border-color:var(--brand);color:#fff;min-height:34px}
 .backbox-target{font-size:15px;font-weight:950;white-space:nowrap;color:var(--text)}
 .detail-mode .settings-strip,.detail-mode .filter-panel,.detail-mode .status-row{display:none}
 .product-detail-page{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
@@ -275,16 +267,21 @@ button:disabled{cursor:not-allowed;opacity:.55}
 .detail-product-header{display:grid;grid-template-columns:minmax(360px,1fr) minmax(760px,850px);align-items:center;gap:28px;padding:20px 22px;border-bottom:1px solid var(--line)}
 .detail-title{font-size:24px;font-weight:950;letter-spacing:-.025em;line-height:1.2}
 .detail-product-main .specification-chips{margin-top:11px}
-.detail-label{display:block;margin-bottom:7px;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.045em}
-.detail-controls-grid{display:grid;grid-template-columns:minmax(130px,1.2fr) minmax(76px,.7fr) minmax(88px,.8fr) auto minmax(115px,1fr) 48px 48px;align-items:end;gap:8px;min-width:0}
-.detail-control{min-width:0}
+.detail-label{display:block;margin:0;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.045em;line-height:13px}
+.detail-controls-grid{display:grid;grid-template-columns:minmax(130px,1.2fr) minmax(76px,.7fr) minmax(88px,.8fr) auto minmax(115px,1fr) 48px 48px;align-items:start;gap:8px;min-width:0}
+.detail-control,.detail-action{display:grid;grid-template-rows:13px minmax(42px,auto);gap:7px;min-width:0;align-self:start}
+.detail-action::before{content:"";display:block;height:13px}
+.detail-control-value{display:flex;flex-direction:column;align-items:stretch;justify-content:center;min-height:42px}
 .detail-control .purchase-input,.detail-control .margin-box input{font-size:16px}
-.detail-stock .quantity-editor{justify-content:center}
+.detail-stock .quantity-editor{justify-content:center;min-height:42px}
 .detail-score{text-align:center}
 .detail-score .detail-label{text-align:center}
-.detail-action{display:flex;align-items:center;justify-content:center;min-height:42px}
-.product-detail-page .market-panel{width:min(100%,1600px);margin-inline:auto;padding:18px 22px 22px;border-left:0}
-.product-detail-page .market-table-wrap{border-radius:14px}
+.detail-score .detail-control-value,.detail-action .detail-control-value{align-items:center}
+.detail-score .win-count,.detail-score .loss-count,.detail-score .reference-chip{min-width:42px;height:42px}
+.detail-market-context{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.detail-market-context span{padding:5px 8px;border-radius:999px;background:#eef2f6;color:#526275;border:1px solid #d8e0e8;font-size:10px;font-weight:800}
+.product-detail-page .market-panel{width:100%;margin:0;padding:0;border-left:0}
+.product-detail-page .market-table-wrap{border:0;border-radius:0}
 .detail-loading{display:grid;justify-items:center;gap:10px;padding:70px 20px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:var(--radius);color:var(--muted);font-weight:850}
 .detail-loading strong{color:var(--text);font-size:20px}
 .market-empty{padding:17px 18px;color:var(--muted);font-size:12px;background:#f6f8fc;border-left:4px solid #cbd5e1}
@@ -321,7 +318,6 @@ button:disabled{cursor:not-allowed;opacity:.55}
   .settings-strip{align-items:flex-start;flex-direction:column}
   .settings-summary{justify-content:flex-start}
   .family-body{overflow-x:auto}
-  .market-panel-title{align-items:flex-start;flex-direction:column}
   .detail-controls-grid{grid-template-columns:minmax(130px,1.2fr) minmax(76px,.7fr) minmax(88px,.8fr) auto minmax(115px,1fr) 48px 48px}
 }
 @media (max-width:900px){
