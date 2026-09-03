@@ -98,12 +98,95 @@
       return '<option value="'+escapeHtml(value)+'">'+escapeHtml(value)+'</option>';
     }).join("");
     if(Array.from(select.options).some(function(option){ return option.value === previous; })){ select.value = previous; }
+    renderCustomSelect(select);
+  }
+  function closeFilterDropdowns(except){
+    document.querySelectorAll(".filter-dropdown.open").forEach(function(dropdown){
+      if(dropdown === except) return;
+      dropdown.classList.remove("open");
+      dropdown.querySelector(".filter-dropdown-trigger").setAttribute("aria-expanded","false");
+      dropdown.querySelector(".filter-dropdown-menu").hidden = true;
+    });
+  }
+  function setFilterDropdownOpen(dropdown,open,focusOption){
+    closeFilterDropdowns(open ? dropdown : null);
+    dropdown.classList.toggle("open",open);
+    dropdown.querySelector(".filter-dropdown-trigger").setAttribute("aria-expanded",String(open));
+    dropdown.querySelector(".filter-dropdown-menu").hidden = !open;
+    if(open && focusOption){
+      var selected = dropdown.querySelector('[role="option"][aria-selected="true"]') || dropdown.querySelector('[role="option"]');
+      if(selected) selected.focus();
+    }
+  }
+  function renderCustomSelect(select){
+    if(!select || !select._filterDropdown) return;
+    var dropdown = select._filterDropdown;
+    var triggerValue = dropdown.querySelector(".filter-dropdown-value");
+    var menu = dropdown.querySelector(".filter-dropdown-menu");
+    var selected = select.options[select.selectedIndex] || select.options[0];
+    triggerValue.textContent = selected ? selected.textContent : "";
+    menu.innerHTML = Array.from(select.options).map(function(option){
+      var active = option.value === select.value;
+      return '<button type="button" class="filter-dropdown-option" role="option" data-value="'+escapeHtml(option.value)+'" aria-selected="'+active+'"><span>'+escapeHtml(option.textContent)+'</span><span class="filter-option-check" aria-hidden="true">✓</span></button>';
+    }).join("");
+  }
+  function initializeCustomSelect(select){
+    if(!select || select._filterDropdown) return;
+    select.classList.add("native-filter-select");
+    select.hidden = true;
+    select.tabIndex = -1;
+    select.setAttribute("aria-hidden","true");
+    var dropdown = document.createElement("div");
+    dropdown.className = "filter-dropdown";
+    dropdown.innerHTML = '<button type="button" class="filter-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="'+escapeHtml(select.id+'Label')+' '+escapeHtml(select.id+'Value')+'"><span id="'+escapeHtml(select.id+'Value')+'" class="filter-dropdown-value"></span><span class="filter-dropdown-chevron" aria-hidden="true">⌄</span></button><div class="filter-dropdown-menu" role="listbox" aria-labelledby="'+escapeHtml(select.id+'Label')+'" hidden></div>';
+    select.insertAdjacentElement("afterend",dropdown);
+    select._filterDropdown = dropdown;
+    var trigger = dropdown.querySelector(".filter-dropdown-trigger");
+    var menu = dropdown.querySelector(".filter-dropdown-menu");
+    trigger.addEventListener("click",function(){ setFilterDropdownOpen(dropdown,!dropdown.classList.contains("open"),false); });
+    trigger.addEventListener("keydown",function(event){
+      if(event.key === "ArrowDown" || event.key === "ArrowUp"){
+        event.preventDefault();
+        setFilterDropdownOpen(dropdown,true,true);
+      }else if(event.key === "Escape") setFilterDropdownOpen(dropdown,false,false);
+    });
+    menu.addEventListener("click",function(event){
+      var option = event.target.closest('[role="option"]');
+      if(!option) return;
+      select.value = option.getAttribute("data-value");
+      select.dispatchEvent(new Event("change",{bubbles:true}));
+      renderCustomSelect(select);
+      setFilterDropdownOpen(dropdown,false,false);
+      trigger.focus();
+    });
+    menu.addEventListener("keydown",function(event){
+      var options = Array.from(menu.querySelectorAll('[role="option"]'));
+      var index = options.indexOf(document.activeElement);
+      if(event.key === "Escape"){
+        event.preventDefault(); setFilterDropdownOpen(dropdown,false,false); trigger.focus(); return;
+      }
+      if(event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End"){
+        event.preventDefault();
+        if(event.key === "Home") index = 0;
+        else if(event.key === "End") index = options.length-1;
+        else index = Math.max(0,Math.min(options.length-1,index+(event.key === "ArrowDown" ? 1 : -1)));
+        if(options[index]) options[index].focus();
+      }
+    });
+    renderCustomSelect(select);
+  }
+  function initializeCustomSelects(){
+    ["brandFilter","capacityFilter","colorFilter","qualityFilter","batteryFilter"].forEach(function(id){ initializeCustomSelect(byId(id)); });
+    document.addEventListener("click",function(event){
+      if(!event.target.closest(".filter-dropdown")) closeFilterDropdowns();
+    });
   }
   function renderFilters(){
     fillSelect("brandFilter","brand","Tutte");
     fillSelect("capacityFilter","capacity","Tutte");
     fillSelect("colorFilter","color","Tutti");
     fillSelect("qualityFilter","quality","Tutte");
+    fillSelect("batteryFilter","batteryLabel","Tutte");
   }
 
   function filteredListings(){
@@ -112,10 +195,12 @@
     var capacity = byId("capacityFilter").value;
     var color = byId("colorFilter").value;
     var quality = byId("qualityFilter").value;
+    var battery = byId("batteryFilter").value;
     return state.listings.filter(function(item){
       return (!query || core.searchableText(item).indexOf(query) >= 0) &&
         (!brand || item.brand === brand) && (!capacity || item.capacity === capacity) &&
-        (!color || item.color === color) && (!quality || item.quality === quality);
+        (!color || item.color === color) && (!quality || item.quality === quality) &&
+        (!battery || item.batteryLabel === battery);
     });
   }
 
@@ -328,7 +413,7 @@
     var signature = String(baseline.minimum)+":"+String(baseline.target);
     var draft = state.priceDrafts[key];
     if(!draft){
-      draft = {minimum:inputNumber(baseline.minimum),target:inputNumber(baseline.target),baseline:signature,dirty:false,message:"",source:"baseline"};
+      draft = {minimum:inputNumber(baseline.minimum),target:inputNumber(baseline.target),baseline:signature,dirty:false,sending:false,message:"",source:"baseline"};
       state.priceDrafts[key] = draft;
     }else if(!draft.dirty && draft.baseline !== signature){
       draft.minimum = inputNumber(baseline.minimum);
@@ -370,8 +455,7 @@
     var targetEconomics = priceEconomics(listing,market,draft.target,currency);
     var statusClass = !competitor || view.isReference ? "market-reference" : competitor.is_winning ? "market-winning" : "market-losing";
     var loadingDetail = state.loadingListingMarkets[listing.id] && state.loadingListingMarkets[listing.id][market];
-    var sendDisabled = !draft.dirty || !draft.minimum || !draft.target;
-    var actionMessage = draft.message ? '<small class="action-message">'+escapeHtml(draft.message)+'</small>' : '';
+    var sendDisabled = draft.sending || !draft.dirty || !draft.minimum || !draft.target;
     return '<tr class="'+statusClass+'" data-market-row="'+escapeHtml(market)+'">'+
       '<td><div class="market-name"><strong>'+escapeHtml(marketLabel(market))+'</strong></div></td>'+
       '<td><label class="price-box"><span class="price-entry-line"><input aria-label="Prezzo minimo ('+escapeHtml(currency)+')" data-price-field="minimum" data-listing-id="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(draft.minimum)+'"><span class="currency-suffix">'+escapeHtml(currency)+'</span></span><span class="price-result-slot" data-price-result="minimum">'+(loadingDetail?'<span class="price-result empty">Lettura…</span>':compactMarginHtml(minimumEconomics,listing.id))+'</span></label></td>'+
@@ -380,7 +464,7 @@
       '<td>'+backboxToBeatHtml(competitor,currency)+'</td>'+
       '<td><span class="calc-value">'+escapeHtml(suggestedHtml(listing,competitor))+'</span></td>'+
       '<td>'+marginHtml(economics,listing.id)+'</td>'+
-      '<td class="send-cell"><button class="row-send-button" data-send-price="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" type="button"'+(sendDisabled?' disabled':'')+'>Invia</button>'+actionMessage+'</td></tr>';
+      '<td class="send-cell">'+controlStackHtml('<button class="row-send-button" data-send-price="'+escapeHtml(listing.id)+'" data-market="'+escapeHtml(market)+'" type="button"'+(sendDisabled?' disabled':'')+'>Invia</button>',draft.message,"action-message")+'</td></tr>';
   }
 
   function marketRowsHtml(listing){
@@ -415,9 +499,13 @@
     return messages.length ? '<div class="detail-market-context">'+messages.map(function(message){ return '<span>'+message+'</span>'; }).join("")+'</div>' : '';
   }
 
+  function controlStackHtml(content,message,statusClass){
+    return '<div class="control-stack"><div class="control-main">'+content+'</div><small class="control-status '+escapeHtml(statusClass || "")+'">'+(message ? escapeHtml(message) : '&nbsp;')+'</small></div>';
+  }
+
   function purchaseFieldHtml(listing){
     var purchaseMissing = !core.toNumber(state.purchases[listing.id]);
-    return '<div class="field-stack"><label class="purchase-box"><input aria-label="Costo di acquisto" class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label>'+(purchaseMissing?'<small class="economics-note">Costo mancante</small>':'')+'</div>';
+    return controlStackHtml('<label class="purchase-box'+(purchaseMissing?' missing':'')+'"><input aria-label="Costo di acquisto" class="purchase-input" data-purchase-id="'+escapeHtml(listing.id)+'" inputmode="decimal" placeholder="0,00" value="'+escapeHtml(state.purchases[listing.id] || "")+'"></label>',purchaseMissing ? "Costo mancante" : "","economics-note");
   }
 
   function marginFieldHtml(listing,field,label){
@@ -431,7 +519,7 @@
 
   function quantityEditorHtml(listing){
     var quantity = quantityDraft(listing);
-    return '<div class="quantity-editor"><input data-quantity-id="'+escapeHtml(listing.id)+'" inputmode="numeric" value="'+escapeHtml(quantity.value)+'"><button type="button" data-send-quantity="'+escapeHtml(listing.id)+'"'+(quantity.dirty?'':' disabled')+'>Salva</button></div>'+(quantity.message?'<small class="action-message">'+escapeHtml(quantity.message)+'</small>':'');
+    return controlStackHtml('<div class="quantity-editor"><input data-quantity-id="'+escapeHtml(listing.id)+'" inputmode="numeric" value="'+escapeHtml(quantity.value)+'"><button type="button" data-send-quantity="'+escapeHtml(listing.id)+'"'+(quantity.dirty?'':' disabled')+'>Salva</button></div>',quantity.message,"action-message");
   }
 
   function variantRow(listing){
@@ -443,20 +531,20 @@
       '<td><div class="product-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div></td>'+
       '<td><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div></td>'+
       '<td class="quantity-cell">'+quantityEditorHtml(listing)+'</td>'+
-      '<td class="score-cell">'+winLossValueHtml(listing,"wins")+'</td>'+
-      '<td class="score-cell">'+winLossValueHtml(listing,"losses")+'</td>'+
+      '<td class="score-cell">'+controlStackHtml(winLossValueHtml(listing,"wins"),"")+'</td>'+
+      '<td class="score-cell">'+controlStackHtml(winLossValueHtml(listing,"losses"),"")+'</td>'+
       '<td class="field-cell">'+purchaseFieldHtml(listing)+'</td>'+
-      '<td class="field-cell">'+marginFieldHtml(listing,"minimum","Margine minimo percentuale")+'</td>'+
-      '<td class="field-cell">'+marginFieldHtml(listing,"target","Margine target percentuale")+'</td>'+
-      '<td class="action-cell">'+recalculateButtonHtml(listing)+'</td>'+
-      '<td class="action-cell"><button class="market-toggle" type="button" data-open-detail="'+escapeHtml(listing.id)+'">'+escapeHtml(marketButtonLabel)+' <span>→</span></button></td>'+
+      '<td class="field-cell">'+controlStackHtml(marginFieldHtml(listing,"minimum","Margine minimo percentuale"),"")+'</td>'+
+      '<td class="field-cell">'+controlStackHtml(marginFieldHtml(listing,"target","Margine target percentuale"),"")+'</td>'+
+      '<td class="action-cell">'+controlStackHtml(recalculateButtonHtml(listing),"")+'</td>'+
+      '<td class="action-cell">'+controlStackHtml('<button class="market-toggle" type="button" data-open-detail="'+escapeHtml(listing.id)+'">'+escapeHtml(marketButtonLabel)+' <span>→</span></button>',"")+'</td>'+
     '</tr>';
   }
 
   function productDetailHtml(listing){
     return '<article class="product-detail-page">'+
       '<div class="detail-toolbar"><button class="detail-back" type="button" data-detail-back>← Catalogo</button><span>Dettaglio prodotto</span></div>'+
-      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div>'+detailMarketContextHtml(listing)+'</div><div class="detail-controls-grid"><div class="detail-control"><span class="detail-label">Costo</span><div class="detail-control-value">'+purchaseFieldHtml(listing)+'</div></div><div class="detail-control"><span class="detail-label">Min %</span><div class="detail-control-value">'+marginFieldHtml(listing,"minimum","Margine minimo percentuale")+'</div></div><div class="detail-control"><span class="detail-label">Target %</span><div class="detail-control-value">'+marginFieldHtml(listing,"target","Margine target percentuale")+'</div></div><div class="detail-action"><div class="detail-control-value">'+recalculateButtonHtml(listing)+'</div></div><div class="detail-control detail-stock"><span class="detail-label">Quantità</span><div class="detail-control-value">'+quantityEditorHtml(listing)+'</div></div><div class="detail-control detail-score"><span class="detail-label">Vinte</span><div class="detail-control-value">'+winLossValueHtml(listing,"wins")+'</div></div><div class="detail-control detail-score"><span class="detail-label">Perse</span><div class="detail-control-value">'+winLossValueHtml(listing,"losses")+'</div></div></div></header>'+
+      '<header class="detail-product-header"><div class="detail-product-main"><div class="detail-title">'+escapeHtml(listing.title)+'</div><div class="sku">SKU: '+escapeHtml(listing.sku || "Non disponibile")+'</div><div class="specification-chips"><span class="quality-chip">'+escapeHtml(listing.quality)+'</span><span class="battery-chip">'+escapeHtml(listing.batteryLabel)+'</span><span class="sim-chip">'+escapeHtml(listing.simType)+'</span></div>'+detailMarketContextHtml(listing)+'</div><div class="detail-controls-grid"><div class="detail-control"><span class="detail-label">Costo</span><div class="detail-control-value">'+purchaseFieldHtml(listing)+'</div></div><div class="detail-control"><span class="detail-label">Min %</span><div class="detail-control-value">'+controlStackHtml(marginFieldHtml(listing,"minimum","Margine minimo percentuale"),"")+'</div></div><div class="detail-control"><span class="detail-label">Target %</span><div class="detail-control-value">'+controlStackHtml(marginFieldHtml(listing,"target","Margine target percentuale"),"")+'</div></div><div class="detail-action"><div class="detail-control-value">'+controlStackHtml(recalculateButtonHtml(listing),"")+'</div></div><div class="detail-control detail-stock"><span class="detail-label">Quantità</span><div class="detail-control-value">'+quantityEditorHtml(listing)+'</div></div><div class="detail-control detail-score"><span class="detail-label">Vinte</span><div class="detail-control-value">'+controlStackHtml(winLossValueHtml(listing,"wins"),"")+'</div></div><div class="detail-control detail-score"><span class="detail-label">Perse</span><div class="detail-control-value">'+controlStackHtml(winLossValueHtml(listing,"losses"),"")+'</div></div></div></header>'+
       marketRowsHtml(listing)+'</article>';
   }
 
@@ -562,6 +650,8 @@
         draft.dirty = true;
         draft.source = "manual";
         draft.message = "";
+        var statusNode = input.closest("tr").querySelector(".control-status");
+        if(statusNode) statusNode.innerHTML = "&nbsp;";
         var listing = listingById(id);
         var rule = core.marketRule(market);
         var resultNode = input.closest("td").querySelector('[data-price-result="'+field+'"]');
@@ -687,7 +777,7 @@
     var listing = listingById(id);
     var draft = state.priceDrafts[priceDraftKey(id,market)];
     var rule = core.marketRule(market);
-    if(!listing || !draft || !rule) return false;
+    if(!listing || !draft || !rule || draft.sending) return false;
     if(!validPriceDraft(draft)){
       draft.message = "Target non valido: deve essere tra il minimo e +8%";
       renderCatalog();
@@ -696,8 +786,10 @@
     var minimum = core.toNumber(draft.minimum);
     var target = core.toNumber(draft.target);
     if(askConfirmation && !window.confirm("Inviare a Back Market i prezzi per "+marketLabel(market)+"?\n\nMinimo: "+core.formatMoney(minimum,rule.currency)+"\nTarget: "+core.formatMoney(target,rule.currency))) return false;
+    draft.sending = true;
     draft.message = "Invio in corso…";
     renderCatalog();
+    var succeeded = false;
     try{
       await apiFetch("/api/listings/"+encodeURIComponent(id),{
         method:"POST",
@@ -719,12 +811,22 @@
       }
       if(!state.listingMarkets[id]) state.listingMarkets[id] = {};
       state.listingMarkets[id][market] = {listing:{price:target.toFixed(2),min_price:minimum.toFixed(2)}};
-      return true;
+      succeeded = true;
     }catch(error){
       draft.message = error.message || "Aggiornamento non riuscito";
-      renderCatalog();
-      return false;
+    }finally{
+      draft.sending = false;
+      if(askConfirmation) renderCatalog();
     }
+    if(succeeded && askConfirmation){
+      setTimeout(function(){
+        if(!draft.sending && !draft.dirty && draft.message === "Prezzi aggiornati"){
+          draft.message = "";
+          renderCatalog();
+        }
+      },2500);
+    }
+    return succeeded;
   }
 
   async function sendAllMarketPrices(id){
@@ -855,12 +957,15 @@
   }
 
   function bindStaticControls(){
-    ["searchInput","brandFilter","capacityFilter","colorFilter","qualityFilter"].forEach(function(id){
+    ["searchInput","brandFilter","capacityFilter","colorFilter","qualityFilter","batteryFilter"].forEach(function(id){
       byId(id).addEventListener(id === "searchInput" ? "input" : "change",renderCatalog);
     });
     byId("clearFilters").addEventListener("click",function(){
       byId("searchInput").value="";
-      ["brandFilter","capacityFilter","colorFilter","qualityFilter"].forEach(function(id){ byId(id).value=""; });
+      ["brandFilter","capacityFilter","colorFilter","qualityFilter","batteryFilter"].forEach(function(id){
+        byId(id).value="";
+        renderCustomSelect(byId(id));
+      });
       renderCatalog();
     });
     byId("refreshCatalog").addEventListener("click",function(){ loadCatalog(true); });
@@ -899,6 +1004,7 @@
   }
 
   renderSettings();
+  initializeCustomSelects();
   bindStaticControls();
   renderCatalog();
   loadCatalog(false);

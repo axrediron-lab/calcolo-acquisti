@@ -11,10 +11,7 @@
     <header class="topbar">
       <div class="heading-block">
         <a class="home-button" href="index.html" aria-label="Torna alla Home">← Home</a>
-        <div>
-          <h1>Monitor BuyBox</h1>
-          <p>Catalogo, BuyBox, prezzi e quantità Back Market raggruppati per famiglia e variante.</p>
-        </div>
+        <h1>Monitor BuyBox</h1>
       </div>
       <div class="header-actions">
         <a class="secondary-button" href="calcolo-completo.html">Impostazioni economiche</a>
@@ -36,20 +33,24 @@
         <input id="searchInput" type="search" placeholder="iPhone 14, Galaxy S23, 128 GB, Mezzanotte..." autocomplete="off">
       </div>
       <div class="filter-field">
-        <label for="brandFilter">Marca</label>
+        <label id="brandFilterLabel" for="brandFilter">Marca</label>
         <select id="brandFilter"><option value="">Tutte</option></select>
       </div>
       <div class="filter-field">
-        <label for="capacityFilter">Capacità</label>
+        <label id="capacityFilterLabel" for="capacityFilter">Capacità</label>
         <select id="capacityFilter"><option value="">Tutte</option></select>
       </div>
       <div class="filter-field">
-        <label for="colorFilter">Colore</label>
+        <label id="colorFilterLabel" for="colorFilter">Colore</label>
         <select id="colorFilter"><option value="">Tutti</option></select>
       </div>
       <div class="filter-field">
-        <label for="qualityFilter">Qualità</label>
+        <label id="qualityFilterLabel" for="qualityFilter">Qualità</label>
         <select id="qualityFilter"><option value="">Tutte</option></select>
+      </div>
+      <div class="filter-field">
+        <label id="batteryFilterLabel" for="batteryFilter">Batteria</label>
+        <select id="batteryFilter"><option value="">Tutte</option></select>
       </div>
       <button id="clearFilters" class="clear-button" type="button">Reimposta</button>
     </section>

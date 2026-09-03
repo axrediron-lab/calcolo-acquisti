@@ -26,6 +26,8 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   const coreScript = read("buybox-core.js");
   const css = read("buybox.css");
   assert.match(html, /write-enabled-badge/);
+  assert.match(html, /id="batteryFilter"/);
+  assert.doesNotMatch(html, /Catalogo, BuyBox, prezzi e quantità Back Market raggruppati/);
   assert.match(script, /\/api\/catalog/);
   assert.match(script, /data-open-detail/);
   assert.match(script, /productDetailHtml/);
@@ -51,6 +53,12 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(script, /buyboxCurrency/);
   assert.match(script, /shippingItaly/);
   assert.match(script, /listing\.simType/);
+  assert.match(script, /batteryLabel === battery/);
+  assert.match(script, /initializeCustomSelects/);
+  assert.match(script, /filter-dropdown-option/);
+  assert.match(script, /draft\.sending = true/);
+  assert.match(script, /if\(askConfirmation\) renderCatalog\(\)/);
+  assert.match(script, /controlStackHtml/);
   assert.match(coreScript, /P-SIM/);
   assert.match(coreScript, /E-SIM/);
   assert.doesNotMatch(script, /Bozza calcolata/);
@@ -64,6 +72,8 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.doesNotMatch(script, /class="market-panel-title"/);
   assert.match(css, /width:min\(1840px,98vw\)/);
   assert.match(css, /\.product-detail-page \.market-panel\{width:100%/);
+  assert.match(css, /\.filter-dropdown-menu/);
+  assert.match(css, /\.control-status/);
   assert.doesNotMatch(css, /width:min\(100%,1600px\)/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });
