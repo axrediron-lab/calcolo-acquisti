@@ -19,7 +19,7 @@ test('verifica Drive usa password, CSS unico e impedisce invii HTML senza JavaSc
   const html = fs.readFileSync(path.join(root, 'verifica-drive.html'), 'utf8');
   assert.match(html, /type="password"/);
   assert.match(html, /form-action 'none'/);
-  assert.match(html, /href="styles.css"/);
+  assert.match(html, /href="styles\.css\?v=drive-check-1"/);
   assert.doesNotMatch(html, /<style|style=/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|console\.|innerHTML/);
 });
