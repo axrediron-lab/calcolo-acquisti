@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="it" class="page-purchases">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Abbinamenti Ready e Back Market</title><link rel="stylesheet" href="styles.css?v=purchases-1">
+  <script src="buybox-config.js" defer></script><script src="acquisti.js" defer></script>
+</head>
+<body data-mode="mappings"><main class="purchases-shell">
+  <header><div><p class="eyebrow">ARCHIVIO ONLINE</p><h1>Abbinamenti</h1></div><nav><a href="index.html">Home</a><a href="acquisti.html">Acquisti</a><a href="buybox.html">Monitor BuyBox</a></nav></header>
+  <p class="purchases-notice">Codice prodotto Ready ↔ SKU Back Market. Modifiche e rimozioni valgono solo per le nuove importazioni: non spostano quantità, costi o documenti già salvati.</p>
+  <form id="purchaseLogin" class="purchases-panel" autocomplete="off"><label for="purchaseKey">Codice di accesso del Monitor BuyBox</label><input id="purchaseKey" type="password" autocomplete="off" required><button type="submit">Accedi</button><small>Il codice rimane solo nella sessione della scheda.</small></form>
+  <p id="purchaseStatus" role="status" aria-live="polite"></p>
+  <section id="purchaseWorkspace" class="purchases-panel" hidden><div class="purchases-toolbar"><button id="purchaseLogout" type="button" class="secondary">Esci</button></div>
+    <form id="historySearch" class="purchases-toolbar"><label for="historyQuery">Codice Ready, descrizione o SKU</label><input id="historyQuery" type="search"><button type="submit">Cerca</button></form>
+    <div id="purchaseHistory"></div><button id="historyMore" type="button" class="secondary" hidden>Carica altri</button>
+  </section>
+</main>
+<dialog id="mappingDialog"><form id="mappingForm"><h2>Modifica abbinamento</h2><p id="mappingContext"></p><p id="mappingCurrent"></p><p>La modifica vale solo per nuove importazioni. I documenti già salvati non cambiano.</p>
+  <label for="listingSearch">Cerca SKU o descrizione Back Market</label><input id="listingSearch" type="search" autocomplete="off"><label for="listingChoice">Seleziona lo SKU esatto</label><select id="listingChoice" size="7" required></select><small id="listingCount"></small>
+  <p id="mappingError" role="alert"></p><div class="purchases-toolbar"><button type="submit">Conferma abbinamento</button><button id="mappingCancel" type="button" class="secondary">Annulla</button></div>
+</form></dialog>
+<dialog id="documentDialog"><h2 id="documentTitle"></h2><div id="documentContent"></div><button id="documentClose" type="button">Chiudi</button></dialog>
+</body></html>

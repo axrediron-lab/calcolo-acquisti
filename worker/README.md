@@ -75,8 +75,39 @@ la sincronizzazione se Drive sostituisce il file durante la verifica.
 
 Prima del rilascio, eseguire i test; dopo configurazione del segreto e rilascio
 autorizzato verificare prima lo stato e poi l'anteprima, senza stampare il CSV nei
-log. Il pulsante nella pagina Impostazioni/Acquisti e la deduplicazione persistente
-per documento saranno implementati nella fase successiva.
+log. La verifica Drive resta separata dall'importazione descritta sotto.
+
+## Archivio Acquisti e Abbinamenti
+
+Le pagine `acquisti.html` e `abbinamenti.html` usano il binding D1 `PURCHASES_DB`.
+Applicare `migrations/0001_purchases.sql` con le migrazioni Wrangler prima del
+rilascio. Usare `wrangler deploy --keep-vars` per preservare le variabili configurate
+nel pannello. Non importare CSV operativi nel repository.
+
+- `GET /api/purchases/status`: disponibilità e numero documenti.
+- `POST /api/purchases/preview`: lettura Drive o CSV caricato, validazione e
+  anteprima senza scritture. Gli abbinamenti mancanti bloccano la conferma.
+- `POST /api/purchases/confirm`: salva un documento dopo conferma esplicita,
+  usando l'anteprima firmata con scadenza di un'ora.
+- `GET /api/purchases/documents` e `/api/purchases/document?key=...`: storico
+  ricercabile e dettaglio con riferimenti d'origine e righe del file.
+- `GET /api/mappings`, `GET /api/mappings/history?code=...` e
+  `POST /api/mappings/save`: elenco, revisioni e modifica/rimozione futura.
+
+Tutti richiedono `X-App-Key`. Il codice resta nella sessione della scheda, non
+nel database; abbinamenti e documenti sono invece persistenti online.
+La coppia anno/numero Ready impedisce duplicati; contenuti diversi per lo stesso
+documento vengono bloccati senza sovrascrivere. Il salvataggio verifica che le
+revisioni degli abbinamenti non siano cambiate dopo l'anteprima. Lo storico salva
+lo SKU abbinato in quel momento: le modifiche successive non lo spostano.
+
+Questa fase NON invia quantità o prezzi a Back Market e NON calcola costi medi.
+Lo stato persistito è `not_sent`. I collegamenti BuyBox aprono la singola
+inserzione esistente. Invio delle quantità, riconciliazione delle giacenze e
+costo medio sono una fase successiva, separata dal semplice salvataggio.
+
+Verifiche dalla radice: `node --test tests/*.test.cjs worker/test/*.test.mjs`.
+I test usano dati sintetici e SQLite in memoria, senza modifiche in produzione.
 
 Attività successiva concordata: pulizia delle regole CSS obsolete dopo
 l'implementazione delle nuove funzionalità, mantenendo il Mobile escluso.

@@ -31,7 +31,7 @@ function mockGoogle({ listing = { files: [file] }, content = csv, after = listin
   globalThis.fetch = async (input, options) => {
     const url = new URL(input);
     calls.push({ url, options });
-    assert.equal(options.redirect, "error");
+    assert.equal(options.redirect, "manual");
     assert.ok(options.signal);
     if (url.href === "https://oauth2.googleapis.com/token") {
       assert.equal(options.method, "POST");
@@ -108,6 +108,7 @@ for (const [label, options, code] of [
   ["file sostituito", { after: { files: [{ ...file, id: "replacement" }] } }, "DRIVE_FILE_CHANGED"],
   ["contenuto incoerente", { content: csv.replace("Prodotto", "Cambiatо") }, "DRIVE_FILE_CHANGED"],
   ["token rifiutato", { tokenResponse: new Response("SECRET upstream details", { status: 403 }) }, "DRIVE_UPSTREAM_ERROR"],
+  ["redirect rifiutato", { tokenResponse: new Response(null, { status: 302, headers: { Location: "https://other.invalid" } }) }, "DRIVE_UPSTREAM_ERROR"],
 ]) test(`Drive: ${label}`, async () => {
   mockGoogle(options);
   const response = await handleRequest(request(), env);

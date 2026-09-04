@@ -34,7 +34,9 @@ async function googleRead(url, options, limit = 64 * 1024) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetch(url, { ...options, redirect: "error", signal: controller.signal });
+    // Workerd supports manual/follow, not error. Reject every non-2xx below,
+    // including redirects, without forwarding credentials to another address.
+    const response = await fetch(url, { ...options, redirect: "manual", signal: controller.signal });
     if (!response.ok) {
       await response.body?.cancel();
       fail("DRIVE_UPSTREAM_ERROR", "Google non ha consentito la lettura. Verifica credenziali, condivisione e disponibilità del servizio.");

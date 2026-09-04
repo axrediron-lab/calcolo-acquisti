@@ -8,6 +8,7 @@
  * 03 - Calcolo completo (.page-calcolo-completo)
  * 04 - Monitor BuyBox (.page-buybox)
  * 05 - Verifica Drive (.page-drive-check)
+ * 06 - Acquisti e abbinamenti (.page-purchases)
  *
  * :where() delimita le regole alla pagina senza aumentarne la specificita.
  * Ordine, valori e breakpoint originali sono mantenuti per preservare la resa.
@@ -2173,3 +2174,48 @@
 :where(.page-drive-check) dd { margin: 0 0 8px; overflow-wrap: anywhere; }
 :where(.page-drive-check) .drive-home-link { margin-top: 24px; padding: 12px; border-radius: 10px; }
 :where(.page-drive-check) .drive-home-link::after { display: none; }
+
+/* 06 - Acquisti e abbinamenti: nessuna regola modifica il Monitor BuyBox. */
+:where(.page-purchases), :where(.page-purchases) * { box-sizing: border-box; }
+:where(.page-purchases) body { margin: 0; background: #f4f7fb; color: #152536; font: 15px/1.5 Arial, sans-serif; }
+:where(.page-purchases) [hidden] { display: none !important; }
+:where(.page-purchases) .purchases-shell { max-width: 1600px; margin: auto; padding: 32px; }
+:where(.page-purchases) header, :where(.page-purchases) nav, :where(.page-purchases) .purchases-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+:where(.page-purchases) header { justify-content: space-between; margin-bottom: 20px; }
+:where(.page-purchases) h1 { margin: 0; font-size: 36px; letter-spacing: -.03em; }
+:where(.page-purchases) h2 { font-size: 22px; }
+:where(.page-purchases) .eyebrow { color: #035a8b; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .1em; }
+:where(.page-purchases) a { color: #035a8b; }
+:where(.page-purchases) .purchases-notice { background: #eaf5fb; padding: 16px; border-left: 4px solid #035a8b; }
+:where(.page-purchases) .purchases-panel { background: white; border: 1px solid #dde5ef; border-radius: 14px; padding: 24px; margin: 20px 0; }
+:where(.page-purchases) form { display: grid; gap: 12px; }
+:where(.page-purchases) #purchaseLogin { max-width: 560px; }
+:where(.page-purchases) label, :where(.page-purchases) summary { font-weight: 700; }
+:where(.page-purchases) summary { cursor: pointer; font-size: 18px; }
+:where(.page-purchases) input, :where(.page-purchases) select, :where(.page-purchases) button { font: inherit; border-radius: 8px; padding: 10px 12px; }
+:where(.page-purchases) input, :where(.page-purchases) select { border: 1px solid #bdcbd9; min-width: 0; max-width: 100%; background: white; color: #152536; }
+:where(.page-purchases) button { border: 1px solid #035a8b; background: #035a8b; color: white; font-weight: 700; cursor: pointer; }
+:where(.page-purchases) button.secondary { background: white; color: #035a8b; }
+:where(.page-purchases) button:disabled { opacity: .5; cursor: not-allowed; }
+:where(.page-purchases) :focus-visible { outline: 3px solid #1476b8; outline-offset: 3px; }
+:where(.page-purchases) small { display: block; color: #526578; font-size: 12px; margin: 5px 0; }
+:where(.page-purchases) .purchases-table-wrap { overflow-x: auto; margin: 16px 0; }
+:where(.page-purchases) table { width: 100%; border-collapse: collapse; font-size: 14px; }
+:where(.page-purchases) th { text-align: left; background: #edf3f8; color: #354e64; padding: 12px; }
+:where(.page-purchases) td { border-bottom: 1px solid #dde5ef; padding: 12px; vertical-align: top; overflow-wrap: anywhere; }
+:where(.page-purchases) td button, :where(.page-purchases) td a { display: inline-block; margin: 2px 5px 5px 0; white-space: nowrap; }
+:where(.page-purchases) .document-state { font-weight: 700; }
+:where(.page-purchases) #purchaseStatus { min-height: 24px; font-weight: 600; }
+:where(.page-purchases) dialog { width: min(1100px,94vw); max-height: 90vh; border: 1px solid #dde5ef; border-radius: 14px; padding: 24px; }
+:where(.page-purchases) dialog::backdrop { background: #13263888; }
+:where(.page-purchases) #mappingDialog { width: min(850px,94vw); }
+:where(.page-purchases) #listingChoice { width: 100%; }
+:where(.page-purchases) #mappingError { color: #a32121; }
+:where(.page-purchases) .is-working { cursor: progress; }
+:where(.page-purchases) .is-working button { opacity: .6; }
+@media (max-width:700px) {
+  :where(.page-purchases) .purchases-shell { padding: 16px; }
+  :where(.page-purchases) .purchases-panel { padding: 16px; }
+  :where(.page-purchases) .purchases-toolbar { align-items: stretch; flex-direction: column; }
+  :where(.page-purchases) h1 { font-size: 30px; }
+}

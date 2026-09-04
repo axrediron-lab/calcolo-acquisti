@@ -5,6 +5,14 @@
   "compatibility_date": "2026-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "PURCHASES_DB",
+      "database_name": "calcolo-acquisti-archivio",
+      "database_id": "a3db68b5-5ff4-486c-be22-3040aa013873",
+      "migrations_dir": "migrations"
+    }
+  ],
   "vars": {
     "DRIVE_FOLDER_ID": "1p46QtfodU6g8piuuuUY5F0Z3GeuOZ_HZ",
     "DRIVE_FILE_NAME": "acquisti.CSV",

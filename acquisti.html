@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="it" class="page-purchases">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Acquisti</title>
+  <link rel="stylesheet" href="styles.css?v=purchases-1">
+  <script src="buybox-config.js" defer></script><script src="acquisti.js" defer></script>
+</head>
+<body data-mode="purchases">
+  <main class="purchases-shell">
+    <header><div><p class="eyebrow">ARCHIVIO ONLINE</p><h1>Acquisti</h1></div><nav><a href="index.html">Home</a><a href="abbinamenti.html">Abbinamenti</a><a href="buybox.html">Monitor BuyBox</a></nav></header>
+    <p class="purchases-notice">Prima fase: salvi documenti, costi EUR e abbinamenti online. Le quantità e i prezzi su Back Market non vengono modificati. Nessun costo medio viene applicato.</p>
+    <form id="purchaseLogin" class="purchases-panel" autocomplete="off">
+      <label for="purchaseKey">Codice di accesso del Monitor BuyBox</label>
+      <input id="purchaseKey" type="password" autocomplete="off" required>
+      <button type="submit">Accedi</button>
+      <small>Il codice rimane solo nella sessione della scheda. Documenti e abbinamenti sono conservati online.</small>
+    </form>
+    <p id="purchaseStatus" role="status" aria-live="polite"></p>
+    <section id="purchaseWorkspace" hidden>
+      <div class="purchases-toolbar"><button id="readDrive" type="button">Leggi da Drive</button><label class="file-label">Oppure carica dal computer <input id="purchaseFile" type="file" accept=".csv,text/csv"></label><button id="purchaseLogout" class="secondary" type="button">Esci</button></div>
+      <p id="previewSource"></p><div id="purchasePreview"></div>
+      <section class="purchases-panel"><h2>Documenti salvati</h2><p>Salvato non significa caricato su Back Market. Puoi cercare per numero Ready o riferimento d’origine.</p>
+        <form id="historySearch" class="purchases-toolbar"><label for="historyQuery">Cerca documento</label><input id="historyQuery" type="search"><button type="submit">Cerca</button></form>
+        <div id="purchaseHistory"></div><button id="historyMore" type="button" class="secondary" hidden>Carica altri</button>
+      </section>
+    </section>
+  </main>
+  <dialog id="mappingDialog"><form id="mappingForm">
+    <h2>Abbina codice Ready</h2><p id="mappingContext"></p><p id="mappingCurrent"></p>
+    <p>La modifica vale solo per nuove importazioni. I documenti già salvati non cambiano.</p>
+    <label for="listingSearch">Cerca SKU o descrizione Back Market</label><input id="listingSearch" type="search" autocomplete="off">
+    <label for="listingChoice">Seleziona lo SKU esatto (controlla grado, batteria, memoria e colore)</label><select id="listingChoice" size="7" required></select><small id="listingCount"></small>
+    <p id="mappingError" role="alert"></p><div class="purchases-toolbar"><button type="submit">Conferma abbinamento</button><button id="mappingCancel" type="button" class="secondary">Annulla</button></div>
+  </form></dialog>
+  <dialog id="documentDialog"><h2 id="documentTitle"></h2><div id="documentContent"></div><button id="documentClose" type="button">Chiudi</button></dialog>
+</body></html>
