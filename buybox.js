@@ -1003,6 +1003,15 @@
     setStatus(force ? "Aggiornamento in corso…" : "Connessione al catalogo…");
     try{
       var payload = await apiFetch("/api/catalog"+(force?"?refresh=1":""));
+      try{
+        var costs = await apiFetch("/api/purchases/costs");
+        (costs.results || []).forEach(function(item){
+          state.purchases[item.listing_id] = (item.average_cost_cents / 100).toFixed(2).replace(".",",");
+        });
+        writeJson(config.purchaseCacheKey,state.purchases);
+      }catch(costError){
+        if(costError.code === "ACCESS_REQUIRED") throw costError;
+      }
       writeJson(config.catalogCacheKey,payload);
       applyCatalog(payload,"live");
     }catch(error){

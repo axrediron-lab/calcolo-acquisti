@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { parseReady } from "../src/ready-csv.js";
-import { previewPurchases, confirmPurchase, saveMapping, purchaseRoute } from "../src/purchases.js";
+import { previewPurchases, confirmPurchase, saveMapping, purchaseRoute, processPurchaseItem, workDocument } from "../src/purchases.js";
 import { handleRequest } from "../src/index.js";
 
 const header = '"Data";"N.Doc.";"Cod.";"Descrizione";"Quant.";"Pr.sc."\r\n';
@@ -11,7 +11,7 @@ const reference = '"02/09/2026";"142";"";"Rif. Ord.f. N. 136 del 02/09/2026";"";
 const product = '"02/09/2026";"142";"00123";"Prodotto test";"2";"10,25"\r\n';
 const csv = header + reference + product;
 class D1Test {
-  constructor() { this.db = new DatabaseSync(':memory:'); this.db.exec(readFileSync(new URL('../migrations/0001_purchases.sql', import.meta.url), 'utf8')); }
+  constructor() { this.db = new DatabaseSync(':memory:'); this.db.exec(readFileSync(new URL('../migrations/0001_purchases.sql', import.meta.url), 'utf8')); this.db.exec(readFileSync(new URL('../migrations/0002_purchase_processing.sql', import.meta.url), 'utf8')); }
   prepare(sql) {
     const database = this.db;
     const statement = (params = []) => ({
@@ -127,4 +127,59 @@ test('API acquisti e abbinamenti protette, nessuna necessità di segreti Back Ma
     assert.equal((await handleRequest(new Request('https://test.local'+path),env)).status,401);
     assert.equal((await handleRequest(new Request('https://test.local'+path,{headers:{'X-App-Key':env.APP_ACCESS_KEY}}),env)).status,200);
   }
+});
+
+test('prima lavorazione usa il costo ordine senza media e può lasciare la quantità in sospeso', async t => {
+  const {env,database}=setup(t); await saveMapping(mapping(),env,listing); const d=await preview(env); await confirmPurchase({token:d.token,confirm:true},env);
+  const operations={loadListing:async id=>({id,sku:'SKU-'+id,quantity:100}),updateQuantity:async()=>assert.fail('nessuna scrittura prevista')};
+  const result=await processPurchaseItem({document_key:'2026:142',listing_id:'listing-123',mode:'prices_only',expected_bm_quantity:100,confirm:true},env,operations);
+  assert.equal(result.new_average_cost_cents,1025); assert.equal(result.quantity_status,'pending'); assert.equal(result.target_quantity,102);
+  assert.equal(database.db.prepare('SELECT average_cost_cents FROM product_costs').get().average_cost_cents,1025);
+  assert.equal((await workDocument('2026:142',env)).items[0].processing.quantity_status,'pending');
+});
+
+test('quantità manuale non invia nulla e usa la quantità al netto dell’ordine per la media futura', async t => {
+  const {env}=setup(t); await saveMapping(mapping(),env,listing); let d=await preview(env); await confirmPurchase({token:d.token,confirm:true},env);
+  let writes=0; const operations={loadListing:async id=>({id,sku:'SKU-'+id,quantity:102}),updateQuantity:async()=>{writes+=1;}};
+  const first=await processPurchaseItem({document_key:'2026:142',listing_id:'listing-123',mode:'manual',expected_bm_quantity:102,confirm:true},env,operations);
+  assert.equal(first.previous_quantity,null); assert.equal(writes,0);
+  const secondCsv=csv.replaceAll('"142"','"143"').replace('10,25','20,25'); d=await preview(env,secondCsv); await confirmPurchase({token:d.token,confirm:true},env);
+  const second=await processPurchaseItem({document_key:'2026:143',listing_id:'listing-123',mode:'manual',expected_bm_quantity:102,confirm:true},env,operations);
+  assert.equal(second.previous_quantity,100); assert.equal(second.new_average_cost_cents,1045); assert.equal(writes,0);
+});
+
+test('aggiornamento automatico invia una sola volta la somma e il retry è idempotente', async t => {
+  const {env}=setup(t); await saveMapping(mapping(),env,listing); const d=await preview(env); await confirmPurchase({token:d.token,confirm:true},env);
+  let quantity=100,writes=0; const operations={loadListing:async id=>({id,sku:'SKU-'+id,quantity}),updateQuantity:async(_id,value)=>{writes+=1;quantity=value;}};
+  const body={document_key:'2026:142',listing_id:'listing-123',mode:'automatic',expected_bm_quantity:100,confirm:true};
+  const first=await processPurchaseItem(body,env,operations); const retry=await processPurchaseItem({...body,expected_bm_quantity:102},env,operations);
+  assert.equal(first.target_quantity,102); assert.equal(first.quantity_status,'automatic'); assert.equal(retry.duplicate,true); assert.equal(writes,1);
+});
+
+test('blocca quantità cambiata e un nuovo ordine finché ne esiste una in sospeso', async t => {
+  const {env}=setup(t); await saveMapping(mapping(),env,listing); let d=await preview(env); await confirmPurchase({token:d.token,confirm:true},env);
+  const operations={loadListing:async id=>({id,sku:'SKU-'+id,quantity:9}),updateQuantity:async()=>{}};
+  await assert.rejects(()=>processPurchaseItem({document_key:'2026:142',listing_id:'listing-123',mode:'prices_only',expected_bm_quantity:8,confirm:true},env,operations),{code:'QUANTITY_CHANGED'});
+  await processPurchaseItem({document_key:'2026:142',listing_id:'listing-123',mode:'prices_only',expected_bm_quantity:9,confirm:true},env,operations);
+  const secondCsv=csv.replaceAll('"142"','"143"'); d=await preview(env,secondCsv); await confirmPurchase({token:d.token,confirm:true},env);
+  await assert.rejects(()=>processPurchaseItem({document_key:'2026:143',listing_id:'listing-123',mode:'prices_only',expected_bm_quantity:9,confirm:true},env,operations),{code:'PENDING_QUANTITY'});
+});
+
+test('una quantità in sospeso può essere chiusa manualmente senza applicare due volte il costo', async t => {
+  const {env,database}=setup(t); await saveMapping(mapping(),env,listing); const d=await preview(env); await confirmPurchase({token:d.token,confirm:true},env);
+  let quantity=100; const operations={loadListing:async id=>({id,sku:'SKU-'+id,quantity}),updateQuantity:async()=>assert.fail('nessuna scrittura manuale')};
+  const base={document_key:'2026:142',listing_id:'listing-123',expected_bm_quantity:100,confirm:true};
+  await processPurchaseItem({...base,mode:'prices_only'},env,operations); quantity=102;
+  const closed=await processPurchaseItem({...base,mode:'manual',expected_bm_quantity:102},env,operations);
+  assert.equal(closed.quantity_status,'manual'); assert.equal(database.db.prepare('SELECT average_cost_cents FROM product_costs').get().average_cost_cents,1025);
+  assert.equal(database.db.prepare('SELECT revision FROM product_costs').get().revision,1);
+});
+
+test('impone la lavorazione cronologica quando lo stesso SKU appare in più documenti', async t => {
+  const {env}=setup(t); await saveMapping(mapping(),env,listing);
+  const first=await preview(env); await confirmPurchase({token:first.token,confirm:true},env);
+  const secondCsv=csv.replaceAll('"142"','"143"').replaceAll('02/09/2026','03/09/2026'); const second=await preview(env,secondCsv); await confirmPurchase({token:second.token,confirm:true},env);
+  const operations={loadListing:async id=>({id,sku:'SKU-'+id,quantity:100}),updateQuantity:async()=>{}};
+  assert.equal((await workDocument('2026:143',env)).items[0].earlier_document.document_number,'142');
+  await assert.rejects(()=>processPurchaseItem({document_key:'2026:143',listing_id:'listing-123',mode:'prices_only',expected_bm_quantity:100,confirm:true},env,operations),{code:'EARLIER_DOCUMENT_REQUIRED'});
 });

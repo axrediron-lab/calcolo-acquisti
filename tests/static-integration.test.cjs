@@ -12,6 +12,24 @@ test("la Home collega il Monitor BuyBox", () => {
   assert.match(html, /Monitor BuyBox/);
 });
 
+test("la Home sostituisce la verifica tecnica Drive con la lavorazione ordini", () => {
+  const html = read("index.html");
+  assert.match(html, /href="lavorazione\.html"/);
+  assert.doesNotMatch(html, /href="verifica-drive\.html"/);
+});
+
+test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", () => {
+  const html = read("lavorazione.html");
+  const script = read("lavorazione.js");
+  assert.match(html, /Nessuna modifica senza conferma/);
+  assert.match(script, /prices_only/);
+  assert.match(script, /manual/);
+  assert.match(script, /automatic/);
+  assert.match(script, /confirm\(/);
+  assert.match(script, /Prezzi e BuyBox/);
+  assert.match(read("buybox.js"), /\/api\/purchases\/costs/);
+});
+
 test("il Calcolo completo include Home e impostazioni condivise", () => {
   const html = read("calcolo-completo.html");
   assert.match(html, /href="index\.html"[^>]*>← Home/);

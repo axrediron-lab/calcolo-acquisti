@@ -101,10 +101,31 @@ documento vengono bloccati senza sovrascrivere. Il salvataggio verifica che le
 revisioni degli abbinamenti non siano cambiate dopo l'anteprima. Lo storico salva
 lo SKU abbinato in quel momento: le modifiche successive non lo spostano.
 
-Questa fase NON invia quantità o prezzi a Back Market e NON calcola costi medi.
-Lo stato persistito è `not_sent`. I collegamenti BuyBox aprono la singola
-inserzione esistente. Invio delle quantità, riconciliazione delle giacenze e
-costo medio sono una fase successiva, separata dal semplice salvataggio.
+Il semplice salvataggio del documento NON invia quantità o prezzi a Back Market
+e mantiene lo stato storico `not_sent`. Costi e quantità vengono gestiti solo
+dalla lavorazione separata descritta sotto.
+
+## Lavorazione di costi e quantità
+
+La migrazione `0002_purchase_processing.sql` aggiunge il costo medio online e
+un registro idempotente per documento e inserzione. La pagina
+`lavorazione.html?key=...` presenta esclusivamente gli articoli del documento.
+
+- al primo acquisto il costo del documento diventa il costo iniziale, senza media;
+- dagli acquisti successivi la media ponderata usa la quantità Back Market letta
+  immediatamente prima della conferma;
+- `prices_only` registra il costo e lascia la quantità in sospeso;
+- `manual` registra che la quantità Back Market comprende già l'ordine e non invia
+  alcuna scrittura;
+- `automatic` verifica che la quantità non sia cambiata e invia la somma soltanto
+  dopo conferma esplicita.
+
+Una quantità in sospeso blocca la lavorazione di acquisti successivi per la stessa
+inserzione, così la media non può usare una base ambigua. I retry dell'aggiornamento
+automatico controllano la quantità corrente prima di ripetere la scrittura.
+I prezzi restano sempre separati: il Monitor BuyBox legge `/api/purchases/costs`
+e usa il costo online nei calcoli, ma ogni invio prezzo mantiene la propria
+conferma esistente.
 
 Verifiche dalla radice: `node --test tests/*.test.cjs worker/test/*.test.mjs`.
 I test usano dati sintetici e SQLite in memoria, senza modifiche in produzione.

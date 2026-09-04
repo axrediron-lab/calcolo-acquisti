@@ -137,17 +137,137 @@ function searchParams(url) {
   if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1000000) reject("INVALID_PAGE", "Pagina non valida", 400);
   return { q, offset };
 }
-export async function purchaseRoute(request, url, env, loadListing) {
+function documentItems(saved) {
+  let lines;
+  try { lines = JSON.parse(saved.lines_json); } catch { reject("INVALID_DOCUMENT", "Documento salvato non leggibile", 500); }
+  if (!Array.isArray(lines) || !lines.length) reject("INVALID_DOCUMENT", "Documento salvato senza righe", 500);
+  const items = new Map();
+  for (const line of lines) {
+    const listingId = String(line.mapping?.listing_id || "");
+    if (!listingId) reject("INVALID_DOCUMENT", "Documento salvato senza abbinamento storico", 500);
+    const quantity = Number(line.quantity); const unitCost = Number(line.unit_cost_cents);
+    if (!Number.isSafeInteger(quantity) || quantity <= 0 || !Number.isSafeInteger(unitCost) || unitCost <= 0) reject("INVALID_DOCUMENT", "Riga documento non valida", 500);
+    const current = items.get(listingId) || { listing_id: listingId, sku_snapshot: String(line.mapping.sku || ""), description: String(line.description || ""), ready_codes: [], incoming_quantity: 0, incoming_total_cents: 0 };
+    current.incoming_quantity += quantity; current.incoming_total_cents += quantity * unitCost;
+    if (!current.ready_codes.includes(line.ready_code)) current.ready_codes.push(line.ready_code);
+    items.set(listingId, current);
+  }
+  return [...items.values()].map(item => ({ ...item, incoming_unit_cost_cents: Math.round(item.incoming_total_cents / item.incoming_quantity) }));
+}
+async function savedDocument(key, database) {
+  const saved = await database.prepare("SELECT * FROM purchase_documents WHERE document_key=?").bind(key).first();
+  if (!saved) reject("DOCUMENT_NOT_FOUND", "Documento non trovato", 404);
+  return saved;
+}
+export async function workDocument(key, env) {
+  const database = db(env); const saved = await savedDocument(key, database); const items = documentItems(saved);
+  const ids = JSON.stringify(items.map(item => item.listing_id));
+  const [{ results: costs }, { results: events }, { results: earlier }] = await Promise.all([
+    database.prepare("SELECT * FROM product_costs WHERE listing_id IN (SELECT value FROM json_each(?))").bind(ids).all(),
+    database.prepare("SELECT * FROM purchase_processing WHERE document_key=?").bind(key).all(),
+    database.prepare(`SELECT json_extract(j.value,'$.mapping.listing_id') AS listing_id,d.document_key,d.document_number,d.document_date
+      FROM purchase_documents d,json_each(d.lines_json) j
+      WHERE json_extract(j.value,'$.mapping.listing_id') IN (SELECT value FROM json_each(?))
+        AND (d.document_date<? OR (d.document_date=? AND d.document_key<?))
+        AND NOT EXISTS(SELECT 1 FROM purchase_processing p WHERE p.document_key=d.document_key AND p.listing_id=json_extract(j.value,'$.mapping.listing_id'))
+      ORDER BY d.document_date,d.document_key`).bind(ids, saved.document_date, saved.document_date, saved.document_key).all(),
+  ]);
+  const costMap = new Map(costs.map(row => [row.listing_id, row])); const eventMap = new Map(events.map(row => [row.listing_id, row])); const earlierMap = new Map();
+  for (const row of earlier) if (!earlierMap.has(row.listing_id)) earlierMap.set(row.listing_id, row);
+  return { document: { document_key: saved.document_key, document_number: saved.document_number, document_date: saved.document_date }, items: items.map(item => ({ ...item, cost: costMap.get(item.listing_id) || null, processing: eventMap.get(item.listing_id) || null, earlier_document: earlierMap.get(item.listing_id) || null })) };
+}
+async function completeAutomatic(event, database, operations) {
+  const listing = await operations.loadListing(event.listing_id); const current = Number(listing.quantity);
+  if (!Number.isSafeInteger(current) || current < 0) reject("INVALID_LISTING_QUANTITY", "Quantità Back Market non leggibile", 502);
+  if (current !== event.target_quantity) {
+    if (current !== event.bm_quantity_observed) reject("QUANTITY_CHANGED", `La quantità Back Market è cambiata da ${event.bm_quantity_observed} a ${current}. Ricarica prima di procedere.`, 409);
+    await operations.updateQuantity(event.listing_id, event.target_quantity);
+  }
+  await database.prepare("UPDATE purchase_processing SET quantity_status='automatic',updated_at=? WHERE document_key=? AND listing_id=? AND quantity_status='applying'")
+    .bind(new Date().toISOString(), event.document_key, event.listing_id).run();
+  return { ...event, quantity_status: "automatic", duplicate: false };
+}
+export async function processPurchaseItem(body, env, operations) {
+  const database = db(env); const key = String(body.document_key || ""); const listingId = String(body.listing_id || "");
+  const mode = String(body.mode || "");
+  if (!key || !/^[A-Za-z0-9-]{6,100}$/.test(listingId) || !["automatic","manual","prices_only"].includes(mode) || body.confirm !== true || !Number.isSafeInteger(body.expected_bm_quantity) || body.expected_bm_quantity < 0) reject("INVALID_PROCESSING", "Scelta di lavorazione non valida", 400);
+  const existing = await database.prepare("SELECT * FROM purchase_processing WHERE document_key=? AND listing_id=?").bind(key, listingId).first();
+  if (existing) {
+    if (existing.quantity_status === "applying") return completeAutomatic(existing, database, operations);
+    if (existing.quantity_status === "pending" && mode !== "prices_only") {
+      const listing = await operations.loadListing(listingId); const current = Number(listing.quantity);
+      if (current !== body.expected_bm_quantity) reject("QUANTITY_CHANGED", `La quantità Back Market è cambiata da ${body.expected_bm_quantity} a ${current}. Ricarica prima di procedere.`, 409);
+      if (mode === "manual") {
+        await database.prepare("UPDATE purchase_processing SET quantity_status='manual',bm_quantity_observed=?,target_quantity=?,updated_at=? WHERE document_key=? AND listing_id=? AND quantity_status='pending'")
+          .bind(current, current, new Date().toISOString(), key, listingId).run();
+        return { ...existing, quantity_status: "manual", target_quantity: current, duplicate: false };
+      }
+      const target = current + existing.incoming_quantity; const now = new Date().toISOString();
+      await database.prepare("UPDATE purchase_processing SET quantity_status='applying',bm_quantity_observed=?,target_quantity=?,updated_at=? WHERE document_key=? AND listing_id=? AND quantity_status='pending'")
+        .bind(current, target, now, key, listingId).run();
+      return completeAutomatic({ ...existing, quantity_status: "applying", bm_quantity_observed: current, target_quantity: target }, database, operations);
+    }
+    return { ...existing, duplicate: true };
+  }
+  const saved = await savedDocument(key, database); const item = documentItems(saved).find(value => value.listing_id === listingId);
+  if (!item) reject("ITEM_NOT_FOUND", "Articolo non presente nel documento", 404);
+  const earlier = await database.prepare(`SELECT d.document_number FROM purchase_documents d,json_each(d.lines_json) j
+    WHERE json_extract(j.value,'$.mapping.listing_id')=? AND (d.document_date<? OR (d.document_date=? AND d.document_key<?))
+      AND NOT EXISTS(SELECT 1 FROM purchase_processing p WHERE p.document_key=d.document_key AND p.listing_id=?)
+    ORDER BY d.document_date,d.document_key LIMIT 1`).bind(listingId, saved.document_date, saved.document_date, saved.document_key, listingId).first();
+  if (earlier) reject("EARLIER_DOCUMENT_REQUIRED", `Lavora prima il documento ${earlier.document_number} per rispettare l’ordine dei costi.`, 409);
+  const pending = await database.prepare("SELECT document_key FROM purchase_processing WHERE listing_id=? AND quantity_status='pending' LIMIT 1").bind(listingId).first();
+  if (pending) reject("PENDING_QUANTITY", "Esiste già una quantità in sospeso per questo articolo. Completa prima quella lavorazione.", 409);
+  const listing = await operations.loadListing(listingId); const current = Number(listing.quantity);
+  if (!Number.isSafeInteger(current) || current < 0) reject("INVALID_LISTING_QUANTITY", "Quantità Back Market non leggibile", 502);
+  if (current !== body.expected_bm_quantity) reject("QUANTITY_CHANGED", `La quantità Back Market è cambiata da ${body.expected_bm_quantity} a ${current}. Ricarica prima di procedere.`, 409);
+  const profile = await database.prepare("SELECT * FROM product_costs WHERE listing_id=?").bind(listingId).first();
+  const previousQuantity = mode === "manual" ? current - item.incoming_quantity : current;
+  if (profile && previousQuantity < 0) reject("INVALID_MANUAL_QUANTITY", "La quantità attuale è inferiore a quella dell’ordine: non può comprenderla già.", 409);
+  const denominator = previousQuantity + item.incoming_quantity;
+  const average = profile ? Math.round((previousQuantity * profile.average_cost_cents + item.incoming_total_cents) / denominator) : item.incoming_unit_cost_cents;
+  const target = mode === "manual" ? current : current + item.incoming_quantity;
+  const status = mode === "automatic" ? "applying" : mode === "manual" ? "manual" : "pending";
+  const revision = (profile?.revision || 0) + 1; const now = new Date().toISOString();
+  try {
+    await database.batch([
+      database.prepare(`INSERT INTO product_costs (listing_id,sku_snapshot,average_cost_cents,revision,source_document_key,updated_at)
+        SELECT ?,?,?,?,?,? WHERE ?=0 OR EXISTS(SELECT 1 FROM product_costs WHERE listing_id=? AND revision=?)
+        ON CONFLICT(listing_id) DO UPDATE SET sku_snapshot=excluded.sku_snapshot,average_cost_cents=excluded.average_cost_cents,
+        revision=product_costs.revision+1,source_document_key=excluded.source_document_key,updated_at=excluded.updated_at WHERE product_costs.revision=?`)
+        .bind(listingId, String(listing.sku || item.sku_snapshot), average, revision, key, now, profile?.revision || 0, listingId, profile?.revision || 0, profile?.revision || 0),
+      database.prepare(`INSERT INTO purchase_processing (document_key,listing_id,sku_snapshot,incoming_quantity,incoming_total_cents,previous_average_cost_cents,previous_quantity,new_average_cost_cents,bm_quantity_observed,target_quantity,quantity_status,cost_revision,processed_at,updated_at)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM product_costs WHERE listing_id=? AND revision=? AND source_document_key=?`)
+        .bind(key, listingId, String(listing.sku || item.sku_snapshot), item.incoming_quantity, item.incoming_total_cents, profile?.average_cost_cents || null, profile ? previousQuantity : null, average, current, target, status, revision, now, now, listingId, revision, key),
+    ]);
+  } catch (error) {
+    if (String(error.message).includes("UNIQUE constraint")) return processPurchaseItem(body, env, operations);
+    throw error;
+  }
+  const event = await database.prepare("SELECT * FROM purchase_processing WHERE document_key=? AND listing_id=?").bind(key, listingId).first();
+  if (!event) reject("COST_CHANGED", "Il costo è stato aggiornato nel frattempo. Ricarica e riprova.", 409);
+  return status === "applying" ? completeAutomatic(event, database, operations) : { ...event, duplicate: false };
+}
+export async function purchaseRoute(request, url, env, operationInput) {
   const database = db(env);
+  const operations = typeof operationInput === "function" ? { loadListing: operationInput, updateQuantity: async () => reject("WRITE_UNAVAILABLE", "Aggiornamento quantità non disponibile", 503) } : operationInput;
   const path = url.pathname;
   if (request.method === "GET") {
     if (path === "/api/purchases/status") {
       const row = await database.prepare("SELECT count(*) AS documents FROM purchase_documents").first();
-      return { configured: true, documents: row.documents, stock_writes_enabled: false };
+      return { configured: true, documents: row.documents, document_save_writes_stock: false, processing_quantity_writes_enabled: true };
+    }
+    if (path === "/api/purchases/work") return workDocument(url.searchParams.get("key") || "", env);
+    if (path === "/api/purchases/costs") {
+      const { results } = await database.prepare("SELECT listing_id,sku_snapshot,average_cost_cents,revision,updated_at FROM product_costs ORDER BY listing_id LIMIT 5000").all();
+      return { results };
     }
     if (path === "/api/purchases/documents") {
       const { q, offset } = searchParams(url);
-      const { results } = await database.prepare(`SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status
+      const { results } = await database.prepare(`SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,
+        (SELECT count(DISTINCT json_extract(j.value,'$.mapping.listing_id')) FROM json_each(lines_json) j) AS item_count,
+        (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key) AS processed_items,
+        (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key AND p.quantity_status IN ('pending','applying')) AS pending_items
         FROM purchase_documents WHERE instr(document_number,?)>0 OR instr(references_json,?)>0
         ORDER BY document_date DESC,document_key LIMIT 51 OFFSET ?`).bind(q, q, offset).all();
       return { results: results.slice(0, 50), next_offset: results.length > 50 ? offset + 50 : null };
@@ -172,7 +292,8 @@ export async function purchaseRoute(request, url, env, loadListing) {
   if (request.method === "POST") {
     if (path === "/api/purchases/preview") return previewPurchases(await purchaseBody(request), env);
     if (path === "/api/purchases/confirm") return confirmPurchase(await purchaseBody(request), env);
-    if (path === "/api/mappings/save") return saveMapping(await purchaseBody(request), env, loadListing);
+    if (path === "/api/purchases/process") return processPurchaseItem(await purchaseBody(request), env, operations);
+    if (path === "/api/mappings/save") return saveMapping(await purchaseBody(request), env, operations.loadListing);
   }
   reject("NOT_FOUND", "Operazione non disponibile", 404);
 }

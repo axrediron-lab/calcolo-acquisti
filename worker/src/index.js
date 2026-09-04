@@ -362,6 +362,16 @@ async function updateListingResponse(request, listingId, env) {
   return jsonResponse({ ok: true, market: update.market, listing });
 }
 
+async function updateListingQuantity(listingId, quantity, env) {
+  if (!validListingId(listingId) || !Number.isSafeInteger(quantity) || quantity < 0) {
+    throw new HttpError(400, "Quantità non valida", "INVALID_QUANTITY");
+  }
+  const upstream = absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env);
+  const listing = await backMarketJson(upstream, env, { method: "POST", locale: env.BACKMARKET_ACCEPT_LANGUAGE || "it-it", body: { quantity } });
+  await clearListingCaches(listingId);
+  return listing;
+}
+
 function preflightResponse(request, env) {
   if (!isAllowedOrigin(request, env)) {
     return jsonResponse({ error: "Origine non autorizzata", code: "ORIGIN_DENIED" }, 403);
@@ -397,9 +407,15 @@ export async function handleRequest(request, env, ctx = {}) {
     } else if (url.pathname.startsWith("/api/purchases/") || url.pathname === "/api/mappings" || url.pathname.startsWith("/api/mappings/")) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);
-      response = jsonResponse(await purchaseRoute(request, url, env, async listingId => {
-        assertConfigured(env);
-        return backMarketJson(absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env), env, { locale: "it-it" });
+      response = jsonResponse(await purchaseRoute(request, url, env, {
+        loadListing: async listingId => {
+          assertConfigured(env);
+          return backMarketJson(absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env), env, { locale: "it-it" });
+        },
+        updateQuantity: async (listingId, quantity) => {
+          assertConfigured(env);
+          return updateListingQuantity(listingId, quantity, env);
+        },
       }));
     } else if (url.pathname === "/api/drive/status" || url.pathname === "/api/drive/preview") {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
