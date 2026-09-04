@@ -483,7 +483,7 @@
       if(b === config.market) return 1;
       return marketLabel(a).localeCompare(marketLabel(b),"it");
     });
-    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-table-wrap"><table class="market-table"><colgroup><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup><thead><tr>'+
+    return '<div class="market-panel'+(view.isReference?' reference':'')+'"><div class="market-table-wrap"><table class="market-table"><colgroup><col><col><col><col><col><col><col><col></colgroup><thead><tr>'+
       '<th>Mercato</th><th title="Prezzo minimo">Min</th><th title="Prezzo target">Target</th><th title="BackBox attuale">BB att.</th><th title="BackBox da battere">BB da battere</th><th title="Acquisto consigliato">Acq. cons.</th><th title="Utile netto alla BackBox attuale">Utile BB</th><th class="bulk-send-header"><button class="bulk-send-button" type="button" data-send-all-prices="'+escapeHtml(listing.id)+'">Invia modifiche</button></th>'+
       '</tr></thead><tbody>'+markets.map(function(market){ return marketRowHtml(listing,market,competitorForMarket(entry,market),view); }).join("")+'</tbody></table></div></div>';
   }
@@ -562,7 +562,7 @@
         '<span class="family-main"><span class="family-icon">▣</span><span><span class="family-name">'+escapeHtml(name)+'</span><span class="family-meta"><span class="stock-chip">'+escapeHtml(totalQuantity)+' unità</span><span class="count-chip">'+items.length+' varianti</span>'+capacities.map(function(value){ return '<span class="meta-chip">'+escapeHtml(value)+'</span>'; }).join("")+'</span></span></span>'+
         '<span class="chevron">⌄</span>'+
       '</button>'+
-      '<div class="family-body"><table class="variant-table"><colgroup><col style="width:23%"><col style="width:18%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:10%"><col style="width:7%"><col style="width:8%"><col style="width:7%"><col style="width:7%"></colgroup><thead><tr>'+
+      '<div class="family-body"><table class="variant-table"><colgroup><col><col><col><col><col><col><col><col><col><col></colgroup><thead><tr>'+
         '<th>Prodotto</th><th>Specifiche</th><th>Quantità</th><th class="header-win">Vinte</th><th class="header-loss">Perse</th><th>Costo</th><th>Min %</th><th>Target %</th><th aria-label="Ricalcolo"></th><th aria-label="BuyBox"></th>'+
       '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
   }

@@ -24,7 +24,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   const html = read("buybox.html");
   const script = read("buybox.js");
   const coreScript = read("buybox-core.js");
-  const css = read("buybox.css");
+  const css = read("styles.css");
   assert.match(html, /write-enabled-badge/);
   assert.match(html, /id="batteryFilter"/);
   assert.doesNotMatch(html, /Catalogo, BuyBox, prezzi e quantità Back Market raggruppati/);
@@ -75,13 +75,13 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.doesNotMatch(script, /<th>Invia<\/th>/);
   assert.doesNotMatch(script, /Prezzi per Paese/);
   assert.doesNotMatch(script, /class="market-panel-title"/);
-  assert.match(css, /width:min\(1840px,98vw\)/);
-  assert.match(css, /\.product-detail-page \.market-panel\{width:100%/);
+  assert.match(css, /width:\s*min\(1840px,98vw\)/);
+  assert.match(css, /\.product-detail-page \.market-panel\s*\{\s*width:\s*100%/);
   assert.match(css, /\.filter-dropdown-menu/);
   assert.match(css, /\.control-status/);
   assert.match(css, /\.purchase-box\.missing \.purchase-content/);
-  assert.match(css, /\.detail-stock \.detail-label\{text-align:center\}/);
-  assert.doesNotMatch(css, /width:min\(100%,1600px\)/);
+  assert.match(css, /\.detail-stock \.detail-label\s*\{\s*text-align:\s*center;?\s*\}/);
+  assert.doesNotMatch(css, /width:\s*min\(100%,1600px\)/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
 });
 
