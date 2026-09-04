@@ -2175,26 +2175,35 @@
 :where(.page-drive-check) .drive-home-link { margin-top: 24px; padding: 12px; border-radius: 10px; }
 :where(.page-drive-check) .drive-home-link::after { display: none; }
 
-/* 06 - Acquisti e abbinamenti: nessuna regola modifica il Monitor BuyBox. */
+/* 06 - Acquisti e abbinamenti: stesso linguaggio visivo del Monitor BuyBox. */
+:root:where(.page-purchases) { --bg:#f4f7fb; --panel:#fff; --text:#0b1220; --muted:#64748b; --line:#dce5ef; --brand:#035a8b; --brand-2:#1476b8; --brand-soft:#eaf5fb; --bad:#c0362c; --shadow:0 14px 34px rgba(15,23,42,.09); --radius:18px; }
 :where(.page-purchases), :where(.page-purchases) * { box-sizing: border-box; }
-:where(.page-purchases) body { margin: 0; background: #f4f7fb; color: #152536; font: 15px/1.5 Arial, sans-serif; }
+:where(.page-purchases) body { margin: 0; min-height:100vh; background:var(--bg); color:var(--text); font:15px/1.5 Inter,Arial,Helvetica,sans-serif; }
 :where(.page-purchases) [hidden] { display: none !important; }
-:where(.page-purchases) .purchases-shell { max-width: 1600px; margin: auto; padding: 32px; }
+:where(.page-purchases) .purchases-shell { width:min(1840px,98vw); margin:auto; padding:24px 0 48px; }
 :where(.page-purchases) header, :where(.page-purchases) nav, :where(.page-purchases) .purchases-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-:where(.page-purchases) header { justify-content: space-between; margin-bottom: 20px; }
-:where(.page-purchases) h1 { margin: 0; font-size: 36px; letter-spacing: -.03em; }
-:where(.page-purchases) h2 { font-size: 22px; }
-:where(.page-purchases) .eyebrow { color: #035a8b; font-size: 12px; font-weight: 700; margin: 0; letter-spacing: .1em; }
+:where(.page-purchases) header { justify-content:space-between; margin-bottom:18px; }
+:where(.page-purchases) .heading-block { display:flex; align-items:center; gap:16px; }
+:where(.page-purchases) .header-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+:where(.page-purchases) h1 { margin:0; font-size:clamp(28px,3.3vw,44px); letter-spacing:-.045em; }
+:where(.page-purchases) h2 { font-size:22px; letter-spacing:-.025em; }
+:where(.page-purchases) p { color:var(--muted); }
+:where(.page-purchases) .eyebrow { display:block; color:var(--brand); text-transform:uppercase; font-size:10px; font-weight:900; margin:0 0 4px; letter-spacing:.08em; }
 :where(.page-purchases) a { color: #035a8b; }
-:where(.page-purchases) .purchases-notice { background: #eaf5fb; padding: 16px; border-left: 4px solid #035a8b; }
-:where(.page-purchases) .purchases-panel { background: white; border: 1px solid #dde5ef; border-radius: 14px; padding: 24px; margin: 20px 0; }
+:where(.page-purchases) .home-button, :where(.page-purchases) .secondary-button, :where(.page-purchases) .primary-button { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:10px 15px; font-weight:850; text-decoration:none; cursor:pointer; border:1px solid var(--line); white-space:nowrap; }
+:where(.page-purchases) .home-button, :where(.page-purchases) .secondary-button { background:#fff; color:var(--text); }
+:where(.page-purchases) .primary-button { background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; border-color:var(--brand); }
+:where(.page-purchases) .home-button:hover, :where(.page-purchases) .secondary-button:hover { border-color:rgba(3,90,139,.45); color:var(--brand); }
+:where(.page-purchases) .purchases-notice { display:flex; justify-content:space-between; align-items:center; gap:18px; background:var(--brand-soft); padding:15px 17px; border:1px solid #bfe2f2; border-radius:var(--radius); margin-bottom:14px; }
+:where(.page-purchases) .safety-chip { display:inline-flex; border-radius:999px; padding:7px 10px; font-size:12px; font-weight:800; line-height:1; white-space:nowrap; background:#fff; border:1px solid #cce4f0; color:#244157; }
+:where(.page-purchases) .purchases-panel { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px; margin:20px 0; box-shadow:var(--shadow); }
 :where(.page-purchases) form { display: grid; gap: 12px; }
-:where(.page-purchases) #purchaseLogin { max-width: 560px; }
 :where(.page-purchases) label, :where(.page-purchases) summary { font-weight: 700; }
 :where(.page-purchases) summary { cursor: pointer; font-size: 18px; }
-:where(.page-purchases) input, :where(.page-purchases) select, :where(.page-purchases) button { font: inherit; border-radius: 8px; padding: 10px 12px; }
-:where(.page-purchases) input, :where(.page-purchases) select { border: 1px solid #bdcbd9; min-width: 0; max-width: 100%; background: white; color: #152536; }
-:where(.page-purchases) button { border: 1px solid #035a8b; background: #035a8b; color: white; font-weight: 700; cursor: pointer; }
+:where(.page-purchases) input, :where(.page-purchases) select, :where(.page-purchases) button { font:inherit; border-radius:12px; padding:10px 12px; }
+:where(.page-purchases) input, :where(.page-purchases) select { border:1px solid var(--line); min-width:0; max-width:100%; background:#fff; color:var(--text); }
+:where(.page-purchases) input:focus, :where(.page-purchases) select:focus { border-color:var(--brand); box-shadow:0 0 0 3px rgba(3,90,139,.12); outline:none; }
+:where(.page-purchases) button { border:1px solid var(--brand); background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:white; font-weight:800; cursor:pointer; }
 :where(.page-purchases) button.secondary { background: white; color: #035a8b; }
 :where(.page-purchases) button:disabled { opacity: .5; cursor: not-allowed; }
 :where(.page-purchases) :focus-visible { outline: 3px solid #1476b8; outline-offset: 3px; }
@@ -2206,16 +2215,27 @@
 :where(.page-purchases) td button, :where(.page-purchases) td a { display: inline-block; margin: 2px 5px 5px 0; white-space: nowrap; }
 :where(.page-purchases) .document-state { font-weight: 700; }
 :where(.page-purchases) #purchaseStatus { min-height: 24px; font-weight: 600; }
-:where(.page-purchases) dialog { width: min(1100px,94vw); max-height: 90vh; border: 1px solid #dde5ef; border-radius: 14px; padding: 24px; }
-:where(.page-purchases) dialog::backdrop { background: #13263888; }
+:where(.page-purchases) dialog { width:min(1100px,94vw); max-height:90vh; border:1px solid var(--line); border-radius:18px; padding:24px; box-shadow:0 28px 80px rgba(15,23,42,.28); }
+:where(.page-purchases) dialog::backdrop { background:rgba(15,23,42,.48); backdrop-filter:blur(3px); }
+:where(.page-purchases) .access-dialog { width:min(460px,calc(100vw - 30px)); border-radius:22px; padding:0; }
+:where(.page-purchases) .access-dialog form { padding:25px; }
+:where(.page-purchases) .access-dialog h2 { margin:4px 0 5px; }
+:where(.page-purchases) .access-dialog p { margin:0 0 18px; font-size:13px; }
+:where(.page-purchases) .access-dialog label { display:block; margin:0 0 6px; font-size:11px; line-height:14px; color:var(--muted); font-weight:850; }
+:where(.page-purchases) .access-dialog input { width:100%; height:44px; }
+:where(.page-purchases) .dialog-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+:where(.page-purchases) .form-error { color:var(--bad)!important; font-weight:800; }
 :where(.page-purchases) #mappingDialog { width: min(850px,94vw); }
 :where(.page-purchases) #listingChoice { width: 100%; }
 :where(.page-purchases) #mappingError { color: #a32121; }
 :where(.page-purchases) .is-working { cursor: progress; }
 :where(.page-purchases) .is-working button { opacity: .6; }
 @media (max-width:700px) {
-  :where(.page-purchases) .purchases-shell { padding: 16px; }
+  :where(.page-purchases) .purchases-shell { width:100%; padding:16px; }
   :where(.page-purchases) .purchases-panel { padding: 16px; }
   :where(.page-purchases) .purchases-toolbar { align-items: stretch; flex-direction: column; }
-  :where(.page-purchases) h1 { font-size: 30px; }
+  :where(.page-purchases) .topbar, :where(.page-purchases) .purchases-notice { align-items:flex-start; flex-direction:column; }
+  :where(.page-purchases) .heading-block { width:100%; }
+  :where(.page-purchases) .header-actions { width:100%; justify-content:flex-start; }
+  :where(.page-purchases) .safety-chip { white-space:normal; }
 }

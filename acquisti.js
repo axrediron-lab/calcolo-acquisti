@@ -9,7 +9,12 @@
   var money = cents => (cents / 100).toLocaleString("it-IT", { style: "currency", currency: "EUR" });
   var esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function message(text) { byId("purchaseStatus").textContent = text; }
-  function loginState() { byId("purchaseLogin").hidden = !!memoryKey; byId("purchaseWorkspace").hidden = !memoryKey; }
+  function loginState() {
+    var dialog = byId("purchaseLoginDialog");
+    byId("purchaseWorkspace").hidden = !memoryKey;
+    if (memoryKey) { if (dialog.open) dialog.close(); }
+    else if (!dialog.open) { dialog.showModal(); setTimeout(() => byId("purchaseKey").focus(), 0); }
+  }
   function logout() {
     memoryKey = ""; try { sessionStorage.removeItem(config.accessSessionKey); } catch (_) {}
     docs = []; catalog = null; currentMapping = null; sourceRequest = null; historyRows = [];
@@ -97,7 +102,8 @@
   }
   byId("purchaseLogin").addEventListener("submit", event => { event.preventDefault(); run(async () => {
     memoryKey = byId("purchaseKey").value.trim(); byId("purchaseKey").value = "";
-    try { await api("/api/purchases/status"); } catch (error) { logout(); throw error; }
+    byId("purchaseLoginError").hidden = true;
+    try { await api("/api/purchases/status"); } catch (error) { logout(); byId("purchaseLoginError").textContent = error.message; byId("purchaseLoginError").hidden = false; throw error; }
     try { sessionStorage.setItem(config.accessSessionKey, memoryKey); } catch (_) {}
     loginState(); await history(false); message("Archivio online disponibile.");
   }); });

@@ -5,19 +5,13 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Acquisti</title>
-  <link rel="stylesheet" href="styles.css?v=purchases-1">
+  <link rel="stylesheet" href="styles.css?v=purchases-2">
   <script src="buybox-config.js" defer></script><script src="acquisti.js" defer></script>
 </head>
 <body data-mode="purchases">
-  <main class="purchases-shell">
-    <header><div><p class="eyebrow">ARCHIVIO ONLINE</p><h1>Acquisti</h1></div><nav><a href="index.html">Home</a><a href="abbinamenti.html">Abbinamenti</a><a href="buybox.html">Monitor BuyBox</a></nav></header>
-    <p class="purchases-notice">Prima fase: salvi documenti, costi EUR e abbinamenti online. Le quantità e i prezzi su Back Market non vengono modificati. Nessun costo medio viene applicato.</p>
-    <form id="purchaseLogin" class="purchases-panel" autocomplete="off">
-      <label for="purchaseKey">Codice di accesso del Monitor BuyBox</label>
-      <input id="purchaseKey" type="password" autocomplete="off" required>
-      <button type="submit">Accedi</button>
-      <small>Il codice rimane solo nella sessione della scheda. Documenti e abbinamenti sono conservati online.</small>
-    </form>
+  <main class="purchases-shell page-shell">
+    <header class="topbar"><div class="heading-block"><a class="home-button" href="index.html">← Home</a><h1>Acquisti</h1></div><nav class="header-actions"><a class="secondary-button" href="abbinamenti.html">Abbinamenti</a><a class="secondary-button" href="buybox.html">Monitor BuyBox</a></nav></header>
+    <section class="purchases-notice settings-strip"><div><span class="eyebrow">Archivio online</span><strong>Documenti, costi EUR e abbinamenti pronti per il lavoro sulle BuyBox.</strong></div><span class="safety-chip">Quantità e prezzi non vengono modificati</span></section>
     <p id="purchaseStatus" role="status" aria-live="polite"></p>
     <section id="purchaseWorkspace" hidden>
       <div class="purchases-toolbar"><button id="readDrive" type="button">Leggi da Drive</button><label class="file-label">Oppure carica dal computer <input id="purchaseFile" type="file" accept=".csv,text/csv"></label><button id="purchaseLogout" class="secondary" type="button">Esci</button></div>
@@ -28,6 +22,15 @@
       </section>
     </section>
   </main>
+  <dialog id="purchaseLoginDialog" class="access-dialog">
+    <form id="purchaseLogin" autocomplete="off">
+      <span class="eyebrow">Accesso protetto</span><h2>Apri Acquisti</h2>
+      <p>Inserisci il codice di accesso del Monitor BuyBox. Rimane soltanto in questa sessione; documenti e abbinamenti sono conservati online.</p>
+      <label for="purchaseKey">Codice di accesso</label><input id="purchaseKey" type="password" autocomplete="off" required>
+      <p id="purchaseLoginError" class="form-error" role="alert" hidden>Codice non valido o servizio non configurato.</p>
+      <div class="dialog-actions"><a href="index.html" class="secondary-button">Annulla</a><button class="primary-button" type="submit">Continua</button></div>
+    </form>
+  </dialog>
   <dialog id="mappingDialog"><form id="mappingForm">
     <h2>Abbina codice Ready</h2><p id="mappingContext"></p><p id="mappingCurrent"></p>
     <p>La modifica vale solo per nuove importazioni. I documenti già salvati non cambiano.</p>
