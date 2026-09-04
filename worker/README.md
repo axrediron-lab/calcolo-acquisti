@@ -35,3 +35,48 @@ Ogni comando chiede il valore in modo interattivo, senza inserirlo nel file o ne
 ## Verifica locale
 
 ```powershell
+node --test test/*.test.mjs
+```
+
+## Collegamento Drive: prima fase, sola lettura
+
+La cartella e l'account tecnico sono configurati nelle variabili `DRIVE_FOLDER_ID`,
+`DRIVE_SERVICE_ACCOUNT_EMAIL` e `DRIVE_FILE_NAME`. Non sono credenziali segrete.
+Condividere esclusivamente la cartella dedicata con l'account tecnico come
+Visualizzatore e mantenere l'accesso generale limitato.
+
+Il valore `private_key` dell'account Google va inserito esclusivamente come
+segreto Cloudflare `DRIVE_PRIVATE_KEY` (PEM, con righe reali o sequenze `\n`).
+Non inserire l'intero JSON nel campo, non caricarlo in chat, nel sito o nel repository.
+La chiave deve appartenere all'account indicato in `DRIVE_SERVICE_ACCOUNT_EMAIL`.
+Non sono necessari ruoli amministrativi sul progetto né delega a livello di dominio.
+Creare la chiave solo al momento della configurazione; revocarla se esposta e
+prevederne la rotazione. Non registrare token, chiavi o contenuti CSV nei log.
+
+Nuovi endpoint, entrambi protetti con il codice applicativo `X-App-Key`:
+
+- `GET /api/drive/status`: verifica soltanto la presenza della configurazione,
+  non certifica l'accesso a Google; non effettua chiamate esterne.
+- `GET /api/drive/preview`: autentica l'account, cerca il nome esatto nella cartella,
+  scarica il CSV e restituisce metadati, SHA-256 dei byte originali e testo CSV.
+  `read_only: true` e `imported: false`: NON salva documenti o abbinamenti,
+  NON aggiorna stock, costi o prezzi e NON chiama Back Market.
+
+Il token Google usa solo `drive.readonly` e resta nella singola richiesta lato
+server. Non vi è cache del CSV o delle credenziali. Download e risposte sono
+limitati in dimensione e tempo; redirect rifiutati. Il CSV ha un limite applicativo
+di 2 MiB, intestazione Ready a sei colonne e codifica UTF-8 o Windows-1252.
+Le righe non sono ancora validate come documenti: questa non è un'importazione.
+Un Foglio Google o un collegamento non sostituisce il CSV originale.
+
+La lettura blocca file mancanti, nomi duplicati, ricerche incomplete e cambiamenti
+rilevati durante il download (identità/versione/hash/dimensione). Riprovare dopo
+la sincronizzazione se Drive sostituisce il file durante la verifica.
+
+Prima del rilascio, eseguire i test; dopo configurazione del segreto e rilascio
+autorizzato verificare prima lo stato e poi l'anteprima, senza stampare il CSV nei
+log. Il pulsante nella pagina Impostazioni/Acquisti e la deduplicazione persistente
+per documento saranno implementati nella fase successiva.
+
+Attività successiva concordata: pulizia delle regole CSS obsolete dopo
+l'implementazione delle nuove funzionalità, mantenendo il Mobile escluso.

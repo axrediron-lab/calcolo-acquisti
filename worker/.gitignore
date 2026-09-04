@@ -1,0 +1,8 @@
+# Local credentials must never be committed or served by GitHub Pages.
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+*.pem
+service-account*.json
+.wrangler/

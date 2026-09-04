@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { DriveError, drivePreview, driveStatus } from "./drive.js";
 
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
 const CATALOG_TTL_SECONDS = 300;
@@ -391,6 +392,11 @@ export async function handleRequest(request, env, ctx = {}) {
     let response;
     if (url.pathname === "/health" && ["GET", "HEAD"].includes(request.method)) {
       response = jsonResponse({ ok: true, configured: configurationStatus(env) });
+    } else if (url.pathname === "/api/drive/status" || url.pathname === "/api/drive/preview") {
+      if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
+      assertAuthorized(request, env);
+      if (request.method !== "GET") throw new HttpError(405, "È consentita soltanto la lettura GET", "METHOD_NOT_ALLOWED");
+      response = jsonResponse(url.pathname.endsWith("/status") ? driveStatus(env) : await drivePreview(env));
     } else {
       assertConfigured(env);
       assertAuthorized(request, env);
@@ -415,11 +421,12 @@ export async function handleRequest(request, env, ctx = {}) {
       ? new Response(null, { status: finalResponse.status, headers: finalResponse.headers })
       : finalResponse;
   } catch (error) {
+    if (error instanceof DriveError) error = new HttpError(error.status, error.publicMessage, error.code);
     const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof HttpError ? error.publicMessage : "Errore interno del servizio";
     const code = error instanceof HttpError ? error.code : "INTERNAL_ERROR";
     console.error(JSON.stringify({ event: "request_error", request_id: requestId, path: url.pathname, status, code, duration_ms: Date.now() - startedAt, details: error instanceof HttpError ? error.details : {} }));
-    const response = jsonResponse({ error: message, code, request_id: requestId }, status, status === 405 ? { Allow: "GET, HEAD, POST, OPTIONS" } : {});
+    const response = jsonResponse({ error: message, code, request_id: requestId }, status, status === 405 ? { Allow: url.pathname.startsWith("/api/drive/") ? "GET, OPTIONS" : "GET, HEAD, POST, OPTIONS" } : {});
     return addCors(response, request, env);
   }
 }

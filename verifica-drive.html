@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="it" class="page-home page-drive-check">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Verifica Drive</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="verifica-drive.js" defer></script>
+</head>
+<body>
+  <main class="card">
+    <h1>Verifica Drive</h1>
+    <p>Controlla che il collegamento riesca a leggere acquisti.CSV dalla cartella privata.</p>
+    <p class="drive-notice">Solo lettura: nessun documento viene importato e nessuna quantità o prezzo viene modificato.</p>
+    <form id="driveCheckForm" autocomplete="off">
+      <label class="drive-confirmation"><input id="keyRotated" type="checkbox" required> Ho sostituito su Cloudflare il codice di accesso precedentemente esposto.</label>
+      <label for="driveAccessKey">Nuovo codice di accesso del Monitor BuyBox</label>
+      <input id="driveAccessKey" type="password" autocomplete="off" spellcheck="false" required aria-describedby="driveKeyHelp">
+      <p id="driveKeyHelp">Non inserire la chiave privata Google. Il codice viene inviato soltanto al tuo servizio e non viene salvato da questa pagina.</p>
+      <button id="driveCheckButton" type="submit" disabled>Verifica Drive</button>
+    </form>
+    <noscript>Attiva JavaScript per eseguire la verifica. Nessun dato verrà inviato tramite il modulo.</noscript>
+    <p id="driveCheckStatus" class="drive-status" role="status" aria-live="polite"></p>
+    <section id="driveCheckResult" hidden aria-label="Esito della verifica">
+      <h2>File letto correttamente</h2>
+      <dl>
+        <dt>Nome</dt><dd id="driveFileName"></dd>
+        <dt>Dimensione</dt><dd id="driveFileSize"></dd>
+        <dt>Ultima modifica su Drive</dt><dd id="driveFileModified"></dd>
+      </dl>
+      <p>Collegamento verificato. Il file non è stato importato; abbinamenti e controllo dei documenti saranno gestiti nella pagina Acquisti.</p>
+    </section>
+    <a class="drive-home-link" href="index.html">← Home</a>
+  </main>
+</body>
+</html>

@@ -7,6 +7,7 @@
  * 02 - Home (.page-home)
  * 03 - Calcolo completo (.page-calcolo-completo)
  * 04 - Monitor BuyBox (.page-buybox)
+ * 05 - Verifica Drive (.page-drive-check)
  *
  * :where() delimita le regole alla pagina senza aumentarne la specificita.
  * Ordine, valori e breakpoint originali sono mantenuti per preservare la resa.
@@ -2121,3 +2122,54 @@
 :where(.page-buybox) .variant-table col:nth-child(8) {
   width: 8%;
 }
+
+/* 05 - Verifica Drive: regole isolate, base condivisa con Home. */
+:where(.page-drive-check) .drive-notice {
+  margin-top: 20px;
+  padding: 14px;
+  border-left: 4px solid var(--brand);
+  background: var(--brand-soft);
+  color: var(--text);
+}
+:where(.page-drive-check) form {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+:where(.page-drive-check) label { font-weight: 600; }
+:where(.page-drive-check) .drive-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+:where(.page-drive-check) input[type="checkbox"] { margin-top: 4px; }
+:where(.page-drive-check) input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+}
+:where(.page-drive-check) button {
+  padding: 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--brand);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+:where(.page-drive-check) button:disabled { opacity: .5; cursor: not-allowed; }
+:where(.page-drive-check) :focus-visible { outline: 3px solid var(--brand-500); outline-offset: 3px; }
+:where(.page-drive-check) .drive-status { margin-top: 20px; color: var(--text); }
+:where(.page-drive-check) section { margin-top: 20px; }
+:where(.page-drive-check) h2 { font-size: 20px; }
+:where(.page-drive-check) dl { display: grid; gap: 8px; }
+:where(.page-drive-check) dt { font-weight: 700; }
+:where(.page-drive-check) dd { margin: 0 0 8px; overflow-wrap: anywhere; }
+:where(.page-drive-check) .drive-home-link { margin-top: 24px; padding: 12px; border-radius: 10px; }
+:where(.page-drive-check) .drive-home-link::after { display: none; }
