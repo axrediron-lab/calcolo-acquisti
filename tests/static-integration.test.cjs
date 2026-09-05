@@ -99,7 +99,20 @@ test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", (
   assert.match(script, /Quantità magazzino/);
   assert.match(script, /Costo articolo/);
   assert.match(script, /work-table/);
+  assert.match(script, /compactProcessingLabel/);
+  assert.match(script, /Quantità manuale/);
+  assert.match(script, /&order=/);
   assert.match(read("buybox.js"), /\/api\/purchases\/costs/);
+});
+
+test("la BuyBox aperta da un ordine permette di tornare alla stessa lavorazione", () => {
+  const html = read("buybox.html");
+  const script = read("buybox.js");
+  assert.match(html, /id="buyboxBackLink"/);
+  assert.match(script, /configureContextBackLink/);
+  assert.match(script, /URLSearchParams\(window\.location\.search\)\.get\("order"\)/);
+  assert.match(script, /lavorazione\.html\?key=/);
+  assert.match(script, /Torna all’ordine/);
 });
 
 test("Acquisti filtra gli ordini per periodo e lavorazione", () => {
@@ -269,7 +282,7 @@ test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
 
   for (const file of pages) {
     const html = read(file);
-    assert.match(html, /href="styles\.css\?v=cleanup-1"/, file);
+    assert.match(html, /href="styles\.css\?v=workflow-1"/, file);
     assert.doesNotMatch(html, /<style\b|\sstyle=/i, file);
   }
 });

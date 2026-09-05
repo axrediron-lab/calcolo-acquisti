@@ -1091,6 +1091,15 @@
     window.AppAuth.redirect(true);
   }
 
+  function configureContextBackLink(){
+    var link = byId("buyboxBackLink");
+    var orderKey = new URLSearchParams(window.location.search).get("order") || "";
+    if(!link || !orderKey) return;
+    link.href = "lavorazione.html?key=" + encodeURIComponent(orderKey);
+    link.textContent = "← Torna all’ordine";
+    link.setAttribute("aria-label","Torna alla lavorazione dell’ordine");
+  }
+
   function bindStaticControls(){
     ["searchInput","brandFilter","capacityFilter","colorFilter","qualityFilter","batteryFilter"].forEach(function(id){
       byId(id).addEventListener(id === "searchInput" ? "input" : "change",renderCatalog);
@@ -1121,6 +1130,7 @@
     });
   }
 
+  configureContextBackLink();
   renderSettings();
   initializeCustomSelects();
   bindStaticControls();
