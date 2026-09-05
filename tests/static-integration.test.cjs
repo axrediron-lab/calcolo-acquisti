@@ -61,12 +61,22 @@ test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", (
   assert.match(read("buybox.js"), /\/api\/purchases\/costs/);
 });
 
-test("il Calcolo completo include Home e impostazioni condivise", () => {
+test("la Valutazione stock usa catalogo, profilo Acquisti e sole letture BuyBox", () => {
   const html = read("calcolo-completo.html");
+  const script = read("calcolo-completo.js");
   assert.match(html, /href="index\.html"[^>]*>← Home/);
-  assert.match(html, /id="minimumMargin"/);
-  assert.match(html, /id="shippingItaly"/);
+  assert.match(html, /Valutazione stock BackMarket/);
+  assert.match(html, /data-mode="uniform"/);
+  assert.match(html, /data-mode="mixed"/);
+  assert.match(html, /data-mode="uncertain"/);
   assert.match(html, /<script src="shared-settings\.js(?:\?v=[^"]+)?"><\/script>/);
+  assert.match(html, /stock-valuation-core\.js/);
+  assert.match(script, /resolveProfile\(state\.settings,"purchases"\)/);
+  assert.match(script, /\/api\/catalog/);
+  assert.match(script, /\/api\/backbox\//);
+  assert.doesNotMatch(script, /\/api\/listings\//);
+  assert.doesNotMatch(script, /method\s*:\s*["']POST["']/);
+  assert.doesNotMatch(html, /style=/);
 });
 
 test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
