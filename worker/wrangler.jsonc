@@ -21,6 +21,7 @@
     "DRIVE_FILE_NAME": "acquisti.CSV",
     "DRIVE_SERVICE_ACCOUNT_EMAIL": "importazione-acquisti@liquid-agility-466309-f5.iam.gserviceaccount.com",
     "BACKMARKET_API_BASE": "https://www.backmarket.fr",
+    "BACKMARKET_USER_AGENT": "Axrediron",
     "BACKMARKET_ACCEPT_LANGUAGE": "it-it",
     "ALLOWED_ORIGINS": "https://axrediron-lab.github.io,http://localhost:8000,http://127.0.0.1:8000"
   },
