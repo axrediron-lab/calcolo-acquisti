@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Lavorazione ordine</title><link rel="stylesheet" href="styles.css?v=purchases-3">
-  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="buybox-core.js" defer></script><script src="lavorazione.js" defer></script>
+  <title>Lavorazione ordine</title><link rel="stylesheet" href="styles.css?v=cleanup-1">
+  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="buybox-core.js" defer></script><script src="lavorazione.js?v=cleanup-1" defer></script>
 </head>
 <body><main class="purchases-shell page-shell">
   <header class="topbar"><div class="heading-block"><a class="home-button" href="acquisti.html">← Acquisti</a><h1>Lavorazione ordine</h1></div><nav class="header-actions"><a class="secondary-button" href="abbinamenti.html">Abbinamenti</a><a class="secondary-button" href="impostazioni.html">Impostazioni</a><a class="secondary-button" href="buybox.html">Monitor BuyBox</a></nav></header>
@@ -12,10 +12,4 @@
   <p id="workStatus" role="status" aria-live="polite"></p>
   <section id="workWorkspace" hidden><div id="workHeading"></div><div id="workItems" class="work-table-container"></div></section>
 </main>
-<dialog id="workLoginDialog" class="access-dialog"><form id="workLogin" autocomplete="off">
-  <span class="eyebrow">Accesso protetto</span><h2>Apri Lavorazione ordine</h2><p>Inserisci il codice di accesso del Monitor BuyBox. Rimane soltanto in questa sessione.</p>
-  <label for="workKey">Codice di accesso</label><input id="workKey" type="password" autocomplete="off" required>
-  <p id="workLoginError" class="form-error" role="alert" hidden>Codice non valido o servizio non configurato.</p>
-  <div class="dialog-actions"><a href="acquisti.html" class="secondary-button">Annulla</a><button class="primary-button" type="submit">Continua</button></div>
-</form></dialog>
 </body></html>

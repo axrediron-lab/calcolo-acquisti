@@ -28,7 +28,6 @@
   function readJson(key){ try{ var raw=localStorage.getItem(key); return raw ? JSON.parse(raw) : null; }catch(error){ return null; } }
   function writeJson(key,value){ try{ localStorage.setItem(key,JSON.stringify(value)); }catch(error){} }
   function accessKey(){ try{ return sessionStorage.getItem(config.accessSessionKey) || ""; }catch(error){ return ""; } }
-  function setAccessKey(value){ try{ sessionStorage.setItem(config.accessSessionKey,value); }catch(error){} }
   function clearAccessKey(){ try{ sessionStorage.removeItem(config.accessSessionKey); }catch(error){} }
   function apiUrl(path){ return config.apiBase.replace(/\/$/,"") + path; }
   async function apiFetch(path){
@@ -273,15 +272,6 @@
     byId("uncertainScenario").addEventListener("change",renderResults);
     byId("analyzeStock").addEventListener("click",analyze);
     byId("refreshCatalog").addEventListener("click",function(){ loadCatalog(true); });
-    byId("accessForm").addEventListener("submit",async function(event){
-      event.preventDefault(); var key=byId("accessKey").value.trim(); if(!key) return;
-      setAccessKey(key); byId("accessError").hidden=true;
-      try{
-        var loaded=await loadCatalog(true);
-        if(loaded && accessKey()){ byId("accessDialog").close(); byId("accessKey").value=""; }
-        else byId("accessError").hidden=false;
-      }catch(error){ clearAccessKey(); byId("accessError").hidden=false; }
-    });
     window.addEventListener(settingsApi.EVENT_NAME,function(event){ state.settings=event.detail||settingsApi.load(); renderProfile(); if(state.benchmarks) renderResults(); });
   }
 

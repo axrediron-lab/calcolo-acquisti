@@ -221,3 +221,55 @@ test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
     assert.doesNotMatch(content, /Authorization\s*:\s*["']Basic\s+[^$]/i, file);
   }
 });
+
+test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () => {
+  const protectedPages = [
+    "acquisti.html",
+    "abbinamenti.html",
+    "buybox.html",
+    "calcolo-completo.html",
+    "impostazioni.html",
+    "lavorazione.html",
+  ];
+  const protectedScripts = [
+    "acquisti.js",
+    "buybox.js",
+    "calcolo-completo.js",
+    "impostazioni.js",
+    "lavorazione.js",
+  ];
+
+  for (const file of protectedPages) {
+    const html = read(file);
+    assert.match(html, /app-auth-guard\.js/, file);
+    assert.doesNotMatch(html, /access-dialog|LoginDialog|accessDialog|purchaseLogin|settingsLogin|workLogin|accessForm/, file);
+  }
+
+  for (const file of protectedScripts) {
+    const script = read(file);
+    assert.doesNotMatch(script, /LoginDialog|accessDialog|purchaseLogin|settingsLogin|workLogin|accessForm|setAccessKey/, file);
+  }
+
+  const css = read("styles.css");
+  assert.doesNotMatch(css, /page-calcolo-completo|access-dialog/);
+});
+
+test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
+  const pages = [
+    "index.html",
+    "acquisti.html",
+    "abbinamenti.html",
+    "buybox.html",
+    "calcolo-completo.html",
+    "calcolo-light.html",
+    "impostazioni.html",
+    "lavorazione.html",
+    "verifica-drive.html",
+  ];
+
+  for (const file of pages) {
+    const html = read(file);
+    assert.match(html, /href="styles\.css\?v=cleanup-1"/, file);
+    assert.doesNotMatch(html, /<style\b|\sstyle=/i, file);
+  }
+});

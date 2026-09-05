@@ -10,10 +10,8 @@
   var esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function message(text) { byId("purchaseStatus").textContent = text; }
   function loginState() {
-    var dialog = byId("purchaseLoginDialog");
     byId("purchaseWorkspace").hidden = !memoryKey;
-    if (memoryKey) { if (dialog && dialog.open) dialog.close(); }
-    else { window.AppAuth.redirect(false); }
+    if (!memoryKey) window.AppAuth.redirect(false);
   }
   function logout() {
     memoryKey = ""; try { sessionStorage.removeItem(config.accessSessionKey); } catch (_) {}
@@ -114,14 +112,6 @@
     byId("mappingError").textContent = ""; byId("listingSearch").value = ""; filterListings(); byId("mappingDialog").showModal();
     message("Seleziona lo SKU esatto e conferma l’abbinamento.");
   }
-  if (byId("purchaseLogin")) byId("purchaseLogin").addEventListener("submit", event => { event.preventDefault(); run(async () => {
-    memoryKey = byId("purchaseKey").value.trim(); byId("purchaseKey").value = "";
-    byId("purchaseLoginError").hidden = true;
-    try { await api("/api/purchases/status"); } catch (error) { logout(); byId("purchaseLoginError").textContent = error.message; byId("purchaseLoginError").hidden = false; throw error; }
-    try { sessionStorage.setItem(config.accessSessionKey, memoryKey); } catch (_) {}
-    loginState(); await history(false); message("Archivio online disponibile.");
-  }); });
-  if (byId("purchaseLogout")) byId("purchaseLogout").addEventListener("click", () => { if (!busy) { logout(); message("Disconnesso."); } });
   byId("historySearch").addEventListener("submit", event => { event.preventDefault(); run(() => history(false)); });
   byId("historyReset").addEventListener("click", () => {
     byId("historyQuery").value = "";

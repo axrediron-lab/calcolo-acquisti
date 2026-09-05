@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Monitor BuyBox</title>
-  <link rel="stylesheet" href="styles.css?v=costs-1">
+  <link rel="stylesheet" href="styles.css?v=cleanup-1">
   <script src="buybox-config.js"></script>
   <script src="app-auth-guard.js?v=access-1"></script>
 </head>
@@ -74,23 +74,8 @@
     </section>
   </main>
 
-  <dialog id="accessDialog" class="access-dialog">
-    <form id="accessForm">
-      <span class="eyebrow">Accesso protetto</span>
-      <h2>Apri il Monitor BuyBox</h2>
-      <p>Inserisci il codice di accesso della Worker. Rimane soltanto in questa sessione e protegge anche gli aggiornamenti verso Back Market.</p>
-      <label for="accessKey">Codice di accesso</label>
-      <input id="accessKey" type="password" autocomplete="off" required>
-      <p id="accessError" class="form-error" hidden>Codice non valido o servizio non configurato.</p>
-      <div class="dialog-actions">
-        <a href="index.html" class="secondary-button">Annulla</a>
-        <button class="primary-button" type="submit">Continua</button>
-      </div>
-    </form>
-  </dialog>
-
   <script src="shared-settings.js?v=settings-1"></script>
   <script src="buybox-core.js"></script>
-  <script src="buybox.js?v=settings-1"></script>
+  <script src="buybox.js?v=cleanup-1"></script>
 </body>
 </html>

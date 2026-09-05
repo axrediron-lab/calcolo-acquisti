@@ -13,10 +13,8 @@
   function escapeHtml(value){ return String(value == null ? "" : value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
   function status(message){ byId("settingsStatus").textContent = message || ""; }
   function accessState(){
-    var dialog = byId("settingsLoginDialog");
     byId("settingsWorkspace").hidden = !key;
-    if(key){ if(dialog.open) dialog.close(); }
-    else window.AppAuth.redirect(false);
+    if(!key) window.AppAuth.redirect(false);
   }
   async function api(path, options){
     options = options || {};
@@ -110,10 +108,6 @@
     renderMargins(); renderMigration(); renderRateStatus();
   }
 
-  byId("settingsLogin").addEventListener("submit",function(event){
-    event.preventDefault(); key=byId("settingsKey").value.trim(); byId("settingsKey").value=""; byId("settingsLoginError").hidden=true;
-    load().then(function(){ sessionStorage.setItem(config.accessSessionKey,key); accessState(); }).catch(function(error){ key=""; byId("settingsLoginError").textContent=error.message; byId("settingsLoginError").hidden=false; accessState(); });
-  });
   byId("economicSettings").addEventListener("submit",function(event){
     event.preventDefault(); if(!confirm("Salvare queste impostazioni nell’archivio online? Saranno usate su tutti i computer.")) return;
     var button=byId("saveSettings"); button.disabled=true; status("Salvataggio online in corso…");

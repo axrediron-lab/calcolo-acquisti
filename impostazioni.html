@@ -6,11 +6,11 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Impostazioni</title>
-  <link rel="stylesheet" href="styles.css?v=profiles-1">
+  <link rel="stylesheet" href="styles.css?v=cleanup-1">
   <script src="buybox-config.js"></script>
   <script src="app-auth-guard.js?v=access-1"></script>
   <script src="shared-settings.js?v=profiles-1" defer></script>
-  <script src="impostazioni.js?v=profiles-1" defer></script>
+  <script src="impostazioni.js?v=cleanup-1" defer></script>
 </head>
 <body>
   <main class="purchases-shell page-shell">
@@ -108,14 +108,5 @@
     </section>
   </main>
 
-  <dialog id="settingsLoginDialog" class="access-dialog">
-    <form id="settingsLogin" autocomplete="off">
-      <span class="eyebrow">Accesso protetto</span><h2>Apri Impostazioni</h2>
-      <p>Inserisci il codice di accesso del Monitor BuyBox. Le impostazioni sono conservate online e saranno disponibili anche sugli altri computer.</p>
-      <label for="settingsKey">Codice di accesso</label><input id="settingsKey" type="password" autocomplete="off" required>
-      <p id="settingsLoginError" class="form-error" role="alert" hidden>Codice non valido o servizio non configurato.</p>
-      <div class="dialog-actions"><a href="index.html" class="secondary-button">Annulla</a><button class="primary-button" type="submit">Continua</button></div>
-    </form>
-  </dialog>
 </body>
 </html>
