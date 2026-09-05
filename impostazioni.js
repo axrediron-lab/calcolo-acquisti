@@ -16,7 +16,7 @@
     var dialog = byId("settingsLoginDialog");
     byId("settingsWorkspace").hidden = !key;
     if(key){ if(dialog.open) dialog.close(); }
-    else if(!dialog.open){ dialog.showModal(); setTimeout(function(){ byId("settingsKey").focus(); },0); }
+    else window.AppAuth.redirect(false);
   }
   async function api(path, options){
     options = options || {};
@@ -24,7 +24,7 @@
     if(options.body !== undefined) headers["Content-Type"] = "application/json";
     var response = await fetch(config.apiBase.replace(/\/$/,"") + path, {method:options.method || "GET",headers:headers,cache:"no-store",body:options.body === undefined ? undefined : JSON.stringify(options.body)});
     var payload = null; try{ payload = await response.json(); }catch(error){}
-    if(response.status === 401){ key=""; try{sessionStorage.removeItem(config.accessSessionKey);}catch(error){} accessState(); }
+    if(response.status === 401){ key=""; try{sessionStorage.removeItem(config.accessSessionKey);}catch(error){} window.AppAuth.redirect(true); }
     if(!response.ok){ var failure=new Error(payload&&payload.error?payload.error:"Servizio non disponibile"); failure.code=payload&&payload.code; throw failure; }
     return payload;
   }

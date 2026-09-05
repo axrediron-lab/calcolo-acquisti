@@ -1089,9 +1089,7 @@
   }
 
   function showAccessDialog(){
-    var dialog = byId("accessDialog");
-    if(!dialog.open) dialog.showModal();
-    setTimeout(function(){ byId("accessKey").focus(); },0);
+    window.AppAuth.redirect(true);
   }
 
   function bindStaticControls(){

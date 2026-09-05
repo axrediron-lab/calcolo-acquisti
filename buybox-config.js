@@ -1,4 +1,5 @@
 window.BUYBOX_CONFIG = Object.freeze({
+  appName:"Centro operativo",
   apiBase:"https://calcolo-acquisti-api.axrediron-lab.workers.dev",
   market:"IT",
   catalogCacheKey:"calcolo_buybox_catalog_v1",

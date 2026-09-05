@@ -3,46 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Calcolo Acquisti</title>
-  <link rel="stylesheet" href="styles.css?v=purchases-3">
-
-  
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Centro operativo</title>
+  <link rel="stylesheet" href="styles.css?v=access-1">
+  <script src="buybox-config.js" defer></script>
+  <script src="app-auth.js?v=access-1" defer></script>
 </head>
 <body>
-  <main class="card">
-    <h1>Calcolo Acquisti / Vendite</h1>
-    <p>Documenti, abbinamenti, costi e impostazioni operative vengono conservati nell’archivio online.</p>
+  <main id="loginView" class="access-page" hidden>
+    <section class="access-card">
+      <span class="eyebrow">Area riservata</span>
+      <h1>Accedi al Centro operativo</h1>
+      <p>Un solo accesso per acquisti, catalogo, BuyBox e impostazioni.</p>
+      <form id="accessLogin" autocomplete="off">
+        <label for="homeAccessKey">Codice di accesso</label>
+        <input id="homeAccessKey" type="password" autocomplete="off" required autofocus>
+        <p id="homeLoginError" class="form-error" role="alert" hidden>Codice non valido o servizio non raggiungibile.</p>
+        <button id="loginSubmit" type="submit">Accedi</button>
+      </form>
+      <small>Il codice resta soltanto nella sessione di questo browser.</small>
+    </section>
+  </main>
 
-    <div class="grid">
-      <a href="acquisti.html"><span class="title">Acquisti</span><span class="desc">Importa i documenti Ready da Drive o CSV e consulta lo storico online.</span></a>
-      <a href="abbinamenti.html"><span class="title">Abbinamenti</span><span class="desc">Gestisci le associazioni tra codici Ready e SKU Back Market.</span></a>
-      <a href="lavorazione.html">
-        <span class="title">Lavorazione ordini</span>
-        <span class="desc">Calcola i costi, gestisci le quantità e apri prezzi e BuyBox degli articoli ricevuti.</span>
-      </a>
-      <a href="impostazioni.html">
-        <span class="title">Impostazioni</span>
-        <span class="desc">Gestisci fee, costi fissi, margini e cambi condivisi tra tutti i computer.</span>
-      </a>
-      <a href="calcolo-completo.html">
-        <span class="title">Valutazione stock</span>
-        <span class="desc">Valuta proposte fornitore sulle BuyBox BackMarket per famiglia, composizione e margine netto.</span>
-      </a>
-
-      <a href="calcolo-light.html">
-        <span class="title">Calcolatore Mobile</span>
-        <span class="desc">Per controllo di un singolo prodotto, import fee incluse. Convertitore USD EUR.</span>
-      </a>
-
-      <a href="buybox.html">
-        <span class="title">Monitor BuyBox</span>
-        <span class="desc">Catalogo Back Market automatico, ricerca per variante e controllo BackBox in sola lettura.</span>
-      </a>
-    </div>
-
-    <div class="footer">
-      Versione portatile HTML per GitHub Pages.
-    </div>
+  <main id="homeView" class="home-shell" hidden>
+    <header class="home-header">
+      <div><span class="eyebrow">Area operativa</span><h1>Centro operativo</h1><p>Le attività quotidiane, in un unico punto.</p></div>
+      <button id="appLogout" class="logout-button" type="button">Esci</button>
+    </header>
+    <section class="home-section">
+      <div class="section-heading"><h2>Operatività</h2><span>Ordini e catalogo</span></div>
+      <div class="home-grid primary-grid">
+        <a href="acquisti.html"><span class="title">Acquisti</span><span class="desc">Importa gli ordini Ready e riprendi quelli da evadere.</span></a>
+        <a href="lavorazione.html"><span class="title">Lavorazione ordini</span><span class="desc">Gestisci costi, quantità e passaggio ai prezzi.</span></a>
+        <a href="buybox.html"><span class="title">Monitor BuyBox</span><span class="desc">Controlla catalogo, prezzi e BuyBox per variante.</span></a>
+      </div>
+    </section>
+    <section class="home-section">
+      <div class="section-heading"><h2>Analisi e gestione</h2><span>Strumenti di supporto</span></div>
+      <div class="home-grid">
+        <a href="calcolo-completo.html"><span class="title">Valutazione stock</span><span class="desc">Valuta proposte fornitore per famiglia e composizione.</span></a>
+        <a href="calcolo-light.html"><span class="title">Calcolatore Mobile</span><span class="desc">Calcolo rapido su un singolo prodotto.</span></a>
+        <a href="abbinamenti.html"><span class="title">Abbinamenti</span><span class="desc">Gestisci codici Ready e inserzioni BackMarket.</span></a>
+        <a href="impostazioni.html"><span class="title">Impostazioni</span><span class="desc">Profili economici, costi, margini e cambi.</span></a>
+      </div>
+    </section>
   </main>
 </body>
 </html>

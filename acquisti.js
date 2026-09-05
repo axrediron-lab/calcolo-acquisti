@@ -13,7 +13,7 @@
     var dialog = byId("purchaseLoginDialog");
     byId("purchaseWorkspace").hidden = !memoryKey;
     if (memoryKey) { if (dialog.open) dialog.close(); }
-    else if (!dialog.open) { dialog.showModal(); setTimeout(() => byId("purchaseKey").focus(), 0); }
+    else { window.AppAuth.redirect(false); }
   }
   function logout() {
     memoryKey = ""; try { sessionStorage.removeItem(config.accessSessionKey); } catch (_) {}
@@ -22,7 +22,7 @@
     if (byId("purchasePreview")) byId("purchasePreview").replaceChildren();
     if (byId("previewSource")) byId("previewSource").textContent = "";
     if (byId("purchaseFile")) byId("purchaseFile").value = "";
-    byId("mappingDialog").close(); byId("documentDialog").close(); loginState();
+    byId("mappingDialog").close(); byId("documentDialog").close(); window.AppAuth.redirect(true);
   }
   async function api(path, body) {
     var controller = new AbortController();

@@ -6,7 +6,7 @@
   var money = cents => (cents / 100).toLocaleString("it-IT", {style:"currency",currency:"EUR"});
   try { key = sessionStorage.getItem(config.accessSessionKey) || ""; } catch (_) {}
   function status(text) { byId("workStatus").textContent = text; }
-  function accessState() { var dialog=byId("workLoginDialog"); byId("workWorkspace").hidden=!key; if(key){if(dialog.open)dialog.close();}else if(!dialog.open){dialog.showModal();setTimeout(()=>byId("workKey").focus(),0);} }
+  function accessState() { var dialog=byId("workLoginDialog"); byId("workWorkspace").hidden=!key; if(key){if(dialog.open)dialog.close();}else window.AppAuth.redirect(false); }
   async function api(path, body) {
     var response = await fetch(config.apiBase + path,{method:body===undefined?"GET":"POST",headers:{"X-App-Key":key,"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store",credentials:"omit"});
     var data={}; try{data=await response.json();}catch(_){}

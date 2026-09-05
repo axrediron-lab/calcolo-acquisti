@@ -12,6 +12,21 @@ test("la Home collega il Monitor BuyBox", () => {
   assert.match(html, /Monitor BuyBox/);
 });
 
+test("la Home gestisce l’unico accesso e le pagine protette vi ritornano", () => {
+  const home = read("index.html");
+  const auth = read("app-auth.js");
+  const guard = read("app-auth-guard.js");
+  assert.match(home, /Accedi al Centro operativo/);
+  assert.match(home, /id="accessLogin"/);
+  assert.match(home, /id="homeView"/);
+  assert.match(auth, /\/api\/purchases\/status/);
+  assert.match(auth, /sessionStorage\.setItem/);
+  assert.match(guard, /index\.html\?return=/);
+  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","impostazioni.html","calcolo-completo.html"]) {
+    assert.match(read(file), /app-auth-guard\.js/, file);
+  }
+});
+
 test("la Home sostituisce la verifica tecnica Drive con la lavorazione ordini", () => {
   const html = read("index.html");
   assert.match(html, /href="lavorazione\.html"/);
@@ -159,7 +174,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
 });
 
 test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
-  const publicFiles = ["index.html", "calcolo-completo.html", "buybox.html", "buybox.js", "buybox-config.js"];
+  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "buybox.html", "buybox.js", "buybox-config.js"];
   for (const file of publicFiles) {
     const content = read(file);
     assert.doesNotMatch(content, /BACKMARKET_TOKEN\s*[:=]\s*["'][^"']+/i, file);

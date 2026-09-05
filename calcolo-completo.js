@@ -64,7 +64,7 @@
     ].map(function(row){ return '<div><span>'+escapeHtml(row[0])+'</span><strong>'+escapeHtml(row[1].toFixed(2).replace(".",",")+row[2])+'</strong></div>'; }).join("");
   }
 
-  function showAccessDialog(){ var dialog=byId("accessDialog"); if(!dialog.open) dialog.showModal(); setTimeout(function(){ byId("accessKey").focus(); },0); }
+  function showAccessDialog(){ window.AppAuth.redirect(true); }
   function cachedCatalog(){ var cached=readJson(config.catalogCacheKey); return cached && Array.isArray(cached.results) ? cached : null; }
   function applyCatalog(payload,source){
     state.listings=(payload.results||[]).map(core.normalizeListing).filter(function(item){ return item.id; });
