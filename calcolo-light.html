@@ -1,527 +1,118 @@
 <!doctype html>
-<html lang="it">
+<html lang="it" class="page-purchases page-mobile-calculator">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Calcolatore Mobile</title>
-  <style>
-    :root{
-  --bg:#F4F7FB;
-  --panel:#FFFFFF;
-  --text:#0B1220;
-  --muted:#64748B;
-  --line:#DDE5EF;
-
-  --brand:#035A8B;
-
-  --ok:#11845B;
-  --warn:#C97A12;
-  --bad:#C0362C;
-
-  --shadow:0 14px 34px rgba(15,23,42,.10);
-  --r:18px;
-}
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0}
-    body{
-      font-family:Arial, Helvetica, sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      -webkit-text-size-adjust:100%;
-    }
-    .app{
-      width:100%;
-      max-width:720px;
-      margin:0 auto;
-      padding:16px 14px 28px;
-    }
-    h1{
-      margin:0 0 6px;
-      font-size:28px;
-      line-height:1.05;
-      letter-spacing:-.04em;
-    }
-    .sub{
-      margin:0;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.45;
-    }
-    .top{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      margin-bottom:16px;
-    }
-    .actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    button{
-      -webkit-appearance:none;
-      appearance:none;
-      border:1px solid var(--line);
-      background:#fff;
-      color:var(--text);
-      padding:11px 14px;
-      border-radius:999px;
-      font-size:14px;
-      font-weight:800;
-      cursor:pointer;
-    }
-    .panel,.calc-card{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:var(--r);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      margin-bottom:14px;
-    }
-    .panel-head,.calc-card-head{
-      padding:14px 16px;
-      border-bottom:1px solid var(--line);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .panel-head h2{margin:0;font-size:16px}
-    .pill{
-      background:#eef4ff;
-      color:var(--brand);
-      border-radius:999px;
-      padding:6px 10px;
-      font-size:12px;
-      font-weight:800;
-      white-space:nowrap;
-    }
-    .panel-body,.calc-card-body{
-      padding:14px 16px 16px;
-    }
-    .collapse{display:none}
-    .collapse.open{display:block}
-    .fields,.converter-grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-    }
-    .field label,.value-label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      font-weight:800;
-      margin-bottom:6px;
-      text-transform:uppercase;
-      letter-spacing:.03em;
-    }
-    input{
-      width:100%;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:13px 12px;
-      font-size:16px;
-      outline:none;
-      background:#fff;
-      color:var(--text);
-      -webkit-appearance:none;
-      appearance:none;
-    }
-    input:focus{
-      border-color:var(--brand);
-      box-shadow:0 0 0 3px rgba(3,90,139,.12);
-    }
-    input[disabled]{
-      background:#f8fafc;
-      color:var(--muted);
-      opacity:1;
-    }
-    .note{
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.45;
-      margin-top:12px;
-    }
-    .result-box,.value-output{
-      background:#f8fafc;
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-      font-size:17px;
-      font-weight:900;
-      min-height:48px;
-      display:flex;
-      align-items:center;
-    }
-    .result-box{
-      justify-content:center;
-      border-style:dashed;
-    }
-    .calc-card-body{
-      display:grid;
-      gap:14px;
-    }
-    .card-title{
-      font-size:14px;
-      font-weight:900;
-    }
-    .ok{color:var(--ok)}
-    .warn{color:var(--warn)}
-    .bad{color:var(--bad)}
-    .muted{color:var(--muted)}
-    @media (min-width: 640px){
-      .fields,.converter-grid{grid-template-columns:1fr 1fr}
-    }
-
-    .rate-button{
-      grid-column:1 / -1;
-      width:100%;
-      border-color:rgba(3,90,139,.25);
-      background:linear-gradient(135deg, #035A8B, #1476B8);
-      color:#fff;
-    }
-    .rate-status{
-      grid-column:1 / -1;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.4;
-      text-align:center;
-      margin-top:-2px;
-    }
-
-  </style>
+  <link rel="stylesheet" href="styles.css?v=mobile-1">
+  <script src="buybox-config.js"></script>
+  <script src="app-auth-guard.js?v=access-1"></script>
 </head>
 <body>
-  <div class="app">
-    <div class="top">
-      <div>
-        <h1>Calcolatore Mobile</h1>
-        <p class="sub">Versione light. Inserisci prezzi e controlla subito prezzo suggerito e margini.</p>
+  <main class="purchases-shell mobile-shell">
+    <header class="topbar mobile-topbar">
+      <div class="heading-block">
+        <a class="home-button" href="index.html">← Home</a>
+        <div><span class="eyebrow">Calcolo rapido</span><h1>Calcolatore Mobile</h1></div>
       </div>
-      <div class="actions">
-        <button id="toggleSettings" type="button">Impostazioni</button>
-        <button id="toggleConverter" type="button">Convertitore</button>
-        <button id="resetAll" type="button">Pulisci</button>
-      </div>
-    </div>
+      <button id="resetCalculator" class="secondary-button" type="button">Pulisci</button>
+    </header>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Impostazioni</h2>
-        <span class="pill">Base attuale</span>
+    <p id="mobileStatus" class="mobile-status" role="status" aria-live="polite">Caricamento delle regole online…</p>
+
+    <section class="purchases-panel mobile-profile-panel">
+      <div class="mobile-section-head">
+        <div><span class="eyebrow">Profilo economico</span><h2>Scegli le regole da applicare</h2></div>
+        <span id="profileOrigin" class="safety-chip">Ultima copia disponibile</span>
       </div>
-      <div id="settingsBox" class="panel-body collapse">
-        <div class="fields">
-          <div class="field"><label for="fee12">Commissione 12%</label><input id="fee12" type="text" inputmode="decimal" value="12"></div>
-          <div class="field"><label for="fee5">Commissione 5%</label><input id="fee5" type="text" inputmode="decimal" value="5"></div>
-          <div class="field"><label for="investorFee">Fee investitore %</label><input id="investorFee" type="text" inputmode="decimal" value="1"></div>
-          <div class="field"><label for="storfundFee">Fee Storfund %</label><input id="storfundFee" type="text" inputmode="decimal" value="1,20"></div>
-          <div class="field"><label for="paymentFee">Commissioni pagamenti %</label><input id="paymentFee" type="text" inputmode="decimal" value="1"></div>
-          <div class="field"><label for="importFee">Commissione importazione €</label><input id="importFee" type="text" inputmode="decimal" value="7"></div>
-          <div class="field"><label for="shipping">Spedizione €</label><input id="shipping" type="text" inputmode="decimal" value="16,50"></div>
-          <div class="field"><label for="targetMargin">Margine target prezzo suggerito %</label><input id="targetMargin" type="text" inputmode="decimal" value="7,50"></div>
-        </div>
-        
+      <div id="profileChoices" class="mobile-profile-choices" aria-label="Profilo economico">
+        <button type="button" data-profile="backmarket" aria-pressed="true"><strong>BackMarket</strong><span>Vendita standard</span></button>
+        <button type="button" data-profile="purchases" aria-pressed="false"><strong>Acquisti</strong><span>BackMarket + ingresso</span></button>
+        <button type="button" data-profile="refurbed" aria-pressed="false" disabled><strong>Refurbed</strong><span>Da configurare</span></button>
+        <button type="button" data-profile="custom" aria-pressed="false"><strong>Personalizzato</strong><span>Solo questa sessione</span></button>
+      </div>
+      <div class="mobile-profile-summary">
+        <div><strong id="profileName">BackMarket</strong><p id="profileDescription"></p></div>
+        <div id="profileChips" class="mobile-rule-chips"></div>
+      </div>
+      <details class="mobile-rules-details">
+        <summary>Vedi tutte le regole utilizzate</summary>
+        <dl id="profileRules" class="mobile-rules-list"></dl>
+      </details>
+    </section>
+
+    <section id="customProfilePanel" class="purchases-panel mobile-custom-panel" hidden>
+      <div class="mobile-section-head">
+        <div><span class="eyebrow">Personalizzato</span><h2>Modifica la base BackMarket</h2></div>
+        <span class="safety-chip">Non viene salvato online</span>
+      </div>
+      <p>Le modifiche valgono soltanto in questa pagina e fino alla chiusura della sessione.</p>
+      <div class="mobile-custom-fields">
+        <label>Commissione mercati standard %<input name="fee12" inputmode="decimal"></label>
+        <label>Commissione mercati ridotti %<input name="fee5" inputmode="decimal"></label>
+        <label>Fee investitore %<input name="investorFee" inputmode="decimal"></label>
+        <label>Fee Storfund %<input name="storfundFee" inputmode="decimal"></label>
+        <label>Commissioni pagamenti %<input name="paymentFee" inputmode="decimal"></label>
+        <label>Altri costi fissi €<input name="importFee" inputmode="decimal"></label>
+        <label>Spedizione altri Paesi €<input name="shipping" inputmode="decimal"></label>
+        <label>Spedizione Italia €<input name="shippingItaly" inputmode="decimal"></label>
+        <label>Margine minimo %<input name="minimumMargin" inputmode="decimal"></label>
+        <label>Margine obiettivo %<input name="targetMargin" inputmode="decimal"></label>
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Convertitore</h2>
-        <span class="pill">USD / EUR</span>
+    <section class="purchases-panel mobile-calculation-panel">
+      <div class="mobile-section-head">
+        <div><span class="eyebrow">Simulazione</span><h2>Prezzo e margine reale</h2></div>
+        <span class="safety-chip">Calcolo in diretta</span>
       </div>
-      <div id="converterBox" class="panel-body collapse">
-        <div class="converter-grid">
-          <div class="field"><label for="usdPrice">Prezzo fornitore USD</label><input id="usdPrice" type="text" inputmode="decimal" placeholder="es. 450"></div>
-          <div class="field"><label for="usdRate">Cambio USD → EUR</label><input id="usdRate" type="text" inputmode="decimal" value="0,92"></div>
-          <button id="refreshRate" class="rate-button" type="button">Aggiorna cambio USD/EUR</button>
-          <div id="rateStatus" class="rate-status">Cambio manuale o ultimo cambio salvato nel browser.</div>
-        </div>
-        <div class="result-box" id="eurResult" style="margin-top:12px;">USD → EUR: € 0,00</div>
-        <button id="useConvertedPurchase" class="rate-button" type="button" style="margin-top:12px;">Usa conversione come prezzo acquisto</button>
-        <div class="converter-grid" style="margin-top:14px;">
-          <div class="field"><label for="eurPrice">Prezzo EUR</label><input id="eurPrice" type="text" inputmode="decimal" placeholder="es. 450"></div>
-          <div class="field"><label>Conversione inversa</label><input value="EUR → USD" disabled></div>
-        </div>
-        <div class="result-box" id="usdResult" style="margin-top:12px;">EUR → USD: $ 0,00</div>
+      <div class="mobile-main-fields">
+        <label>Prezzo vendita / BuyBox €<input id="salePrice" type="text" inputmode="decimal" placeholder="es. 450,00" autofocus></label>
+        <label>Costo articolo €<input id="purchasePrice" type="text" inputmode="decimal" placeholder="es. 350,00"></label>
       </div>
+      <div class="mobile-result-grid">
+        <article class="mobile-result-card" data-result="12">
+          <div class="mobile-result-title"><span>Mercati standard</span><strong id="fee12Label">12%</strong></div>
+          <dl>
+            <div><dt>Acquisto massimo</dt><dd id="maximum12">—</dd></div>
+            <div><dt>Margine reale</dt><dd id="margin12">—</dd></div>
+            <div><dt>Utile netto</dt><dd id="profit12">—</dd></div>
+          </dl>
+        </article>
+        <article class="mobile-result-card" data-result="5">
+          <div class="mobile-result-title"><span>Mercati ridotti</span><strong id="fee5Label">5%</strong></div>
+          <dl>
+            <div><dt>Acquisto massimo</dt><dd id="maximum5">—</dd></div>
+            <div><dt>Margine reale</dt><dd id="margin5">—</dd></div>
+            <div><dt>Utile netto</dt><dd id="profit5">—</dd></div>
+          </dl>
+        </article>
+      </div>
+      <p class="mobile-result-note">L’acquisto massimo rispetta il margine obiettivo del profilo. Margine e utile compaiono quando inserisci anche il costo articolo.</p>
     </section>
 
-    <section class="calc-card">
-      <div class="calc-card-head">
-        <div class="card-title">Calcolo rapido</div>
-        <span class="pill">1 scheda</span>
+    <details class="purchases-panel mobile-converter-panel">
+      <summary>Convertitore USD / EUR</summary>
+      <div class="mobile-converter-body">
+        <div class="mobile-section-head">
+          <div><span class="eyebrow">Cambio condiviso</span><h2>Conversione fornitore</h2></div>
+          <span id="usdRateLabel" class="safety-chip">1 USD = — EUR</span>
+        </div>
+        <div class="mobile-main-fields">
+          <label>Prezzo fornitore USD<input id="usdPrice" type="text" inputmode="decimal" placeholder="es. 450"></label>
+          <div class="mobile-conversion-output"><span>Valore convertito</span><strong id="eurResult">—</strong></div>
+        </div>
+        <button id="useConvertedPurchase" class="primary-button" type="button" disabled>Usa come costo articolo</button>
+        <p>Il cambio proviene dalle impostazioni online. Per aggiornarlo o passare alla gestione manuale usa la pagina Impostazioni.</p>
+        <a class="secondary-button" href="impostazioni.html">Apri Impostazioni</a>
       </div>
-      <div class="calc-card-body">
-        <div><label class="value-label" for="backbox">Prezzo BackBox</label><input id="backbox" type="text" inputmode="decimal" placeholder="€"></div>
-        <div><div class="value-label">Prezzo suggerito</div><div id="suggestedValue" class="value-output muted">—</div></div>
-        <div><label class="value-label" for="purchase">Prezzo reale acquisto</label><input id="purchase" type="text" inputmode="decimal" placeholder="€"></div>
-        <div><div class="value-label">Guadagno paesi 12%</div><div id="margin12Value" class="value-output muted">—</div></div>
-        <div><div class="value-label">Guadagno paesi 5%</div><div id="margin5Value" class="value-output muted">—</div></div>
-      </div>
-    </section>
-  </div>
+    </details>
+  </main>
 
-<script>
-(function(){
-  var STORAGE_KEY = "quick_purchase_iphone_safe_v2";
-
-  function byId(id){ return document.getElementById(id); }
-
-  function toNumber(value){
-    if(value === null || value === undefined) return 0;
-    var s = String(value);
-    s = s.replace(/\s/g, "");
-    s = s.replace("€", "");
-    s = s.replace("$", "");
-    s = s.replace(",", ".");
-    var n = parseFloat(s);
-    if(isNaN(n)) return 0;
-    return n;
-  }
-
-  function asPercent(id){
-    return toNumber(byId(id).value) / 100;
-  }
-
-  function moneyEUR(n){
-    if(isNaN(n) || !isFinite(n)) return "—";
-    return "€ " + n.toFixed(2).replace(".", ",");
-  }
-
-  function moneyUSD(n){
-    if(isNaN(n) || !isFinite(n)) return "—";
-    return "$ " + n.toFixed(2).replace(".", ",");
-  }
-
-  function percentText(n){
-    if(isNaN(n) || !isFinite(n)) return "—";
-    return n.toFixed(2).replace(".", ",") + "%";
-  }
-
-  function extraPercentFees(){
-    return asPercent("investorFee") + asPercent("storfundFee") + asPercent("paymentFee");
-  }
-
-  function getFixedCosts(){
-    return toNumber(byId("shipping").value) + toNumber(byId("importFee").value);
-  }
-
-  function setOutput(id, text, colorClass){
-    var node = byId(id);
-    node.className = "value-output " + colorClass;
-    node.innerHTML = text;
-  }
-
-  function colorClassForMargin(percent){
-    if(percent < 3.5) return "bad";
-    if(percent <= 5) return "warn";
-    return "ok";
-  }
-
-  function calculate(){
-    var backbox = toNumber(byId("backbox").value);
-    var purchase = toNumber(byId("purchase").value);
-
-    var fee12 = asPercent("fee12");
-    var fee5 = asPercent("fee5");
-    var target = asPercent("targetMargin");
-    var extra = extraPercentFees();
-    var fixed = getFixedCosts();
-
-    if(backbox <= 0){
-      byId("suggestedValue").className = "value-output muted";
-      byId("suggestedValue").innerHTML = "—";
-      setOutput("margin12Value", "—", "muted");
-      setOutput("margin5Value", "—", "muted");
-      saveData();
-      return;
-    }
-
-    var suggested = backbox * (1 - fee12 - extra - target) - fixed;
-    byId("suggestedValue").className = "value-output";
-    byId("suggestedValue").innerHTML = moneyEUR(suggested);
-
-    if(purchase <= 0){
-      setOutput("margin12Value", "—", "muted");
-      setOutput("margin5Value", "—", "muted");
-      saveData();
-      return;
-    }
-
-    var euro12 = backbox - (backbox * fee12) - (backbox * extra) - fixed - purchase;
-    var perc12 = (euro12 / backbox) * 100;
-    setOutput("margin12Value", percentText(perc12) + " (" + moneyEUR(euro12) + ")", colorClassForMargin(perc12));
-
-    var euro5 = backbox - (backbox * fee5) - (backbox * extra) - fixed - purchase;
-    var perc5 = (euro5 / backbox) * 100;
-    setOutput("margin5Value", percentText(perc5) + " (" + moneyEUR(euro5) + ")", colorClassForMargin(perc5));
-
-    saveData();
-  }
-
-  function convert(){
-    var usdValue = toNumber(byId("usdPrice").value);
-    var eurValue = toNumber(byId("eurPrice").value);
-    var rate = toNumber(byId("usdRate").value);
-
-    byId("eurResult").innerHTML = "USD → EUR: " + moneyEUR(usdValue * rate);
-
-    if(rate <= 0){
-      byId("usdResult").innerHTML = "EUR → USD: —";
-    } else {
-      byId("usdResult").innerHTML = "EUR → USD: " + moneyUSD(eurValue / rate);
-    }
-
-    saveData();
-  }
-
-
-  function useConvertedAsPurchase(){
-    var usdValue = toNumber(byId("usdPrice").value);
-    var rate = toNumber(byId("usdRate").value);
-    var converted = usdValue * rate;
-
-    if(usdValue <= 0 || rate <= 0){
-      alert("Inserisci prima un prezzo fornitore USD e un cambio valido.");
-      return;
-    }
-
-    byId("purchase").value = converted.toFixed(2).replace(".", ",");
-    calculate();
-  }
-
-
-  function refreshRate(){
-    var status = byId("rateStatus");
-    var btn = byId("refreshRate");
-    if(status){ status.innerHTML = "Aggiornamento cambio in corso..."; }
-    if(btn){ btn.disabled = true; btn.innerHTML = "Aggiorno..."; }
-
-    fetch("https://api.frankfurter.dev/v2/rate/USD/EUR")
-      .then(function(response){
-        if(!response.ok){ throw new Error("Errore API"); }
-        return response.json();
-      })
-      .then(function(data){
-        if(!data || data.rate === undefined){ throw new Error("Cambio non disponibile"); }
-        var rate = Number(data.rate);
-        byId("usdRate").value = rate.toFixed(4).replace(".", ",");
-        var dateText = data.date ? data.date.split("-").reverse().join("/") : "oggi";
-        if(status){ status.innerHTML = "Cambio aggiornato da Frankfurter: " + dateText; }
-        convert();
-      })
-      .catch(function(error){
-        if(status){ status.innerHTML = "Non sono riuscito ad aggiornare il cambio. Resta valido il valore inserito manualmente."; }
-      })
-      .finally(function(){
-        if(btn){ btn.disabled = false; btn.innerHTML = "Aggiorna cambio USD/EUR"; }
-      });
-  }
-
-  function saveData(){
-    var ids = [
-      "fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin",
-      "usdPrice","usdRate","eurPrice","backbox","purchase"
-    ];
-    var data = {};
-    var i;
-    for(i=0;i<ids.length;i++){
-      data[ids[i]] = byId(ids[i]).value;
-    }
-    try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }catch(e){}
-  }
-
-  function loadData(){
-    try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return;
-      var data = JSON.parse(raw);
-      var key;
-      for(key in data){
-        if(data.hasOwnProperty(key) && byId(key)){
-          byId(key).value = data[key];
-        }
-      }
-    }catch(e){}
-  }
-
-  function bindInput(id, fn){
-    var node = byId(id);
-    if(!node) return;
-    node.oninput = fn;
-    node.onchange = fn;
-    node.onkeyup = fn;
-  }
-
-  function bindAll(){
-    var calcIds = ["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","targetMargin","backbox","purchase"];
-    var convIds = ["usdPrice","usdRate","eurPrice"];
-    var i;
-
-    for(i=0;i<calcIds.length;i++){
-      bindInput(calcIds[i], calculate);
-    }
-    for(i=0;i<convIds.length;i++){
-      bindInput(convIds[i], convert);
-    }
-
-    if(byId("refreshRate")){
-      byId("refreshRate").onclick = refreshRate;
-    }
-
-    if(byId("useConvertedPurchase")){
-      byId("useConvertedPurchase").onclick = useConvertedAsPurchase;
-    }
-
-    byId("toggleSettings").onclick = function(){
-      var box = byId("settingsBox");
-      if(box.className.indexOf("open") === -1){
-        box.className = "panel-body collapse open";
-      } else {
-        box.className = "panel-body collapse";
-      }
-    };
-
-    byId("toggleConverter").onclick = function(){
-      var box = byId("converterBox");
-      if(box.className.indexOf("open") === -1){
-        box.className = "panel-body collapse open";
-      } else {
-        box.className = "panel-body collapse";
-      }
-    };
-
-    byId("resetAll").onclick = function(){
-      if(!confirm("Vuoi pulire il calcolatore?")) return;
-      try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
-
-      byId("fee12").value = "12";
-      byId("fee5").value = "5";
-      byId("investorFee").value = "0";
-      byId("storfundFee").value = "2,30";
-      byId("paymentFee").value = "1";
-      byId("importFee").value = "7";
-      byId("shipping").value = "16,50";
-      byId("targetMargin").value = "7,50";
-      byId("usdRate").value = "0,92";
-      byId("usdPrice").value = "";
-      byId("eurPrice").value = "";
-      byId("backbox").value = "";
-      byId("purchase").value = "";
-
-      calculate();
-      convert();
-    };
-  }
-
-  loadData();
-  bindAll();
-  calculate();
-  convert();
-})();
-</script>
+  <script src="shared-settings.js?v=profiles-1"></script>
+  <script src="buybox-core.js?v=mobile-1"></script>
+  <script src="calcolo-light.js?v=mobile-1"></script>
 </body>
 </html>

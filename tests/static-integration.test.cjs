@@ -22,9 +22,32 @@ test("la Home gestisce l’unico accesso e le pagine protette vi ritornano", () 
   assert.match(auth, /\/api\/purchases\/status/);
   assert.match(auth, /sessionStorage\.setItem/);
   assert.match(guard, /index\.html\?return=/);
-  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","impostazioni.html","calcolo-completo.html"]) {
+  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","impostazioni.html","calcolo-completo.html","calcolo-light.html"]) {
     assert.match(read(file), /app-auth-guard\.js/, file);
   }
+});
+
+test("il Calcolatore Mobile usa profili online e Personalizzato solo in sessione", () => {
+  const html = read("calcolo-light.html");
+  const script = read("calcolo-light.js");
+  assert.match(html, /data-profile="backmarket"/);
+  assert.match(html, /data-profile="purchases"/);
+  assert.match(html, /data-profile="refurbed"/);
+  assert.match(html, /data-profile="custom"/);
+  assert.match(html, /Non viene salvato online/);
+  assert.match(html, /Mercati standard/);
+  assert.match(html, /Mercati ridotti/);
+  assert.match(html, /shared-settings\.js/);
+  assert.match(html, /buybox-core\.js/);
+  assert.doesNotMatch(html, /<style[\s>]/);
+  assert.doesNotMatch(html, /<script>(?:.|\n)*<\/script>/);
+  assert.doesNotMatch(html, /style=/);
+  assert.match(script, /loadOnline/);
+  assert.match(script, /resolveProfile/);
+  assert.match(script, /suggestedPurchaseForMargin/);
+  assert.match(script, /calculateMargin/);
+  assert.match(script, /sessionStorage\.setItem/);
+  assert.doesNotMatch(script, /settingsApi\.saveOnline/);
 });
 
 test("la Home sostituisce la verifica tecnica Drive con la lavorazione ordini", () => {
@@ -174,7 +197,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
 });
 
 test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
-  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "buybox.html", "buybox.js", "buybox-config.js"];
+  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js"];
   for (const file of publicFiles) {
     const content = read(file);
     assert.doesNotMatch(content, /BACKMARKET_TOKEN\s*[:=]\s*["'][^"']+/i, file);
