@@ -127,6 +127,27 @@ I prezzi restano sempre separati: il Monitor BuyBox legge `/api/purchases/costs`
 e usa il costo online nei calcoli, ma ogni invio prezzo mantiene la propria
 conferma esistente.
 
+## Impostazioni online
+
+La migrazione `0003_online_settings.sql` aggiunge la configurazione economica
+con revisioni e storico, oltre ai margini personalizzati per inserzione. La pagina
+`impostazioni.html` è l'unico punto di modifica per fee, costi fissi, margini
+generali e cambi; il Monitor BuyBox e il Calcolo completo leggono la stessa
+configurazione.
+
+- `GET` e `POST /api/settings`: lettura e salvataggio confermato della
+  configurazione economica;
+- `GET /api/settings/product-margins`: elenco delle personalizzazioni;
+- `POST /api/settings/product-margin`: salvataggio o ripristino dei margini di
+  una singola inserzione.
+
+Tutti gli endpoint sono protetti da `X-App-Key` e usano revisioni per impedire
+sovrascritture silenziose tra computer. Alla prima apertura, se l'archivio è
+vuoto, la pagina propone i valori già presenti nel browser e li salva online
+solo dopo conferma. Anche le vecchie personalizzazioni locali possono essere
+trasferite esplicitamente. Queste operazioni non chiamano Back Market e non
+modificano prezzi o quantità.
+
 Verifiche dalla radice: `node --test tests/*.test.cjs worker/test/*.test.mjs`.
 I test usano dati sintetici e SQLite in memoria, senza modifiche in produzione.
 

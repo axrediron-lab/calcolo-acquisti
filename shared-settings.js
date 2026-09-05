@@ -73,6 +73,43 @@
 
   function reset(){ return save(DEFAULTS); }
 
+  async function onlineRequest(apiBase, accessKey, options){
+    options = options || {};
+    var headers = new Headers({"Accept":"application/json","X-App-Key":accessKey || ""});
+    if(options.body !== undefined) headers.set("Content-Type","application/json");
+    var response = await fetch(String(apiBase || "").replace(/\/$/,"") + "/api/settings", {
+      method:options.method || "GET",
+      headers:headers,
+      cache:"no-store",
+      body:options.body === undefined ? undefined : JSON.stringify(options.body)
+    });
+    var payload = null;
+    try{ payload = await response.json(); }catch(error){}
+    if(!response.ok){
+      var failure = new Error(payload && payload.error ? payload.error : "Archivio impostazioni non disponibile");
+      failure.code = payload && payload.code ? payload.code : "SETTINGS_UNAVAILABLE";
+      failure.status = response.status;
+      throw failure;
+    }
+    return payload;
+  }
+
+  async function loadOnline(apiBase, accessKey){
+    var payload = await onlineRequest(apiBase,accessKey);
+    if(payload && payload.exists && payload.settings){ save(payload.settings); }
+    return payload;
+  }
+
+  async function saveOnline(apiBase, accessKey, value, expectedRevision){
+    var settings = mergeDefaults(value);
+    var payload = await onlineRequest(apiBase,accessKey,{
+      method:"POST",
+      body:{settings:settings,expected_revision:expectedRevision,confirm:true}
+    });
+    if(payload && payload.settings){ save(payload.settings); }
+    return payload;
+  }
+
   if(typeof window !== "undefined" && typeof window.addEventListener === "function"){
     window.addEventListener("storage", function(event){
       if(event.key === STORAGE_KEY){ notify(load()); }
@@ -87,6 +124,8 @@
     load:load,
     save:save,
     update:update,
-    reset:reset
+    reset:reset,
+    loadOnline:loadOnline,
+    saveOnline:saveOnline
   };
 });

@@ -18,6 +18,20 @@ test("la Home sostituisce la verifica tecnica Drive con la lavorazione ordini", 
   assert.doesNotMatch(html, /href="verifica-drive\.html"/);
 });
 
+test("la Home e le pagine operative collegano le impostazioni online", () => {
+  const home = read("index.html");
+  const settings = read("impostazioni.html");
+  const script = read("impostazioni.js");
+  const buybox = read("buybox.js");
+  assert.match(home, /href="impostazioni\.html"/);
+  assert.match(settings, /Configurazione online/);
+  assert.match(settings, /name="sekRate"/);
+  assert.match(script, /saveOnline/);
+  assert.match(script, /product-margins/);
+  assert.match(buybox, /loadOnlinePreferences/);
+  assert.match(buybox, /saveOnlineProductMargin/);
+});
+
 test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", () => {
   const html = read("lavorazione.html");
   const script = read("lavorazione.js");

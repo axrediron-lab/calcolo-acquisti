@@ -231,8 +231,57 @@
     var saved = state.productMargins[listingId] || {};
     return {
       minimum:saved.minimum !== undefined ? saved.minimum : (defaults.minimumMargin*100).toFixed(2).replace(".",","),
-      target:saved.target !== undefined ? saved.target : (defaults.targetMargin*100).toFixed(2).replace(".",",")
+      target:saved.target !== undefined ? saved.target : (defaults.targetMargin*100).toFixed(2).replace(".",","),
+      revision:Number(saved.revision || 0)
     };
+  }
+
+  async function loadOnlinePreferences(){
+    var results = await Promise.all([
+      settingsApi.loadOnline(config.apiBase,accessKey()),
+      apiFetch("/api/settings/product-margins")
+    ]);
+    if(results[0] && results[0].exists){ state.settings = settingsApi.load(); }
+    var onlineMargins = results[1] && Array.isArray(results[1].results) ? results[1].results : [];
+    var unmigratedMargins = {};
+    Object.keys(state.productMargins || {}).forEach(function(id){
+      if(!Number(state.productMargins[id] && state.productMargins[id].revision)){ unmigratedMargins[id]=state.productMargins[id]; }
+    });
+    state.productMargins = unmigratedMargins;
+    onlineMargins.forEach(function(item){
+      state.productMargins[item.listing_id] = {
+        minimum:item.minimum_margin,
+        target:item.target_margin,
+        revision:item.revision,
+        sku:item.sku_snapshot
+      };
+    });
+    writeJson(config.productMarginCacheKey,state.productMargins);
+    renderSettings();
+  }
+
+  async function saveOnlineProductMargin(listingId){
+    var values = productMarginValues(listingId);
+    var listing = state.listings.find(function(item){ return item.id === listingId; });
+    var saved = await apiFetch("/api/settings/product-margin",{
+      method:"POST",
+      body:{
+        listing_id:listingId,
+        sku:listing ? listing.sku : (state.productMargins[listingId] && state.productMargins[listingId].sku) || "Non disponibile",
+        minimum:values.minimum,
+        target:values.target,
+        expected_revision:values.revision,
+        confirm:true
+      }
+    });
+    state.productMargins[listingId] = {
+      minimum:saved.margin.minimum_margin,
+      target:saved.margin.target_margin,
+      revision:saved.margin.revision,
+      sku:saved.margin.sku_snapshot
+    };
+    writeJson(config.productMarginCacheKey,state.productMargins);
+    setStatus("Margini personalizzati salvati online");
   }
 
   function marginClass(value,listingId){
@@ -629,7 +678,13 @@
         state.productMargins[id] = margins;
         writeJson(config.productMarginCacheKey,state.productMargins);
       });
-      input.addEventListener("change",function(){ renderCatalog(); });
+      input.addEventListener("change",function(){
+        var id=input.getAttribute("data-margin-id");
+        saveOnlineProductMargin(id).then(renderCatalog).catch(function(error){
+          setStatus(error.message || "Margine non salvato online");
+          if(error.code === "ACCESS_REQUIRED") showAccessDialog();
+        });
+      });
     });
     document.querySelectorAll("[data-quantity-id]").forEach(function(input){
       input.addEventListener("input",function(){
@@ -1002,6 +1057,7 @@
     byId("refreshCatalog").disabled = true;
     setStatus(force ? "Aggiornamento in corso…" : "Connessione al catalogo…");
     try{
+      await loadOnlinePreferences();
       var payload = await apiFetch("/api/catalog"+(force?"?refresh=1":""));
       try{
         var costs = await apiFetch("/api/purchases/costs");

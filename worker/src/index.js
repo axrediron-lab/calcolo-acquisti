@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { DriveError, drivePreview, driveStatus } from "./drive.js";
 import { PurchaseError } from "./ready-csv.js";
 import { purchaseRoute } from "./purchases.js";
+import { SettingsError, settingsRoute } from "./settings.js";
 
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
 const CATALOG_TTL_SECONDS = 300;
@@ -404,6 +405,10 @@ export async function handleRequest(request, env, ctx = {}) {
     let response;
     if (url.pathname === "/health" && ["GET", "HEAD"].includes(request.method)) {
       response = jsonResponse({ ok: true, configured: configurationStatus(env) });
+    } else if (url.pathname === "/api/settings" || url.pathname.startsWith("/api/settings/")) {
+      if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
+      assertAuthorized(request, env);
+      response = jsonResponse(await settingsRoute(request, url, env));
     } else if (url.pathname.startsWith("/api/purchases/") || url.pathname === "/api/mappings" || url.pathname.startsWith("/api/mappings/")) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);
@@ -446,7 +451,7 @@ export async function handleRequest(request, env, ctx = {}) {
       ? new Response(null, { status: finalResponse.status, headers: finalResponse.headers })
       : finalResponse;
   } catch (error) {
-    if (error instanceof DriveError || error instanceof PurchaseError) error = new HttpError(error.status, error.publicMessage, error.code);
+    if (error instanceof DriveError || error instanceof PurchaseError || error instanceof SettingsError) error = new HttpError(error.status, error.publicMessage, error.code);
     const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof HttpError ? error.publicMessage : "Errore interno del servizio";
     const code = error instanceof HttpError ? error.code : "INTERNAL_ERROR";

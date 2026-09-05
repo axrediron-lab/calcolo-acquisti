@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Calcolo acquisti completo</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=settings-1">
 </head>
 <body>
   <div class="wrap">
@@ -15,7 +15,7 @@
       </div>
       <div class="actions">
         <a class="home-link" href="index.html">← Home</a>
-        <button id="toggleSettings" type="button">Impostazioni</button>
+        <a class="home-link" href="impostazioni.html">Impostazioni</a>
         <button id="exportCsv" type="button">Esporta CSV</button>
         <button id="resetData" type="button">Reset dati</button>
       </div>
@@ -24,56 +24,56 @@
     <div class="grid">
       <section class="panel">
         <div class="panel-head">
-          <h2>Impostazioni calcolo</h2>
-          <span class="pill">Salvataggio automatico</span>
+          <h2>Impostazioni economiche attive</h2>
+          <span class="pill">Gestione online</span>
         </div>
-        <div id="settingsPanel" class="settings">
+        <div id="settingsPanel" class="settings open">
           <div class="field">
             <label>Commissione standard 12%</label>
-            <input id="fee12" type="text" inputmode="decimal" value="12">
+            <input id="fee12" type="text" inputmode="decimal" value="12" readonly>
           </div>
           <div class="field">
             <label>Commissione ridotta 5%</label>
-            <input id="fee5" type="text" inputmode="decimal" value="5">
+            <input id="fee5" type="text" inputmode="decimal" value="5" readonly>
           </div>
           <div class="field">
             <label>Fee investitore %</label>
-            <input id="investorFee" type="text" inputmode="decimal" value="1">
+            <input id="investorFee" type="text" inputmode="decimal" value="1" readonly>
           </div>
           <div class="field">
             <label>Fee Storfund %</label>
-            <input id="storfundFee" type="text" inputmode="decimal" value="1,20">
+            <input id="storfundFee" type="text" inputmode="decimal" value="1,20" readonly>
           </div>
           <div class="field">
             <label>Commissioni pagamenti %</label>
-            <input id="paymentFee" type="text" inputmode="decimal" value="1">
+            <input id="paymentFee" type="text" inputmode="decimal" value="1" readonly>
           </div>
           <div class="field">
             <label>Commissione importazione €</label>
-            <input id="importFee" type="text" inputmode="decimal" value="0">
+            <input id="importFee" type="text" inputmode="decimal" value="0" readonly>
           </div>
           <div class="field">
             <label>Spedizione altri Paesi €</label>
-            <input id="shipping" type="text" inputmode="decimal" value="16,50">
+            <input id="shipping" type="text" inputmode="decimal" value="16,50" readonly>
           </div>
           <div class="field">
             <label>Spedizione Italia €</label>
-            <input id="shippingItaly" type="text" inputmode="decimal" value="7,50">
+            <input id="shippingItaly" type="text" inputmode="decimal" value="7,50" readonly>
           </div>
           <div class="field">
             <label>Margine minimo netto %</label>
-            <input id="minimumMargin" type="text" inputmode="decimal" value="5">
+            <input id="minimumMargin" type="text" inputmode="decimal" value="5" readonly>
           </div>
           <div class="field">
             <label>Margine obiettivo netto %</label>
-            <input id="targetMargin" type="text" inputmode="decimal" value="7,50">
+            <input id="targetMargin" type="text" inputmode="decimal" value="7,50" readonly>
           </div>
           <div class="field">
             <label>Cambio SEK → EUR</label>
-            <input id="sekRate" type="text" inputmode="decimal" value="0,090">
+            <input id="sekRate" type="text" inputmode="decimal" value="0,090" readonly>
           </div>
         </div>
-        <p class="note">Queste impostazioni sono condivise con il Monitor BuyBox. Il margine è sempre netto di commissione Back Market, fee aggiuntive, importazione e spedizione; per l’Italia viene usato il costo dedicato.</p>
+        <p class="note">Questi valori sono gestiti dalla pagina Impostazioni e condivisi online con il Monitor BuyBox. Per modificarli usa il pulsante Impostazioni in alto.</p>
       </section>
 
       <section class="panel">
@@ -88,10 +88,10 @@
           </div>
           <div class="field">
             <label>Cambio USD → EUR</label>
-            <input id="usdRate" type="text" inputmode="decimal" value="0,92">
+            <input id="usdRate" type="text" inputmode="decimal" value="0,92" readonly>
           </div>
-          <button id="refreshRate" class="rate-button" type="button">Aggiorna cambio USD/EUR</button>
-          <div id="rateStatus" class="rate-status">Cambio manuale o ultimo cambio salvato nel browser.</div>
+          <a class="rate-button" href="impostazioni.html">Gestisci cambio USD/EUR</a>
+          <div id="rateStatus" class="rate-status">Cambio letto dalle impostazioni condivise.</div>
           <div class="result-box" id="eurResult">USD → EUR: € 0,00</div>
 
           <div class="field">
@@ -747,6 +747,7 @@
     </section>
   </div>
 
+<script src="buybox-config.js"></script>
 <script src="shared-settings.js"></script>
 <script>
 (function(){
@@ -1011,15 +1012,6 @@
       byId("refreshRate").addEventListener("click", refreshRate);
     }
 
-    byId("toggleSettings").addEventListener("click", function(){
-      var panel = byId("settingsPanel");
-      if(panel.className.indexOf("open") === -1){
-        panel.className += " open";
-      } else {
-        panel.className = panel.className.replace(" open", "");
-      }
-    });
-
     byId("searchInput").addEventListener("input", function(){
       var q = byId("searchInput").value.toLowerCase().trim();
       var trs = document.querySelectorAll("#calcTable tbody tr");
@@ -1033,22 +1025,8 @@
       if(!confirm("Vuoi cancellare tutti i dati inseriti?")) return;
       try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
 
-      byId("fee12").value = "12";
-      byId("fee5").value = "5";
-      byId("investorFee").value = "1";
-      byId("storfundFee").value = "1,20";
-      byId("paymentFee").value = "1";
-      byId("importFee").value = "0";
-      byId("shipping").value = "16,50";
-      byId("shippingItaly").value = "7,50";
-      byId("minimumMargin").value = "5";
-      byId("targetMargin").value = "7,50";
-      byId("usdRate").value = "0,92";
-      byId("sekRate").value = "0,090";
       byId("usdPrice").value = "";
       byId("eurPrice").value = "";
-
-      if(window.CalcoloSettings){ window.CalcoloSettings.reset(); }
       rows = MODELS.map(function(name){ return { name:name, backbox:"", purchase:"" }; });
       syncInputsFromState();
       calculateAll();
@@ -1097,6 +1075,17 @@
   bindInputs();
   calculateAll();
   updateConverter();
+  try{
+    var onlineKey=sessionStorage.getItem(window.BUYBOX_CONFIG.accessSessionKey)||"";
+    if(onlineKey){
+      window.CalcoloSettings.loadOnline(window.BUYBOX_CONFIG.apiBase,onlineKey).then(function(result){
+        if(!result.exists)return;
+        var values=result.settings;
+        Object.keys(window.CalcoloSettings.DEFAULTS).forEach(function(name){if(byId(name)&&values[name]!==undefined)byId(name).value=values[name];});
+        calculateAll();updateConverter();
+      }).catch(function(){});
+    }
+  }catch(e){}
 })();
 </script>
 </body>
