@@ -12,7 +12,7 @@
   function loginState() {
     var dialog = byId("purchaseLoginDialog");
     byId("purchaseWorkspace").hidden = !memoryKey;
-    if (memoryKey) { if (dialog.open) dialog.close(); }
+    if (memoryKey) { if (dialog && dialog.open) dialog.close(); }
     else { window.AppAuth.redirect(false); }
   }
   function logout() {
@@ -79,9 +79,14 @@
     var data = await api(path + "?" + params.toString());
     historyRows = append ? historyRows.concat(data.results) : data.results;
     offset = data.next_offset; byId("historyMore").hidden = offset === null;
-    if (!historyRows.length) { byId("purchaseHistory").textContent = "Nessun risultato."; return; }
+    if (mode === "mappings" && byId("mappingCount")) byId("mappingCount").textContent = historyRows.length + (offset === null ? "" : "+") + (historyRows.length === 1 ? " risultato" : " risultati");
+    if (!historyRows.length) {
+      if (mode === "mappings") byId("purchaseHistory").innerHTML = '<div class="mapping-empty"><strong>Nessun abbinamento trovato</strong><span>Modifica la ricerca oppure importa un nuovo ordine per creare le associazioni mancanti.</span></div>';
+      else byId("purchaseHistory").textContent = "Nessun ordine trovato.";
+      return;
+    }
     if (mode === "mappings") {
-      byId("purchaseHistory").innerHTML = '<div class="purchases-table-wrap"><table><thead><tr><th>Codice Ready</th><th>Descrizione Ready</th><th>SKU Back Market</th><th>Ultima modifica</th><th>Azioni</th></tr></thead><tbody>' + historyRows.map(m => '<tr><td>' + esc(m.ready_code) + '</td><td>' + esc(m.ready_description) + '</td><td>' + esc(m.sku || "Rimosso — da abbinare alla prossima importazione") + '</td><td>' + esc(new Date(m.updated_at).toLocaleString("it-IT")) + '</td><td><button type="button" data-map="' + esc(m.ready_code) + '">Modifica</button>' + (m.listing_id ? '<button type="button" data-remove="' + esc(m.ready_code) + '" class="secondary">Rimuovi</button>' : '') + '<button type="button" data-audit="' + esc(m.ready_code) + '" class="secondary">Storico</button></td></tr>').join('') + '</tbody></table></div>';
+      byId("purchaseHistory").innerHTML = '<div class="purchases-table-wrap mapping-table-wrap"><table class="mapping-table"><thead><tr><th>Prodotto Ready</th><th>Inserzione Back Market</th><th>Ultima modifica</th><th>Azioni</th></tr></thead><tbody>' + historyRows.map(m => '<tr><td><strong class="mapping-ready-code">' + esc(m.ready_code) + '</strong><small>' + esc(m.ready_description || "Descrizione non disponibile") + '</small></td><td><span class="mapping-state ' + (m.listing_id ? 'active' : 'removed') + '">' + (m.listing_id ? 'Attivo' : 'Rimosso') + '</span><strong class="mapping-sku">' + esc(m.sku || "Da abbinare alla prossima importazione") + '</strong></td><td><span class="mapping-date">' + esc(new Date(m.updated_at).toLocaleString("it-IT")) + '</span></td><td><div class="mapping-actions"><button type="button" data-map="' + esc(m.ready_code) + '">' + (m.listing_id ? 'Modifica' : 'Abbina') + '</button>' + (m.listing_id ? '<button type="button" data-remove="' + esc(m.ready_code) + '" class="secondary">Rimuovi</button>' : '') + '<button type="button" data-audit="' + esc(m.ready_code) + '" class="secondary">Storico</button></div></td></tr>').join('') + '</tbody></table></div>';
     } else {
       byId("purchaseHistory").innerHTML = '<div class="purchases-table-wrap"><table><thead><tr><th>Documento Ready</th><th>Data</th><th>Righe</th><th>Pezzi</th><th>Costo totale EUR</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>' + historyRows.map(d => { var complete=d.processed_items>=d.item_count&&!d.pending_items,state=complete?'Evaso':d.processed_items?'In lavorazione':'Da evadere'; return '<tr><td><strong>' + esc(d.document_number) + '</strong></td><td>' + esc(d.document_date) + '</td><td>' + d.row_count + '</td><td>' + d.units + '</td><td>' + esc(money(d.total_cents)) + '</td><td><span class="order-state '+(complete?'done':'pending')+'">' + esc(state) + '</span></td><td><a class="table-action" href="lavorazione.html?key=' + encodeURIComponent(d.document_key) + '">'+(complete?'Rivedi':'Lavora')+'</a><button type="button" data-document="' + esc(d.document_key) + '">Apri</button></td></tr>'; }).join('') + '</tbody></table></div>';
     }
@@ -109,17 +114,18 @@
     byId("mappingError").textContent = ""; byId("listingSearch").value = ""; filterListings(); byId("mappingDialog").showModal();
     message("Seleziona lo SKU esatto e conferma l’abbinamento.");
   }
-  byId("purchaseLogin").addEventListener("submit", event => { event.preventDefault(); run(async () => {
+  if (byId("purchaseLogin")) byId("purchaseLogin").addEventListener("submit", event => { event.preventDefault(); run(async () => {
     memoryKey = byId("purchaseKey").value.trim(); byId("purchaseKey").value = "";
     byId("purchaseLoginError").hidden = true;
     try { await api("/api/purchases/status"); } catch (error) { logout(); byId("purchaseLoginError").textContent = error.message; byId("purchaseLoginError").hidden = false; throw error; }
     try { sessionStorage.setItem(config.accessSessionKey, memoryKey); } catch (_) {}
     loginState(); await history(false); message("Archivio online disponibile.");
   }); });
-  byId("purchaseLogout").addEventListener("click", () => { if (!busy) { logout(); message("Disconnesso."); } });
+  if (byId("purchaseLogout")) byId("purchaseLogout").addEventListener("click", () => { if (!busy) { logout(); message("Disconnesso."); } });
   byId("historySearch").addEventListener("submit", event => { event.preventDefault(); run(() => history(false)); });
-  if (mode === "purchases") byId("historyReset").addEventListener("click", () => {
-    byId("historyQuery").value = ""; byId("historyFrom").value = ""; byId("historyTo").value = ""; byId("historyState").value = "pending";
+  byId("historyReset").addEventListener("click", () => {
+    byId("historyQuery").value = "";
+    if (mode === "purchases") { byId("historyFrom").value = ""; byId("historyTo").value = ""; byId("historyState").value = "pending"; }
     run(() => history(false));
   });
   byId("historyMore").addEventListener("click", () => run(() => history(true)));
@@ -161,7 +167,7 @@
     if (target.dataset.audit) run(async () => {
       var data = await api("/api/mappings/history?code=" + encodeURIComponent(target.dataset.audit));
       byId("documentTitle").textContent = "Storico abbinamenti · " + target.dataset.audit;
-      byId("documentContent").innerHTML = '<p>Ultime 100 revisioni, dalla più recente.</p><ul>' + data.results.map(m => '<li>' + esc(new Date(m.changed_at).toLocaleString("it-IT")) + ' · revisione ' + m.revision + ' · ' + esc(m.sku || "Abbinamento rimosso") + '</li>').join('') + '</ul>';
+      byId("documentContent").innerHTML = '<p>Ultime 100 revisioni, dalla più recente. Le revisioni precedenti restano consultabili e non vengono riscritte.</p><ol class="mapping-audit-list">' + data.results.map(m => '<li><div><strong>Revisione ' + esc(m.revision) + '</strong><span>' + esc(new Date(m.changed_at).toLocaleString("it-IT")) + '</span></div><p>' + esc(m.sku || "Abbinamento rimosso") + '</p></li>').join('') + '</ol>';
       byId("documentDialog").showModal();
     });
   });

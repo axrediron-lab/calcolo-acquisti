@@ -2333,6 +2333,62 @@
   :where(.page-purchases) .work-document-summary { justify-content:flex-start; }
 }
 
+/* Abbinamenti: archivio compatto e coerente con Acquisti. */
+:where(.page-mappings) .mappings-shell { width:min(1500px,calc(100% - 32px)); }
+:where(.page-mappings) #purchaseStatus { margin:0 2px 8px; font-size:12px; }
+:where(.page-mappings) .mappings-panel { padding:0; overflow:hidden; }
+:where(.page-mappings) .mappings-panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:21px 22px 15px; }
+:where(.page-mappings) .mappings-panel-head h2 { margin:0 0 3px; }
+:where(.page-mappings) .mappings-panel-head p { margin:0; font-size:12px; }
+:where(.page-mappings) .mapping-search { display:grid; grid-template-columns:minmax(260px,1fr) auto auto; align-items:end; gap:9px; padding:0 22px 17px; border-bottom:1px solid var(--line); }
+:where(.page-mappings) .mapping-search label { display:grid; gap:5px; color:#354e64; font-size:11px; }
+:where(.page-mappings) .mapping-search input { min-height:42px; }
+:where(.page-mappings) .mapping-search button { min-height:42px; }
+:where(.page-mappings) .mapping-table-wrap { margin:0; }
+:where(.page-mappings) .mapping-table { table-layout:fixed; }
+:where(.page-mappings) .mapping-table th:nth-child(1) { width:31%; }
+:where(.page-mappings) .mapping-table th:nth-child(2) { width:36%; }
+:where(.page-mappings) .mapping-table th:nth-child(3) { width:15%; }
+:where(.page-mappings) .mapping-table th:nth-child(4) { width:18%; }
+:where(.page-mappings) .mapping-table th { padding:10px 13px; font-size:11px; }
+:where(.page-mappings) .mapping-table td { padding:11px 13px; vertical-align:middle; }
+:where(.page-mappings) .mapping-ready-code, :where(.page-mappings) .mapping-sku { display:block; color:var(--text); font-size:13px; line-height:1.3; }
+:where(.page-mappings) .mapping-table td small { margin:3px 0 0; color:#5f7182; line-height:1.25; }
+:where(.page-mappings) .mapping-state { display:inline-flex; margin:0 0 5px; padding:4px 7px; border:1px solid #a9dbc8; border-radius:999px; background:#ecf9f3; color:#176b4b; font-size:10px; line-height:1; font-weight:850; }
+:where(.page-mappings) .mapping-state.removed { border-color:#efd091; background:#fff7e5; color:#8a530b; }
+:where(.page-mappings) .mapping-date { color:#526578; font-size:11px; white-space:nowrap; }
+:where(.page-mappings) .mapping-actions { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+:where(.page-mappings) .mapping-actions button { min-height:34px; margin:0; padding:7px 9px; border-radius:9px; font-size:11px; }
+:where(.page-mappings) .mappings-more { margin:14px 22px 20px; }
+:where(.page-mappings) .mapping-empty { display:grid; justify-items:center; gap:4px; padding:54px 20px; text-align:center; }
+:where(.page-mappings) .mapping-empty strong { font-size:16px; }
+:where(.page-mappings) .mapping-empty span { color:var(--muted); font-size:12px; }
+:where(.page-mappings) .mapping-editor-dialog { width:min(780px,calc(100vw - 30px)); }
+:where(.page-mappings) .mapping-dialog-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:15px; }
+:where(.page-mappings) .mapping-dialog-head h2 { margin:1px 0 0; }
+:where(.page-mappings) .mapping-current-card { display:grid; gap:3px; padding:12px 14px; border:1px solid #c9dce9; border-radius:12px; background:#f5f9fc; }
+:where(.page-mappings) .mapping-current-card strong { color:var(--text); }
+:where(.page-mappings) .mapping-current-card span { color:#526578; font-size:12px; }
+:where(.page-mappings) .mapping-safety-note { margin:0; padding:10px 12px; border-left:3px solid var(--brand); background:var(--brand-soft); color:#36546b; font-size:12px; }
+:where(.page-mappings) .mapping-editor-dialog label { margin-top:2px; color:#354e64; font-size:12px; }
+:where(.page-mappings) .mapping-history-dialog { width:min(700px,calc(100vw - 30px)); }
+:where(.page-mappings) .mapping-audit-list { display:grid; gap:8px; margin:15px 0 0; padding:0; list-style:none; }
+:where(.page-mappings) .mapping-audit-list li { padding:11px 13px; border:1px solid var(--line); border-radius:11px; background:#f8fafc; }
+:where(.page-mappings) .mapping-audit-list li div { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+:where(.page-mappings) .mapping-audit-list li span { color:#64748b; font-size:11px; }
+:where(.page-mappings) .mapping-audit-list li p { margin:4px 0 0; color:#29465d; font-size:12px; }
+@media (max-width:800px) {
+  :where(.page-mappings) .mapping-table { min-width:900px; }
+  :where(.page-mappings) .mapping-search { grid-template-columns:1fr 1fr; }
+  :where(.page-mappings) .mapping-search label { grid-column:1 / -1; }
+}
+@media (max-width:520px) {
+  :where(.page-mappings) .mappings-shell { width:100%; }
+  :where(.page-mappings) .mappings-panel-head, :where(.page-mappings) .mapping-dialog-head { align-items:flex-start; flex-direction:column; }
+  :where(.page-mappings) .mapping-search { grid-template-columns:1fr; }
+  :where(.page-mappings) .mapping-search label { grid-column:auto; }
+}
+
 /* 08 - Valutazione stock BackMarket */
 :root:where(.page-stock-valuation) { --bg:#f4f7fb; --panel:#fff; --text:#0b1220; --muted:#64748b; --line:#dce5ef; --brand:#035a8b; --brand-2:#1476b8; --brand-soft:#eaf5fb; --ok:#11845b; --warn:#c97a12; --bad:#c0362c; --shadow:0 14px 34px rgba(15,23,42,.09); --radius:18px; }
 :where(.page-stock-valuation), :where(.page-stock-valuation) * { box-sizing:border-box; }

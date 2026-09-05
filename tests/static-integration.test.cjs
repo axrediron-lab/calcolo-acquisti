@@ -113,6 +113,23 @@ test("Acquisti filtra gli ordini per periodo e lavorazione", () => {
   assert.match(script, /Evaso/);
 });
 
+test("Abbinamenti è un archivio compatto senza scorciatoia BuyBox", () => {
+  const html = read("abbinamenti.html");
+  const script = read("acquisti.js");
+  assert.match(html, /class="page-purchases page-mappings"/);
+  assert.match(html, /id="mappingCount"/);
+  assert.match(html, /id="historyReset"/);
+  assert.match(html, /Lo storico resta invariato/);
+  assert.doesNotMatch(html, /href="buybox\.html/);
+  assert.doesNotMatch(html, /id="purchaseLogout"/);
+  assert.doesNotMatch(html, /style=/);
+  assert.match(script, /Prodotto Ready/);
+  assert.match(script, /Inserzione Back Market/);
+  assert.match(script, /mapping-state/);
+  assert.match(script, /Da abbinare alla prossima importazione/);
+  assert.match(script, /mapping-audit-list/);
+});
+
 test("la Valutazione stock usa catalogo, profilo Acquisti e sole letture BuyBox", () => {
   const html = read("calcolo-completo.html");
   const script = read("calcolo-completo.js");

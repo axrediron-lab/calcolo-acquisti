@@ -1,29 +1,80 @@
 <!doctype html>
-<html lang="it" class="page-purchases">
+<html lang="it" class="page-purchases page-mappings">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Abbinamenti Ready e Back Market</title><link rel="stylesheet" href="styles.css?v=purchases-3">
-  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="acquisti.js" defer></script>
+  <title>Abbinamenti</title>
+  <link rel="stylesheet" href="styles.css?v=mappings-1">
+  <script src="buybox-config.js"></script>
+  <script src="app-auth-guard.js?v=access-1"></script>
+  <script src="acquisti.js?v=mappings-1" defer></script>
 </head>
-<body data-mode="mappings"><main class="purchases-shell page-shell">
-  <header class="topbar"><div class="heading-block"><a class="home-button" href="index.html">← Home</a><h1>Abbinamenti</h1></div><nav class="header-actions"><a class="secondary-button" href="acquisti.html">Acquisti</a><a class="secondary-button" href="impostazioni.html">Impostazioni</a><a class="secondary-button" href="buybox.html">Monitor BuyBox</a></nav></header>
-  <section class="purchases-notice settings-strip"><div><span class="eyebrow">Archivio online</span><strong>Codice prodotto Ready ↔ inserzione Back Market.</strong></div><span class="safety-chip">Lo storico non viene modificato</span></section>
-  <p id="purchaseStatus" role="status" aria-live="polite"></p>
-  <section id="purchaseWorkspace" class="purchases-panel" hidden><div class="purchases-toolbar"><button id="purchaseLogout" type="button" class="secondary">Esci</button></div>
-    <form id="historySearch" class="purchases-toolbar"><label for="historyQuery">Codice Ready, descrizione o SKU</label><input id="historyQuery" type="search"><button type="submit">Cerca</button></form>
-    <div id="purchaseHistory"></div><button id="historyMore" type="button" class="secondary" hidden>Carica altri</button>
-  </section>
-</main>
-<dialog id="purchaseLoginDialog" class="access-dialog"><form id="purchaseLogin" autocomplete="off">
-  <span class="eyebrow">Accesso protetto</span><h2>Apri Abbinamenti</h2><p>Inserisci il codice di accesso del Monitor BuyBox. Rimane soltanto in questa sessione.</p>
-  <label for="purchaseKey">Codice di accesso</label><input id="purchaseKey" type="password" autocomplete="off" required>
-  <p id="purchaseLoginError" class="form-error" role="alert" hidden>Codice non valido o servizio non configurato.</p>
-  <div class="dialog-actions"><a href="index.html" class="secondary-button">Annulla</a><button class="primary-button" type="submit">Continua</button></div>
-</form></dialog>
-<dialog id="mappingDialog"><form id="mappingForm"><h2>Modifica abbinamento</h2><p id="mappingContext"></p><p id="mappingCurrent"></p><p>La modifica vale solo per nuove importazioni. I documenti già salvati non cambiano.</p>
-  <label for="listingSearch">Cerca SKU o descrizione Back Market</label><input id="listingSearch" type="search" autocomplete="off"><label for="listingChoice">Seleziona lo SKU esatto</label><select id="listingChoice" size="7" required></select><small id="listingCount"></small>
-  <p id="mappingError" role="alert"></p><div class="purchases-toolbar"><button type="submit">Conferma abbinamento</button><button id="mappingCancel" type="button" class="secondary">Annulla</button></div>
-</form></dialog>
-<dialog id="documentDialog"><h2 id="documentTitle"></h2><div id="documentContent"></div><button id="documentClose" type="button">Chiudi</button></dialog>
-</body></html>
+<body data-mode="mappings">
+  <main class="purchases-shell mappings-shell">
+    <header class="topbar">
+      <div class="heading-block">
+        <a class="home-button" href="index.html">← Home</a>
+        <div><span class="eyebrow">Archivio online</span><h1>Abbinamenti</h1></div>
+      </div>
+      <nav class="header-actions" aria-label="Pagine collegate">
+        <a class="secondary-button" href="acquisti.html">Acquisti</a>
+        <a class="secondary-button" href="impostazioni.html">Impostazioni</a>
+      </nav>
+    </header>
+
+    <section class="purchases-notice settings-strip">
+      <div><span class="eyebrow">Regola archivio</span><strong>Ogni codice prodotto Ready è collegato a una sola inserzione Back Market.</strong></div>
+      <span class="safety-chip">Lo storico resta invariato</span>
+    </section>
+    <p id="purchaseStatus" role="status" aria-live="polite"></p>
+
+    <section id="purchaseWorkspace" class="purchases-panel mappings-panel" hidden>
+      <div class="mappings-panel-head">
+        <div><h2>Associazioni salvate</h2><p>Modifica o rimuovi un’associazione soltanto per le prossime importazioni.</p></div>
+        <span id="mappingCount" class="safety-chip">0 risultati</span>
+      </div>
+      <form id="historySearch" class="mapping-search">
+        <label for="historyQuery">Cerca codice Ready, descrizione o SKU
+          <input id="historyQuery" type="search" placeholder="es. 13317 oppure iPhone 14" autocomplete="off">
+        </label>
+        <button type="submit">Cerca</button>
+        <button id="historyReset" type="button" class="secondary">Reimposta</button>
+      </form>
+      <div id="purchaseHistory"></div>
+      <button id="historyMore" type="button" class="secondary mappings-more" hidden>Carica altri risultati</button>
+    </section>
+  </main>
+
+  <dialog id="mappingDialog" class="mapping-editor-dialog">
+    <form id="mappingForm">
+      <div class="mapping-dialog-head">
+        <div><span class="eyebrow">Associazione futura</span><h2>Modifica abbinamento</h2></div>
+        <span class="safety-chip">Storico protetto</span>
+      </div>
+      <div class="mapping-current-card">
+        <strong id="mappingContext"></strong>
+        <span id="mappingCurrent"></span>
+      </div>
+      <p class="mapping-safety-note">La modifica vale solo per le nuove importazioni. Documenti, costi e quantità già salvati non cambiano.</p>
+      <label for="listingSearch">Cerca nel catalogo Back Market</label>
+      <input id="listingSearch" type="search" placeholder="SKU o descrizione esatta" autocomplete="off">
+      <label for="listingChoice">Seleziona l’inserzione esatta</label>
+      <select id="listingChoice" size="7" required></select>
+      <small id="listingCount"></small>
+      <p id="mappingError" class="form-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="mappingCancel" type="button" class="secondary">Annulla</button>
+        <button type="submit">Conferma abbinamento</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="documentDialog" class="mapping-history-dialog">
+    <div class="mapping-dialog-head"><div><span class="eyebrow">Registro modifiche</span><h2 id="documentTitle"></h2></div></div>
+    <div id="documentContent"></div>
+    <div class="dialog-actions"><button id="documentClose" type="button" class="secondary">Chiudi</button></div>
+  </dialog>
+</body>
+</html>
