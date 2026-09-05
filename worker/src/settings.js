@@ -2,7 +2,7 @@ const MAX_BODY_BYTES = 16 * 1024;
 const ECONOMIC_KEY = "economic";
 const FRANKFURTER_BASE = "https://api.frankfurter.dev/v2/rate";
 
-export const DEFAULT_SETTINGS = Object.freeze({
+const ECONOMIC_DEFAULTS = Object.freeze({
   fee12: "12",
   fee5: "5",
   investorFee: "1",
@@ -17,6 +17,14 @@ export const DEFAULT_SETTINGS = Object.freeze({
   sekRate: "0,090",
   exchangeRateMode: "automatic",
 });
+
+export const DEFAULT_PROFILES = Object.freeze({
+  backmarket: Object.freeze({ label: "BackMarket", configured: true }),
+  purchases: Object.freeze({ label: "Acquisti", configured: true, base: "backmarket", importPerDevice: "7", shippingPerDevice: "2" }),
+  refurbed: Object.freeze({ label: "Refurbed", configured: false }),
+});
+
+export const DEFAULT_SETTINGS = Object.freeze({ ...ECONOMIC_DEFAULTS, profiles: DEFAULT_PROFILES });
 
 const PERCENT_KEYS = new Set([
   "fee12", "fee5", "investorFee", "storfundFee", "paymentFee", "minimumMargin", "targetMargin",
@@ -64,7 +72,7 @@ function numberValue(value, label, { allowZero = true, maximum = 100000 } = {}) 
 export function validateSettings(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) fail("INVALID_SETTINGS", "Impostazioni non valide");
   const output = {};
-  for (const key of Object.keys(DEFAULT_SETTINGS)) {
+  for (const key of Object.keys(ECONOMIC_DEFAULTS)) {
     if (!Object.prototype.hasOwnProperty.call(input, key)) fail("MISSING_SETTING", "Completa tutte le impostazioni");
     if (key === "exchangeRateMode") {
       if (!["automatic", "manual"].includes(input[key])) fail("INVALID_RATE_MODE", "Modalità dei cambi non valida");
@@ -76,15 +84,38 @@ export function validateSettings(input) {
   if (Number(output.minimumMargin.replace(",", ".")) > Number(output.targetMargin.replace(",", "."))) {
     fail("INVALID_MARGIN_RANGE", "Il margine minimo non può superare il margine obiettivo");
   }
+  output.profiles = validateProfiles(input.profiles);
   return output;
+}
+
+function profileAmount(value, fallback, label) {
+  return numberValue(value === undefined || value === null ? fallback : value, label);
+}
+
+function validateProfiles(input) {
+  const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+  const purchases = source.purchases && typeof source.purchases === "object" && !Array.isArray(source.purchases) ? source.purchases : {};
+  const refurbed = source.refurbed && typeof source.refurbed === "object" && !Array.isArray(source.refurbed) ? source.refurbed : {};
+  return {
+    backmarket: { ...DEFAULT_PROFILES.backmarket },
+    purchases: {
+      ...DEFAULT_PROFILES.purchases,
+      importPerDevice: profileAmount(purchases.importPerDevice, DEFAULT_PROFILES.purchases.importPerDevice, "Importazione Acquisti"),
+      shippingPerDevice: profileAmount(purchases.shippingPerDevice, DEFAULT_PROFILES.purchases.shippingPerDevice, "Spedizione Acquisti"),
+    },
+    refurbed: {
+      ...DEFAULT_PROFILES.refurbed,
+      configured: refurbed.configured === true,
+    },
+  };
 }
 
 function parseStoredSettings(value) {
   try {
     const parsed = JSON.parse(value || "{}");
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return validateSettings({ ...DEFAULT_SETTINGS, ...parsed });
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return validateSettings(DEFAULT_SETTINGS);
   }
 }
 
@@ -98,7 +129,7 @@ async function readEconomicSettings(env) {
     updated_at: row.updated_at,
   } : {
     exists: false,
-    settings: { ...DEFAULT_SETTINGS },
+    settings: validateSettings(DEFAULT_SETTINGS),
     revision: 0,
     updated_at: null,
   };

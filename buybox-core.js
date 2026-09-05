@@ -71,6 +71,8 @@
       importFee:toNumber(settings.importFee),
       shipping:toNumber(settings.shipping),
       shippingItaly:settings.shippingItaly === undefined ? toNumber(settings.shipping) : toNumber(settings.shippingItaly),
+      acquisitionImport:toNumber(settings.acquisitionImport),
+      acquisitionShipping:toNumber(settings.acquisitionShipping),
       minimumMargin:percent(settings.minimumMargin),
       targetMargin:percent(settings.targetMargin),
       sekRate:toNumber(settings.sekRate) || 0.09
@@ -86,7 +88,19 @@
     var value = numericSettings(settings);
     var rule = marketRule(market);
     var shipping = rule && rule.shippingKey ? value[rule.shippingKey] : value.shipping;
-    return value.importFee + shipping;
+    return value.importFee + shipping + value.acquisitionImport + value.acquisitionShipping;
+  }
+
+  function fixedCostBreakdown(settings,market){
+    var value = numericSettings(settings);
+    var rule = marketRule(market);
+    return {
+      baseImport:value.importFee,
+      marketplaceShipping:rule && rule.shippingKey ? value[rule.shippingKey] : value.shipping,
+      acquisitionImport:value.acquisitionImport,
+      acquisitionShipping:value.acquisitionShipping,
+      total:fixedCosts(settings,market)
+    };
   }
 
   function calculateMargin(salePrice, purchasePrice, marketplaceFee, settings, market){
@@ -101,6 +115,7 @@
       purchasePrice:purchase,
       variableCosts:variableCosts,
       fixedCosts:fixed,
+      fixedCostBreakdown:fixedCostBreakdown(settings,market),
       profit:profit,
       margin:sale > 0 ? profit / sale : 0
     };
@@ -354,6 +369,7 @@
     salePriceForMargin:salePriceForMargin,
     marketRule:marketRule,
     marketFee:marketFee,
+    fixedCostBreakdown:fixedCostBreakdown,
     amountToEuro:amountToEuro,
     amountFromEuro:amountFromEuro,
     marketPricePlan:marketPricePlan,

@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const core = require("../buybox-core.js");
+const settingsApi = require("../shared-settings.js");
 
 const settings = {
   fee12: "12",
@@ -157,6 +158,37 @@ test("riconosce E-SIM dallo SKU e usa P-SIM quando non è indicato", () => {
   assert.equal(physical.simKey, "physical_esim");
   assert.equal(physical.simLabel, "SIM fisica + eSIM");
   assert.notEqual(esim.familyKey, physical.familyKey);
+});
+
+test("il profilo Acquisti eredita BackMarket e aggiunge 7 + 2 euro per dispositivo", () => {
+  const backmarket = settingsApi.resolveProfile(settings, "backmarket");
+  const purchases = settingsApi.resolveProfile(settings, "purchases");
+  const backmarketResult = core.calculateMargin(400, 280, 0.12, backmarket);
+  const purchaseResult = core.calculateMargin(400, 280, 0.12, purchases);
+  assert.equal(purchases.profileLabel, "Acquisti");
+  assert.equal(purchases.acquisitionImport, "7");
+  assert.equal(purchases.acquisitionShipping, "2");
+  assert.equal(purchaseResult.fixedCosts - backmarketResult.fixedCosts, 9);
+  assert.equal(backmarketResult.profit - purchaseResult.profit, 9);
+  assert.deepEqual(purchaseResult.fixedCostBreakdown, {
+    baseImport: 0,
+    marketplaceShipping: 16.5,
+    acquisitionImport: 7,
+    acquisitionShipping: 2,
+    total: 25.5,
+  });
+});
+
+test("Personalizzato modifica solo la sessione e Refurbed resta non configurato", () => {
+  const stored = settingsApi.mergeDefaults(settings);
+  const custom = settingsApi.resolveProfile(stored, "custom", { fee12: "10", shipping: "5" });
+  const refurbed = settingsApi.resolveProfile(stored, "refurbed");
+  assert.equal(custom.profileLabel, "Personalizzato · sessione");
+  assert.equal(custom.fee12, "10");
+  assert.equal(custom.shipping, "5");
+  assert.equal(stored.fee12, "12");
+  assert.equal(stored.shipping, "16,50");
+  assert.equal(refurbed.profileConfigured, false);
 });
 
 test("separa Dual SIM fisica e blocca una configurazione SIM contraddittoria", () => {

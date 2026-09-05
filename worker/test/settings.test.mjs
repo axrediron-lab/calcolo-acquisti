@@ -54,6 +54,21 @@ test("le impostazioni iniziali vengono lette senza creare dati", async t => {
   assert.equal(database.db.prepare("SELECT count(*) count FROM app_settings").get().count, 0);
 });
 
+test("aggiunge i profili predefiniti anche alle impostazioni nel formato precedente", async t => {
+  const { env } = setup(t);
+  const legacy = Object.fromEntries(Object.entries(DEFAULT_SETTINGS).filter(([key]) => key !== "profiles"));
+  const saved = await settingsRoute(
+    request("/api/settings", { settings: legacy, expected_revision: 0, confirm: true }),
+    new URL("https://test.local/api/settings"),
+    env,
+  );
+  assert.equal(saved.settings.profiles.backmarket.configured, true);
+  assert.equal(saved.settings.profiles.purchases.base, "backmarket");
+  assert.equal(saved.settings.profiles.purchases.importPerDevice, "7");
+  assert.equal(saved.settings.profiles.purchases.shippingPerDevice, "2");
+  assert.equal(saved.settings.profiles.refurbed.configured, false);
+});
+
 test("salva online le impostazioni con revisione e storico", async t => {
   const { env, database } = setup(t);
   const url = new URL("https://test.local/api/settings");

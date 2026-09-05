@@ -35,6 +35,20 @@ test("la Home e le pagine operative collegano le impostazioni online", () => {
   assert.match(buybox, /saveOnlineProductMargin/);
 });
 
+test("le Impostazioni separano i profili senza mostrare l’elenco dei margini articolo", () => {
+  const html = read("impostazioni.html");
+  const script = read("impostazioni.js");
+  assert.match(html, /data-settings-tab="general"/);
+  assert.match(html, /data-settings-tab="backmarket"/);
+  assert.match(html, /data-settings-tab="purchases"/);
+  assert.match(html, /data-settings-tab="refurbed"/);
+  assert.match(html, /name="purchaseImportPerDevice"/);
+  assert.match(html, /name="purchaseShippingPerDevice"/);
+  assert.match(html, /BackMarket \+ <b id="purchaseCostSummary">9,00 €<\/b>/);
+  assert.doesNotMatch(script, /data-margin-row/);
+  assert.match(script, /resolveProfile|profiles\.purchases/);
+});
+
 test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", () => {
   const html = read("lavorazione.html");
   const script = read("lavorazione.js");

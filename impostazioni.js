@@ -29,11 +29,27 @@
     return payload;
   }
   function fillForm(values){
-    Object.keys(settingsApi.DEFAULTS).forEach(function(name){ var input=document.querySelector('[name="'+name+'"]'); if(input) input.value=values[name]; });
+    Object.keys(settingsApi.FIELD_DEFAULTS).forEach(function(name){ var input=document.querySelector('[name="'+name+'"]'); if(input) input.value=values[name]; });
+    var profiles=settingsApi.mergeDefaults(values).profiles;
+    document.querySelector('[name="purchaseImportPerDevice"]').value=profiles.purchases.importPerDevice;
+    document.querySelector('[name="purchaseShippingPerDevice"]').value=profiles.purchases.shippingPerDevice;
+    updatePurchaseSummary();
     updateRateControls();
   }
   function formValues(){
-    var output={}; Object.keys(settingsApi.DEFAULTS).forEach(function(name){ output[name]=document.querySelector('[name="'+name+'"]').value.trim(); }); return output;
+    var output=settingsApi.load(); Object.keys(settingsApi.FIELD_DEFAULTS).forEach(function(name){ output[name]=document.querySelector('[name="'+name+'"]').value.trim(); });
+    output.profiles.purchases.importPerDevice=document.querySelector('[name="purchaseImportPerDevice"]').value.trim();
+    output.profiles.purchases.shippingPerDevice=document.querySelector('[name="purchaseShippingPerDevice"]').value.trim();
+    return output;
+  }
+  function decimalValue(value){var number=Number(String(value||"").replace(",","."));return Number.isFinite(number)?number:0;}
+  function updatePurchaseSummary(){
+    var total=decimalValue(document.querySelector('[name="purchaseImportPerDevice"]').value)+decimalValue(document.querySelector('[name="purchaseShippingPerDevice"]').value);
+    byId("purchaseCostSummary").textContent=new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR"}).format(total);
+  }
+  function selectSettingsTab(id){
+    document.querySelectorAll("[data-settings-tab]").forEach(function(button){var active=button.dataset.settingsTab===id;button.setAttribute("aria-selected",active?"true":"false");});
+    document.querySelectorAll("[data-settings-panel]").forEach(function(panel){panel.hidden=panel.dataset.settingsPanel!==id;});
   }
   function formatDate(value){ return value ? new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(value)) : ""; }
   function formatReferenceDate(value){ if(!value)return "";var parts=String(value).split("-");return parts.length===3?parts.reverse().join("/"):value; }
@@ -75,8 +91,7 @@
   }
   function renderMargins(){
     byId("overrideCount").textContent=margins.length+" "+(margins.length===1?"personalizzazione":"personalizzazioni");
-    if(!margins.length){ byId("productMargins").innerHTML='<div class="settings-empty"><strong>Nessun margine personalizzato</strong><p>Tutti gli articoli usano i margini generali.</p></div>'; return; }
-    byId("productMargins").innerHTML='<div class="purchases-table-wrap"><table><thead><tr><th>SKU Back Market</th><th>Margine minimo</th><th>Margine obiettivo</th><th>Ultima modifica</th><th>Azioni</th></tr></thead><tbody>'+margins.map(function(item){return '<tr data-margin-row="'+escapeHtml(item.listing_id)+'"><td><strong>'+escapeHtml(item.sku_snapshot)+'</strong><small>'+escapeHtml(item.listing_id)+'</small></td><td><input class="override-input" data-margin-minimum inputmode="decimal" value="'+escapeHtml(item.minimum_margin)+'" aria-label="Margine minimo"></td><td><input class="override-input" data-margin-target inputmode="decimal" value="'+escapeHtml(item.target_margin)+'" aria-label="Margine obiettivo"></td><td>'+escapeHtml(formatDate(item.updated_at))+'</td><td><button type="button" data-save-margin="'+escapeHtml(item.listing_id)+'">Salva</button><button class="secondary" type="button" data-remove-margin="'+escapeHtml(item.listing_id)+'">Usa valori generali</button></td></tr>';}).join("")+'</tbody></table></div>';
+    byId("productMargins").innerHTML='<a class="secondary-button" href="buybox.html">Apri Monitor BuyBox</a><small>'+(margins.length?"Gestisci i margini direttamente accanto agli articoli interessati.":"Tutti gli articoli utilizzano i margini generali BackMarket.")+'</small>';
   }
   function renderMigration(){
     localMarginCandidates=localMarginRows();
@@ -105,6 +120,9 @@
     settingsApi.saveOnline(config.apiBase,key,formValues(),revision).then(function(saved){ revision=saved.revision; fillForm(saved.settings); byId("settingsOrigin").textContent="Impostazioni online attive"; byId("settingsUpdated").textContent="Ultimo salvataggio: "+formatDate(saved.updated_at); status("Impostazioni salvate online."); }).catch(function(error){ status(error.message); }).finally(function(){ button.disabled=false; });
   });
   byId("restoreDefaults").addEventListener("click",function(){ if(!confirm("Preparare i valori iniziali? Saranno applicati online soltanto quando premi Salva.")) return; fillForm(settingsApi.defaults()); status("Valori iniziali preparati. Premi Salva impostazioni online per confermare."); });
+  document.querySelectorAll("[data-settings-tab]").forEach(function(button){button.addEventListener("click",function(){selectSettingsTab(button.dataset.settingsTab);});});
+  document.querySelector('[name="purchaseImportPerDevice"]').addEventListener("input",updatePurchaseSummary);
+  document.querySelector('[name="purchaseShippingPerDevice"]').addEventListener("input",updatePurchaseSummary);
   document.querySelector('[name="exchangeRateMode"]').addEventListener("change",updateRateControls);
   byId("refreshExchangeRates").addEventListener("click",function(){
     var button=byId("refreshExchangeRates"); button.disabled=true; byId("rateStatus").className="rate-online-status"; byId("rateStatus").textContent="Aggiornamento dei cambi USD/EUR e SEK/EUR in corso…";
@@ -112,25 +130,6 @@
       if(result.skipped){rateMetadata=result.exchange_rates||rateMetadata;fillForm(result.settings);status("L’aggiornamento automatico è disattivato dalla modalità manuale.");return;}
       revision=result.revision;rateMetadata=result.exchange_rates||null;fillForm(result.settings);settingsApi.save(result.settings);byId("settingsOrigin").textContent="Impostazioni online attive";byId("settingsUpdated").textContent="Ultimo aggiornamento: "+formatDate(result.updated_at);status("Cambi USD/EUR e SEK/EUR aggiornati online.");
     }).catch(function(error){rateMetadata=Object.assign({},rateMetadata||{},{status:"error",last_attempt_at:new Date().toISOString()});renderRateStatus();status(error.message+" L’ultimo cambio valido è rimasto attivo.");}).finally(function(){updateRateControls();});
-  });
-  byId("productMargins").addEventListener("click",function(event){
-    var saveButton=event.target.closest("[data-save-margin]");
-    if(saveButton){
-      var saveId=saveButton.dataset.saveMargin,saveItem=margins.find(function(row){return row.listing_id===saveId;}),row=saveButton.closest("[data-margin-row]");if(!saveItem||!row)return;
-      saveButton.disabled=true;status("Salvataggio del margine personalizzato…");
-      api("/api/settings/product-margin",{method:"POST",body:{listing_id:saveId,sku:saveItem.sku_snapshot,minimum:row.querySelector("[data-margin-minimum]").value.trim(),target:row.querySelector("[data-margin-target]").value.trim(),expected_revision:saveItem.revision,confirm:true}}).then(function(result){
-        margins=margins.map(function(item){return item.listing_id===saveId?result.margin:item;});
-        var stored=readLocalJson(config.productMarginCacheKey)||{};stored[saveId]={minimum:result.margin.minimum_margin,target:result.margin.target_margin,revision:result.margin.revision,sku:result.margin.sku_snapshot};try{localStorage.setItem(config.productMarginCacheKey,JSON.stringify(stored));}catch(error){}
-        renderMargins();renderMigration();status("Margine personalizzato salvato online.");
-      }).catch(function(error){status(error.message);saveButton.disabled=false;});return;
-    }
-    var button=event.target.closest("[data-remove-margin]"); if(!button)return; var listingId=button.dataset.removeMargin,item=margins.find(function(row){return row.listing_id===listingId;}); if(!item)return;
-    if(!confirm("Ripristinare per "+item.sku_snapshot+" i margini generali?"))return; button.disabled=true; status("Aggiornamento margine…");
-    api("/api/settings/product-margin",{method:"POST",body:{listing_id:listingId,expected_revision:item.revision,remove:true,confirm:true}}).then(function(){
-      margins=margins.filter(function(row){return row.listing_id!==listingId;});
-      var stored=readLocalJson(config.productMarginCacheKey)||{};delete stored[listingId];try{localStorage.setItem(config.productMarginCacheKey,JSON.stringify(stored));}catch(error){}
-      renderMargins();renderMigration();status("L’articolo usa nuovamente i margini generali.");
-    }).catch(function(error){status(error.message);button.disabled=false;});
   });
   byId("importLocalMargins").addEventListener("click",function(){
     if(!localMarginCandidates.length||!confirm("Trasferire online le personalizzazioni trovate in questo browser?"))return;

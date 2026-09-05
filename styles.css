@@ -2263,6 +2263,14 @@
 
 /* 07 - Impostazioni online: stessa struttura di Acquisti e Monitor BuyBox. */
 :where(.page-settings) .settings-form { display:grid; gap:16px; }
+:where(.page-settings) .settings-tabs { display:flex; gap:6px; margin:0 0 16px; padding:6px; overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:#fff; }
+:where(.page-settings) .settings-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:9px 16px; border:0; border-radius:10px; background:transparent; color:#41586c; font-size:14px; font-weight:700; white-space:nowrap; }
+:where(.page-settings) .settings-tabs button:hover { background:#f1f6f9; color:var(--text); }
+:where(.page-settings) .settings-tabs button[aria-selected="true"] { background:var(--brand); color:#fff; }
+:where(.page-settings) .settings-tabs .tab-status { padding:4px 7px; border-radius:999px; background:#edf1f5; color:#5d6e7e; font-size:11px; font-weight:700; }
+:where(.page-settings) .settings-tabs button[aria-selected="true"] .tab-status { background:rgba(255,255,255,.18); color:#fff; }
+:where(.page-settings) .settings-panel-stack { display:grid; gap:16px; }
+:where(.page-settings) .settings-panel-stack[hidden] { display:none!important; }
 :where(.page-settings) .settings-section { margin:0; }
 :where(.page-settings) .settings-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
 :where(.page-settings) .settings-section-head h2 { margin:2px 0 0; }
@@ -2280,6 +2288,15 @@
 :where(.page-settings) .settings-savebar { position:sticky; bottom:14px; z-index:4; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:17px 19px; margin:2px 0 20px; border:1px solid #bfe2f2; border-radius:var(--radius); background:rgba(234,245,251,.96); box-shadow:var(--shadow); backdrop-filter:blur(8px); }
 :where(.page-settings) .settings-savebar small { margin:3px 0 0; }
 :where(.page-settings) .settings-overrides { margin-top:4px; }
+:where(.page-settings) .profile-ready { display:inline-flex; align-items:center; min-height:28px; padding:5px 9px; border:1px solid #b8e2d1; border-radius:999px; background:#effaf5; color:#176b4b; font-size:12px; font-weight:700; }
+:where(.page-settings) .profile-summary-card > p { margin:0 0 18px; color:var(--muted); }
+:where(.page-settings) .profile-formula { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:18px; padding:14px 16px; border:1px solid #bfe2f2; border-radius:12px; background:#eff8fc; }
+:where(.page-settings) .profile-formula span { color:#36546b; }
+:where(.page-settings) .settings-empty-profile { min-height:230px; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; }
+:where(.page-settings) .settings-empty-profile h2 { margin:5px 0 8px; }
+:where(.page-settings) .settings-empty-profile p { max-width:720px; margin:0; color:var(--muted); }
+:where(.page-settings) .settings-override-link { display:flex; align-items:center; gap:14px; margin-top:16px; }
+:where(.page-settings) .settings-override-link small { margin:0; }
 :where(.page-settings) .settings-empty { padding:22px; border:1px dashed #b8c8d8; border-radius:14px; background:#f8fafc; text-align:center; }
 :where(.page-settings) .settings-empty p { margin:4px 0 0; }
 :where(.page-settings) .settings-migration { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:16px 0; padding:14px 16px; border:1px solid #f0cf89; border-radius:14px; background:#fff4dc; }
@@ -2288,7 +2305,9 @@
 :where(.page-settings) .rate-button { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
 :where(.page-calcolo-completo) input[readonly] { background:#f4f7fb; color:#334155; cursor:default; }
 @media (max-width:700px) {
+  :where(.page-settings) .settings-tabs { margin-inline:-2px; }
   :where(.page-settings) .settings-section-head, :where(.page-settings) .settings-savebar, :where(.page-settings) .settings-migration { align-items:stretch; flex-direction:column; }
+  :where(.page-settings) .profile-formula, :where(.page-settings) .settings-override-link { align-items:flex-start; flex-direction:column; }
   :where(.page-settings) .settings-savebar .header-actions { display:grid; width:100%; }
   :where(.page-settings) .settings-savebar button { width:100%; }
 }

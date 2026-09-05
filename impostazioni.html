@@ -6,10 +6,10 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Impostazioni</title>
-  <link rel="stylesheet" href="styles.css?v=settings-2">
+  <link rel="stylesheet" href="styles.css?v=profiles-1">
   <script src="buybox-config.js" defer></script>
-  <script src="shared-settings.js?v=settings-2" defer></script>
-  <script src="impostazioni.js?v=settings-2" defer></script>
+  <script src="shared-settings.js?v=profiles-1" defer></script>
+  <script src="impostazioni.js?v=profiles-1" defer></script>
 </head>
 <body>
   <main class="purchases-shell page-shell">
@@ -25,35 +25,14 @@
 
     <p id="settingsStatus" role="status" aria-live="polite"></p>
     <section id="settingsWorkspace" hidden>
+      <nav class="settings-tabs" aria-label="Profili e impostazioni" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-settings-tab="general">Generali</button>
+        <button type="button" role="tab" aria-selected="false" data-settings-tab="backmarket">BackMarket</button>
+        <button type="button" role="tab" aria-selected="false" data-settings-tab="purchases">Acquisti</button>
+        <button type="button" role="tab" aria-selected="false" data-settings-tab="refurbed">Refurbed <span class="tab-status">Da configurare</span></button>
+      </nav>
       <form id="economicSettings" class="settings-form">
-        <section class="purchases-panel settings-section">
-          <div class="settings-section-head"><div><span class="eyebrow">Commissioni</span><h2>Fee percentuali</h2></div><span class="settings-help">Valori in percentuale</span></div>
-          <div class="settings-fields">
-            <label>Commissione Back Market standard<input name="fee12" inputmode="decimal" required><small>Attualmente 12% per i mercati standard.</small></label>
-            <label>Commissione Back Market ridotta<input name="fee5" inputmode="decimal" required><small>Attualmente 5% per i mercati ridotti.</small></label>
-            <label>Fee investitore<input name="investorFee" inputmode="decimal" required></label>
-            <label>Fee Storfund<input name="storfundFee" inputmode="decimal" required></label>
-            <label>Commissioni pagamenti<input name="paymentFee" inputmode="decimal" required></label>
-          </div>
-        </section>
-
-        <section class="purchases-panel settings-section">
-          <div class="settings-section-head"><div><span class="eyebrow">Costi</span><h2>Importazione e spedizione</h2></div><span class="settings-help">Valori in EUR</span></div>
-          <div class="settings-fields">
-            <label>Commissione importazione<input name="importFee" inputmode="decimal" required></label>
-            <label>Spedizione altri Paesi<input name="shipping" inputmode="decimal" required></label>
-            <label>Spedizione Italia<input name="shippingItaly" inputmode="decimal" required></label>
-          </div>
-        </section>
-
-        <section class="purchases-panel settings-section">
-          <div class="settings-section-head"><div><span class="eyebrow">Obiettivi</span><h2>Margini generali</h2></div><span class="settings-help">Valori in percentuale</span></div>
-          <div class="settings-fields">
-            <label>Margine minimo netto<input name="minimumMargin" inputmode="decimal" required></label>
-            <label>Margine obiettivo netto<input name="targetMargin" inputmode="decimal" required></label>
-          </div>
-        </section>
-
+        <div class="settings-panel-stack" data-settings-panel="general">
         <section class="purchases-panel settings-section">
           <div class="settings-section-head"><div><span class="eyebrow">Valute</span><h2>Cambi in EUR</h2></div><button id="refreshExchangeRates" class="secondary" type="button">Aggiorna cambi ora</button></div>
           <div class="settings-fields">
@@ -63,6 +42,55 @@
           </div>
           <div id="rateStatus" class="rate-online-status" role="status">Caricamento dello stato dei cambi…</div>
         </section>
+        </div>
+
+        <div class="settings-panel-stack" data-settings-panel="backmarket" hidden>
+          <section class="purchases-panel settings-section">
+            <div class="settings-section-head"><div><span class="eyebrow">Profilo BackMarket</span><h2>Commissioni di vendita</h2></div><span class="settings-help">Valori in percentuale</span></div>
+            <div class="settings-fields">
+              <label>Commissione mercati standard<input name="fee12" inputmode="decimal" required><small>Applicata al gruppo di Paesi al 12%.</small></label>
+              <label>Commissione mercati ridotti<input name="fee5" inputmode="decimal" required><small>Applicata al gruppo di Paesi al 5%.</small></label>
+              <label>Fee investitore<input name="investorFee" inputmode="decimal" required></label>
+              <label>Fee Storfund<input name="storfundFee" inputmode="decimal" required></label>
+              <label>Commissioni pagamenti<input name="paymentFee" inputmode="decimal" required></label>
+            </div>
+          </section>
+          <section class="purchases-panel settings-section">
+            <div class="settings-section-head"><div><span class="eyebrow">Profilo BackMarket</span><h2>Costi per vendita</h2></div><span class="settings-help">Valori in EUR per dispositivo</span></div>
+            <div class="settings-fields">
+              <label>Altri costi fissi<input name="importFee" inputmode="decimal" required></label>
+              <label>Spedizione altri Paesi<input name="shipping" inputmode="decimal" required></label>
+              <label>Spedizione Italia<input name="shippingItaly" inputmode="decimal" required></label>
+            </div>
+          </section>
+          <section class="purchases-panel settings-section">
+            <div class="settings-section-head"><div><span class="eyebrow">Profilo BackMarket</span><h2>Margini generali</h2></div><span class="settings-help">Valori in percentuale</span></div>
+            <div class="settings-fields">
+              <label>Margine minimo netto<input name="minimumMargin" inputmode="decimal" required></label>
+              <label>Margine obiettivo netto<input name="targetMargin" inputmode="decimal" required></label>
+            </div>
+          </section>
+        </div>
+
+        <div class="settings-panel-stack" data-settings-panel="purchases" hidden>
+          <section class="purchases-panel settings-section profile-summary-card">
+            <div class="settings-section-head"><div><span class="eyebrow">Profilo Acquisti</span><h2>Valutazione degli stock</h2></div><span class="profile-ready">Attivo</span></div>
+            <p>Utilizza tutte le regole del profilo BackMarket e aggiunge questi costi a ogni dispositivo acquistato.</p>
+            <div class="settings-fields">
+              <label>Importazione per dispositivo<input name="purchaseImportPerDevice" inputmode="decimal" required><small>Valore iniziale: 7 €.</small></label>
+              <label>Spedizione acquisto per dispositivo<input name="purchaseShippingPerDevice" inputmode="decimal" required><small>Valore iniziale: 2 €.</small></label>
+            </div>
+            <div class="profile-formula"><strong>Regola applicata</strong><span>BackMarket + <b id="purchaseCostSummary">9,00 €</b> per dispositivo</span></div>
+          </section>
+        </div>
+
+        <div class="settings-panel-stack" data-settings-panel="refurbed" hidden>
+          <section class="purchases-panel settings-section settings-empty-profile">
+            <span class="eyebrow">Profilo Refurbed</span>
+            <h2>Da configurare</h2>
+            <p>Le regole non verranno inventate. Inseriremo commissioni e costi soltanto dopo aver verificato la documentazione e i dati reali della piattaforma.</p>
+          </section>
+        </div>
 
         <div class="settings-savebar">
           <div><strong id="settingsOrigin">Configurazione pronta.</strong><small id="settingsUpdated"></small></div>
@@ -71,10 +99,10 @@
       </form>
 
       <section class="purchases-panel settings-overrides">
-        <div class="settings-section-head"><div><span class="eyebrow">Monitor BuyBox</span><h2>Margini personalizzati per articolo</h2></div><span id="overrideCount" class="safety-chip">0 personalizzazioni</span></div>
-        <p>Quando modifichi minimo e obiettivo su un singolo articolo nel Monitor BuyBox, la personalizzazione viene salvata online. Da qui puoi controllarla o ripristinare i valori generali.</p>
+        <div class="settings-section-head"><div><span class="eyebrow">Monitor BuyBox</span><h2>Personalizzazioni per articolo</h2></div><span id="overrideCount" class="safety-chip">0 personalizzazioni</span></div>
+        <p>Le personalizzazioni restano salvate online, ma non vengono elencate qui per mantenere questa pagina leggibile.</p>
         <div id="marginMigration" class="settings-migration" hidden><div><strong id="marginMigrationTitle"></strong><small>Puoi trasferirle una sola volta nell’archivio online.</small></div><button id="importLocalMargins" type="button">Trasferisci online</button></div>
-        <div id="productMargins"></div>
+        <div id="productMargins" class="settings-override-link"></div>
       </section>
     </section>
   </main>
