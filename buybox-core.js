@@ -20,6 +20,13 @@
     "4":"Stallone"
   };
 
+  var SIM_TYPES = Object.freeze({
+    STANDARD:Object.freeze({key:"physical_esim",label:"SIM fisica + eSIM",legacy:"P-SIM"}),
+    ESIM_ONLY:Object.freeze({key:"esim_only",label:"Solo eSIM",legacy:"E-SIM"}),
+    DUAL_PHYSICAL:Object.freeze({key:"dual_physical",label:"Dual SIM fisica",legacy:"DUAL-SIM"}),
+    UNKNOWN:Object.freeze({key:"unknown",label:"SIM da verificare",legacy:"SIM-ND"})
+  });
+
   var MARKET_RULES = Object.freeze({
     IT:{name:"Italia",feeKey:"fee12",shippingKey:"shippingItaly",commission:12,currency:"EUR",locale:"it-it"},
     AT:{name:"Austria",feeKey:"fee5",commission:5,currency:"EUR",locale:"de-at"},
@@ -242,28 +249,68 @@
     return value.split(" ")[0] || "Altro";
   }
 
+  function simConfigurationFromSku(sku){
+    var value = cleanText(sku);
+    var hasEsim = /\bE[\s-]?SIM\b/i.test(value);
+    var hasDualPhysical = /\b(?:DUAL[\s-]*(?:P[\s-]?)?SIM|2\s*X?\s*(?:P[\s-]?)?SIM)\b/i.test(value);
+    if(hasEsim && hasDualPhysical) return SIM_TYPES.UNKNOWN;
+    if(hasDualPhysical) return SIM_TYPES.DUAL_PHYSICAL;
+    if(hasEsim) return SIM_TYPES.ESIM_ONLY;
+    return SIM_TYPES.STANDARD;
+  }
+
+  function batteryConfiguration(listing,newBattery){
+    var source = cleanText([listing.title,listing.sku,listing.comment].join(" "));
+    var battery100 = /\b100\s*%/.test(source);
+    var excellent100Alias = /\b(?:CN|ECCELLENTE(?:\s+BATTERIA)?)\s*100\s*%/i.test(source);
+    if(newBattery) return {key:"new",label:"Batteria nuova",battery100:battery100,excellent100Alias:excellent100Alias};
+    if(battery100) return {key:"100",label:"Batteria 100%",battery100:true,excellent100Alias:excellent100Alias};
+    return {key:"standard",label:"Batteria standard",battery100:false,excellent100Alias:false};
+  }
+
+  function catalogKey(parts){
+    return parts.map(normalizeSearchText).filter(Boolean).join("|");
+  }
+
   function normalizeListing(listing){
     listing = listing || {};
     var title = cleanText(listing.title || listing.sku || "Prodotto senza titolo");
     var sku = cleanText(listing.sku);
     var gradeKey = String(listing.grade !== undefined ? listing.grade : listing.state || "").toUpperCase();
     var newBattery = listing.new_battery === true || String(listing.new_battery).toLowerCase() === "true";
-    var battery100 = /\b100\s*%/.test(cleanText([listing.title, listing.sku, listing.comment].join(" ")));
-    var simType = /\bE[\s-]?SIM\b/i.test(sku) ? "E-SIM" : "P-SIM";
+    var battery = batteryConfiguration(listing,newBattery);
+    var sim = simConfigurationFromSku(sku);
+    var quality = GRADE_LABELS[gradeKey] || gradeKey || "Non indicata";
+    var issues = [];
+    if(battery.excellent100Alias && quality === "Non indicata") quality = "Eccellente";
+    if(battery.excellent100Alias && quality !== "Eccellente") issues.push("Grado incompatibile con alias Eccellente 100%");
+    if(sim.key === "unknown") issues.push("Configurazione SIM ambigua");
+    var family = familyFromTitle(title);
+    var capacity = capacityFromTitle(title);
+    var familyKey = catalogKey([family,capacity,sim.key]);
+    var variantKey = catalogKey([family,capacity,sim.key,quality,battery.key]);
     return {
       id:String(listing.id || listing.listing_id || ""),
       productId:String(listing.product_id || listing.backmarket_id || ""),
       sku:sku,
       title:title,
       brand:brandFromTitle(title),
-      family:familyFromTitle(title),
-      capacity:capacityFromTitle(title),
+      family:family,
+      capacity:capacity,
       color:colorFromTitle(title),
-      quality:GRADE_LABELS[gradeKey] || gradeKey || "Non indicata",
+      quality:quality,
       newBattery:newBattery,
-      battery100:battery100,
-      batteryLabel:newBattery ? "Batteria nuova" : battery100 ? "Batteria 100%" : "Batteria standard",
-      simType:simType,
+      battery100:battery.battery100,
+      batteryKey:battery.key,
+      batteryLabel:battery.label,
+      qualityAlias:battery.excellent100Alias ? "Eccellente · Batteria 100%" : "",
+      simType:sim.legacy,
+      simKey:sim.key,
+      simLabel:sim.label,
+      familyKey:familyKey,
+      variantKey:variantKey,
+      classificationIssues:issues,
+      eligibleForAggregation:issues.length === 0,
       currency:listing.currency || "EUR",
       currentPrice:toNumber(listing.price),
       minPrice:listing.min_price == null ? null : toNumber(listing.min_price),
@@ -297,6 +344,7 @@
 
   return {
     GRADE_LABELS:GRADE_LABELS,
+    SIM_TYPES:SIM_TYPES,
     MARKET_RULES:MARKET_RULES,
     toNumber:toNumber,
     numericSettings:numericSettings,
@@ -311,6 +359,7 @@
     marketPricePlan:marketPricePlan,
     formatMoney:formatMoney,
     formatPercent:formatPercent,
+    simConfigurationFromSku:simConfigurationFromSku,
     normalizeListing:normalizeListing,
     searchableText:searchableText,
     normalizeSearchText:normalizeSearchText,

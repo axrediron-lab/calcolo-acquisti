@@ -151,7 +151,60 @@ test("riconosce E-SIM dallo SKU e usa P-SIM quando non è indicato", () => {
     sku: "Apple iPhone 14 128GB - Mezzanotte",
   });
   assert.equal(esim.simType, "E-SIM");
+  assert.equal(esim.simKey, "esim_only");
+  assert.equal(esim.simLabel, "Solo eSIM");
   assert.equal(physical.simType, "P-SIM");
+  assert.equal(physical.simKey, "physical_esim");
+  assert.equal(physical.simLabel, "SIM fisica + eSIM");
+  assert.notEqual(esim.familyKey, physical.familyKey);
+});
+
+test("separa Dual SIM fisica e blocca una configurazione SIM contraddittoria", () => {
+  const dual = core.normalizeListing({
+    id: "listing-dual",
+    title: "Samsung Galaxy S24 256GB - Nero",
+    sku: "Samsung Galaxy S24 256GB Nero Dual SIM",
+  });
+  const ambiguous = core.normalizeListing({
+    id: "listing-ambiguous",
+    title: "Samsung Galaxy S24 256GB - Nero",
+    sku: "Samsung Galaxy S24 256GB Dual SIM eSIM",
+  });
+  assert.equal(dual.simKey, "dual_physical");
+  assert.equal(dual.simLabel, "Dual SIM fisica");
+  assert.equal(dual.eligibleForAggregation, true);
+  assert.equal(ambiguous.simKey, "unknown");
+  assert.equal(ambiguous.eligibleForAggregation, false);
+  assert.deepEqual(ambiguous.classificationIssues, ["Configurazione SIM ambigua"]);
+});
+
+test("unifica gli alias CN 100% ed Eccellente batteria 100%", () => {
+  const aliases = ["CN 100%", "Eccellente 100%", "Eccellente batteria 100%"].map((alias, index) => core.normalizeListing({
+    id: `listing-alias-${index}`,
+    title: "Apple iPhone 15 128GB - Nero",
+    sku: `Apple iPhone 15 128GB Nero ${alias}`,
+    grade: "EXCELLENT",
+  }));
+  aliases.forEach((listing) => {
+    assert.equal(listing.quality, "Eccellente");
+    assert.equal(listing.batteryKey, "100");
+    assert.equal(listing.batteryLabel, "Batteria 100%");
+    assert.equal(listing.qualityAlias, "Eccellente · Batteria 100%");
+    assert.equal(listing.eligibleForAggregation, true);
+  });
+  assert.equal(new Set(aliases.map((listing) => listing.variantKey)).size, 1);
+});
+
+test("esclude dalla media un alias 100% incompatibile con il grado", () => {
+  const listing = core.normalizeListing({
+    id: "listing-conflict",
+    title: "Apple iPhone 15 128GB - Nero",
+    sku: "Apple iPhone 15 128GB Nero CN 100%",
+    grade: "GOOD",
+  });
+  assert.equal(listing.quality, "Buono");
+  assert.equal(listing.eligibleForAggregation, false);
+  assert.deepEqual(listing.classificationIssues, ["Grado incompatibile con alias Eccellente 100%"]);
 });
 
 test("trova un prodotto usando parole separate e in ordine diverso", () => {
