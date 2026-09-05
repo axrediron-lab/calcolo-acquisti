@@ -6,6 +6,7 @@
   var revision = 0;
   var margins = [];
   var localMarginCandidates = [];
+  var rateMetadata = null;
   try{ key = sessionStorage.getItem(config.accessSessionKey) || ""; }catch(error){}
 
   function byId(id){ return document.getElementById(id); }
@@ -29,11 +30,38 @@
   }
   function fillForm(values){
     Object.keys(settingsApi.DEFAULTS).forEach(function(name){ var input=document.querySelector('[name="'+name+'"]'); if(input) input.value=values[name]; });
+    updateRateControls();
   }
   function formValues(){
     var output={}; Object.keys(settingsApi.DEFAULTS).forEach(function(name){ output[name]=document.querySelector('[name="'+name+'"]').value.trim(); }); return output;
   }
   function formatDate(value){ return value ? new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(value)) : ""; }
+  function formatReferenceDate(value){ if(!value)return "";var parts=String(value).split("-");return parts.length===3?parts.reverse().join("/"):value; }
+  function updateRateControls(){
+    var automatic=document.querySelector('[name="exchangeRateMode"]').value==="automatic";
+    document.querySelector('[name="usdRate"]').readOnly=automatic;
+    document.querySelector('[name="sekRate"]').readOnly=automatic;
+    byId("refreshExchangeRates").disabled=!automatic;
+    renderRateStatus();
+  }
+  function renderRateStatus(){
+    var note=byId("rateStatus");if(!note)return;
+    if(document.querySelector('[name="exchangeRateMode"]').value==="manual"){
+      note.className="rate-online-status is-manual";
+      note.innerHTML="<strong>Gestione manuale</strong><span>I valori inseriti da te restano attivi e non vengono sostituiti dall’aggiornamento automatico.</span>";
+      return;
+    }
+    if(!rateMetadata||rateMetadata.status==="never"){
+      note.className="rate-online-status";
+      note.innerHTML="<strong>Aggiornamento automatico attivo</strong><span>Il primo controllo BCE sarà eseguito automaticamente oppure premendo Aggiorna cambi ora.</span>";
+      return;
+    }
+    var success=rateMetadata.status==="ok";
+    note.className="rate-online-status "+(success?"is-ok":"is-error");
+    var reference=rateMetadata.reference_date?" · Cambio del "+formatReferenceDate(rateMetadata.reference_date):"";
+    var checked=rateMetadata.last_attempt_at?" · Controllato "+formatDate(rateMetadata.last_attempt_at):"";
+    note.innerHTML="<strong>"+(success?"Cambi BCE aggiornati":"Ultimo controllo non riuscito")+"</strong><span>"+(success?"Fonte: "+escapeHtml(rateMetadata.provider||"ECB via Frankfurter")+reference+checked:"È rimasto attivo l’ultimo cambio valido."+checked)+"</span>";
+  }
   function readLocalJson(storageKey){ try{var raw=localStorage.getItem(storageKey);return raw?JSON.parse(raw):null;}catch(error){return null;} }
   function localMarginRows(){
     var stored=readLocalJson(config.productMarginCacheKey)||{};
@@ -58,13 +86,13 @@
   async function load(){
     status("Caricamento delle impostazioni online…");
     var results=await Promise.all([settingsApi.loadOnline(config.apiBase,key),api("/api/settings/product-margins")]);
-    var economic=results[0]; revision=economic.revision; margins=results[1].results||[];
+    var economic=results[0]; revision=economic.revision; margins=results[1].results||[]; rateMetadata=economic.exchange_rates||null;
     if(economic.exists){
       fillForm(economic.settings); byId("settingsOrigin").textContent="Impostazioni online attive"; byId("settingsUpdated").textContent="Ultimo salvataggio: "+formatDate(economic.updated_at); status("Impostazioni online caricate.");
     }else{
       fillForm(settingsApi.load()); byId("settingsOrigin").textContent="Prima configurazione online"; byId("settingsUpdated").textContent="Sono stati preparati i valori presenti in questo browser. Controllali e salvali online."; status("Archivio pronto: salva una volta per sincronizzare tutti i computer.");
     }
-    renderMargins(); renderMigration();
+    renderMargins(); renderMigration(); renderRateStatus();
   }
 
   byId("settingsLogin").addEventListener("submit",function(event){
@@ -77,9 +105,13 @@
     settingsApi.saveOnline(config.apiBase,key,formValues(),revision).then(function(saved){ revision=saved.revision; fillForm(saved.settings); byId("settingsOrigin").textContent="Impostazioni online attive"; byId("settingsUpdated").textContent="Ultimo salvataggio: "+formatDate(saved.updated_at); status("Impostazioni salvate online."); }).catch(function(error){ status(error.message); }).finally(function(){ button.disabled=false; });
   });
   byId("restoreDefaults").addEventListener("click",function(){ if(!confirm("Preparare i valori iniziali? Saranno applicati online soltanto quando premi Salva.")) return; fillForm(settingsApi.defaults()); status("Valori iniziali preparati. Premi Salva impostazioni online per confermare."); });
-  byId("refreshUsdRate").addEventListener("click",function(){
-    var button=byId("refreshUsdRate"),note=byId("rateStatus"); button.disabled=true; note.textContent="Aggiornamento cambio USD/EUR…";
-    fetch("https://api.frankfurter.dev/v2/rate/USD/EUR").then(function(response){if(!response.ok)throw new Error();return response.json();}).then(function(data){if(!data||!Number.isFinite(Number(data.rate)))throw new Error();document.querySelector('[name="usdRate"]').value=Number(data.rate).toFixed(4).replace(".",",");note.textContent="Cambio aggiornato al "+String(data.date||"oggi").split("-").reverse().join("/")+". Premi Salva per renderlo attivo online.";}).catch(function(){note.textContent="Cambio non disponibile. Il valore precedente non è stato modificato.";}).finally(function(){button.disabled=false;});
+  document.querySelector('[name="exchangeRateMode"]').addEventListener("change",updateRateControls);
+  byId("refreshExchangeRates").addEventListener("click",function(){
+    var button=byId("refreshExchangeRates"); button.disabled=true; byId("rateStatus").className="rate-online-status"; byId("rateStatus").textContent="Aggiornamento dei cambi USD/EUR e SEK/EUR in corso…";
+    api("/api/settings/rates/refresh",{method:"POST",body:{confirm:true}}).then(function(result){
+      if(result.skipped){rateMetadata=result.exchange_rates||rateMetadata;fillForm(result.settings);status("L’aggiornamento automatico è disattivato dalla modalità manuale.");return;}
+      revision=result.revision;rateMetadata=result.exchange_rates||null;fillForm(result.settings);settingsApi.save(result.settings);byId("settingsOrigin").textContent="Impostazioni online attive";byId("settingsUpdated").textContent="Ultimo aggiornamento: "+formatDate(result.updated_at);status("Cambi USD/EUR e SEK/EUR aggiornati online.");
+    }).catch(function(error){rateMetadata=Object.assign({},rateMetadata||{},{status:"error",last_attempt_at:new Date().toISOString()});renderRateStatus();status(error.message+" L’ultimo cambio valido è rimasto attivo.");}).finally(function(){updateRateControls();});
   });
   byId("productMargins").addEventListener("click",function(event){
     var saveButton=event.target.closest("[data-save-margin]");

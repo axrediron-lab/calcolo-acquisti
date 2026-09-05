@@ -2270,6 +2270,13 @@
 :where(.page-settings) .settings-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
 :where(.page-settings) .settings-fields label { display:grid; align-content:start; gap:7px; color:#354e64; font-size:13px; }
 :where(.page-settings) .settings-fields input { width:100%; min-height:46px; color:var(--text); font-size:16px; font-weight:750; }
+:where(.page-settings) .settings-fields select { width:100%; min-height:46px; color:var(--text); font-size:15px; font-weight:750; }
+:where(.page-settings) .settings-fields input[readonly] { background:#f1f6f9; color:#35536b; cursor:not-allowed; }
+:where(.page-settings) .rate-online-status { display:grid; gap:3px; margin:16px 0 0; padding:13px 15px; border:1px solid #c9dce9; border-radius:12px; background:#f5f9fc; color:var(--muted); }
+:where(.page-settings) .rate-online-status strong { color:var(--text); }
+:where(.page-settings) .rate-online-status.is-ok { border-color:#b8e2d1; background:#effaf5; }
+:where(.page-settings) .rate-online-status.is-error { border-color:#f1c2bb; background:#fff5f3; }
+:where(.page-settings) .rate-online-status.is-manual { border-color:#e6d5aa; background:#fff9ea; }
 :where(.page-settings) .settings-savebar { position:sticky; bottom:14px; z-index:4; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:17px 19px; margin:2px 0 20px; border:1px solid #bfe2f2; border-radius:var(--radius); background:rgba(234,245,251,.96); box-shadow:var(--shadow); backdrop-filter:blur(8px); }
 :where(.page-settings) .settings-savebar small { margin:3px 0 0; }
 :where(.page-settings) .settings-overrides { margin-top:4px; }

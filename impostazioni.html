@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev https://api.frankfurter.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Impostazioni</title>
-  <link rel="stylesheet" href="styles.css?v=settings-1">
+  <link rel="stylesheet" href="styles.css?v=settings-2">
   <script src="buybox-config.js" defer></script>
-  <script src="shared-settings.js?v=settings-1" defer></script>
-  <script src="impostazioni.js?v=settings-1" defer></script>
+  <script src="shared-settings.js?v=settings-2" defer></script>
+  <script src="impostazioni.js?v=settings-2" defer></script>
 </head>
 <body>
   <main class="purchases-shell page-shell">
@@ -55,12 +55,13 @@
         </section>
 
         <section class="purchases-panel settings-section">
-          <div class="settings-section-head"><div><span class="eyebrow">Valute</span><h2>Cambi in EUR</h2></div><button id="refreshUsdRate" class="secondary" type="button">Aggiorna USD/EUR</button></div>
+          <div class="settings-section-head"><div><span class="eyebrow">Valute</span><h2>Cambi in EUR</h2></div><button id="refreshExchangeRates" class="secondary" type="button">Aggiorna cambi ora</button></div>
           <div class="settings-fields">
+            <label>Gestione cambi<select name="exchangeRateMode"><option value="automatic">Automatica · BCE</option><option value="manual">Manuale</option></select><small>In automatico vengono aggiornati online dal lunedì al venerdì.</small></label>
             <label>1 USD in EUR<input name="usdRate" inputmode="decimal" required></label>
             <label>1 SEK in EUR<input name="sekRate" inputmode="decimal" required></label>
           </div>
-          <p id="rateStatus" class="work-muted">I cambi possono essere aggiornati manualmente; il valore SEK resta quello configurato da te.</p>
+          <div id="rateStatus" class="rate-online-status" role="status">Caricamento dello stato dei cambi…</div>
         </section>
 
         <div class="settings-savebar">

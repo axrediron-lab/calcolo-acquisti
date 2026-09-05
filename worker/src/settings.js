@@ -1,5 +1,6 @@
 const MAX_BODY_BYTES = 16 * 1024;
 const ECONOMIC_KEY = "economic";
+const FRANKFURTER_BASE = "https://api.frankfurter.dev/v2/rate";
 
 export const DEFAULT_SETTINGS = Object.freeze({
   fee12: "12",
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   targetMargin: "7,50",
   usdRate: "0,92",
   sekRate: "0,090",
+  exchangeRateMode: "automatic",
 });
 
 const PERCENT_KEYS = new Set([
@@ -64,7 +66,10 @@ export function validateSettings(input) {
   const output = {};
   for (const key of Object.keys(DEFAULT_SETTINGS)) {
     if (!Object.prototype.hasOwnProperty.call(input, key)) fail("MISSING_SETTING", "Completa tutte le impostazioni");
-    if (PERCENT_KEYS.has(key)) output[key] = numberValue(input[key], key, { maximum: 100 });
+    if (key === "exchangeRateMode") {
+      if (!["automatic", "manual"].includes(input[key])) fail("INVALID_RATE_MODE", "Modalità dei cambi non valida");
+      output[key] = input[key];
+    } else if (PERCENT_KEYS.has(key)) output[key] = numberValue(input[key], key, { maximum: 100 });
     else if (AMOUNT_KEYS.has(key)) output[key] = numberValue(input[key], key);
     else if (RATE_KEYS.has(key)) output[key] = numberValue(input[key], key, { allowZero: false });
   }
@@ -97,6 +102,115 @@ async function readEconomicSettings(env) {
     revision: 0,
     updated_at: null,
   };
+}
+
+function rateStatusFromRow(row, mode) {
+  return {
+    mode,
+    status: row?.status || "never",
+    provider: row?.provider || "ECB via Frankfurter",
+    reference_date: row?.reference_date || null,
+    last_attempt_at: row?.last_attempt_at || null,
+    last_success_at: row?.last_success_at || null,
+    error: row?.last_error || null,
+  };
+}
+
+async function readRateStatus(env, mode) {
+  const row = await env.PURCHASES_DB.prepare(`SELECT provider,reference_date,last_attempt_at,last_success_at,status,last_error
+    FROM exchange_rate_status WHERE status_key='ecb'`).first();
+  return rateStatusFromRow(row, mode);
+}
+
+function normalizedRate(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0 || numeric > 1000) {
+    fail("INVALID_EXCHANGE_RATE", "Il servizio cambi ha restituito un valore non valido", 502);
+  }
+  return numeric.toFixed(6).replace(/0+$/, "").replace(/\.$/, "").replace(".", ",");
+}
+
+async function frankfurterRate(currency, fetcher) {
+  const response = await fetcher(`${FRANKFURTER_BASE}/${currency}/EUR?providers=ECB`, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) fail("EXCHANGE_RATE_UNAVAILABLE", "Il servizio cambi non è disponibile", 502);
+  let payload;
+  try { payload = await response.json(); } catch { fail("INVALID_EXCHANGE_RATE", "Il servizio cambi ha restituito dati non validi", 502); }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    fail("INVALID_EXCHANGE_RATE", "Il servizio cambi ha restituito dati non validi", 502);
+  }
+  const date = String(payload.date || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail("INVALID_EXCHANGE_RATE", "La data del cambio non è valida", 502);
+  return { rate: normalizedRate(payload.rate), date };
+}
+
+async function recordRateFailure(env, now, error) {
+  const message = error instanceof SettingsError ? error.publicMessage : "Il servizio cambi non è disponibile";
+  await env.PURCHASES_DB.prepare(`INSERT INTO exchange_rate_status
+    (status_key,provider,reference_date,last_attempt_at,last_success_at,status,last_error)
+    VALUES ('ecb','ECB via Frankfurter',NULL,?,NULL,'error',?)
+    ON CONFLICT(status_key) DO UPDATE SET last_attempt_at=excluded.last_attempt_at,status='error',last_error=excluded.last_error`)
+    .bind(now, message).run();
+}
+
+async function writeAutomaticRates(env, usdRate, sekRate, referenceDate, now) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const current = await readEconomicSettings(env);
+    if (current.settings.exchangeRateMode === "manual") {
+      return { ok: true, skipped: true, reason: "manual", ...current, exchange_rates: await readRateStatus(env, "manual") };
+    }
+    const settings = validateSettings({ ...current.settings, usdRate, sekRate });
+    const operation = crypto.randomUUID();
+    const values = JSON.stringify(settings);
+    const write = current.exists
+      ? env.PURCHASES_DB.prepare(`UPDATE app_settings SET values_json=?,revision=revision+1,updated_at=?,operation_id=?
+          WHERE settings_key=? AND revision=?`).bind(values, now, operation, ECONOMIC_KEY, current.revision)
+      : env.PURCHASES_DB.prepare(`INSERT INTO app_settings (settings_key,values_json,revision,updated_at,operation_id)
+          VALUES (?,?,1,?,?) ON CONFLICT(settings_key) DO NOTHING`).bind(ECONOMIC_KEY, values, now, operation);
+    await env.PURCHASES_DB.batch([
+      write,
+      env.PURCHASES_DB.prepare(`INSERT INTO app_settings_history (settings_key,values_json,revision,changed_at)
+        SELECT settings_key,values_json,revision,updated_at FROM app_settings WHERE settings_key=? AND operation_id=?
+        ON CONFLICT(settings_key,revision) DO NOTHING`).bind(ECONOMIC_KEY, operation),
+      env.PURCHASES_DB.prepare(`INSERT INTO exchange_rate_status
+        (status_key,provider,reference_date,last_attempt_at,last_success_at,status,last_error)
+        VALUES ('ecb','ECB via Frankfurter',?,?,?,'ok',NULL)
+        ON CONFLICT(status_key) DO UPDATE SET provider=excluded.provider,reference_date=excluded.reference_date,
+        last_attempt_at=excluded.last_attempt_at,last_success_at=excluded.last_success_at,status='ok',last_error=NULL`)
+        .bind(referenceDate, now, now),
+    ]);
+    const saved = await env.PURCHASES_DB.prepare("SELECT values_json,revision,updated_at,operation_id FROM app_settings WHERE settings_key=?")
+      .bind(ECONOMIC_KEY).first();
+    if (saved?.operation_id === operation) {
+      return {
+        ok: true,
+        exists: true,
+        settings: parseStoredSettings(saved.values_json),
+        revision: saved.revision,
+        updated_at: saved.updated_at,
+        exchange_rates: await readRateStatus(env, "automatic"),
+      };
+    }
+  }
+  fail("SETTINGS_CHANGED", "Le impostazioni sono cambiate durante l’aggiornamento dei cambi. Riprova.", 409);
+}
+
+export async function refreshExchangeRates(env, fetcher = fetch) {
+  const now = new Date().toISOString();
+  const current = await readEconomicSettings(env);
+  if (current.settings.exchangeRateMode === "manual") {
+    return { ok: true, skipped: true, reason: "manual", ...current, exchange_rates: await readRateStatus(env, "manual") };
+  }
+  try {
+    const [usd, sek] = await Promise.all([frankfurterRate("USD", fetcher), frankfurterRate("SEK", fetcher)]);
+    if (usd.date !== sek.date) fail("EXCHANGE_RATE_DATE_MISMATCH", "Le date dei cambi USD e SEK non coincidono", 502);
+    return await writeAutomaticRates(env, usd.rate, sek.rate, usd.date, now);
+  } catch (error) {
+    await recordRateFailure(env, now, error);
+    throw error;
+  }
 }
 
 async function saveEconomicSettings(body, env) {
@@ -178,12 +292,19 @@ async function saveProductMargin(body, env) {
 export async function settingsRoute(request, url, env) {
   const path = url.pathname;
   if (request.method === "GET" || request.method === "HEAD") {
-    if (path === "/api/settings") return readEconomicSettings(env);
+    if (path === "/api/settings") {
+      const result = await readEconomicSettings(env);
+      return { ...result, exchange_rates: await readRateStatus(env, result.settings.exchangeRateMode) };
+    }
     if (path === "/api/settings/product-margins") return listProductMargins(env);
   }
   if (request.method === "POST") {
     const body = await settingsBody(request);
     if (path === "/api/settings") return saveEconomicSettings(body, env);
+    if (path === "/api/settings/rates/refresh") {
+      if (body.confirm !== true) fail("CONFIRM_REQUIRED", "Conferma l’aggiornamento dei cambi");
+      return refreshExchangeRates(env);
+    }
     if (path === "/api/settings/product-margin") return saveProductMargin(body, env);
   }
   fail("NOT_FOUND", "Endpoint impostazioni non trovato", 404);

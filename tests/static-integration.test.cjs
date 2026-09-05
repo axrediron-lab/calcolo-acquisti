@@ -26,7 +26,10 @@ test("la Home e le pagine operative collegano le impostazioni online", () => {
   assert.match(home, /href="impostazioni\.html"/);
   assert.match(settings, /Configurazione online/);
   assert.match(settings, /name="sekRate"/);
+  assert.match(settings, /name="exchangeRateMode"/);
+  assert.match(settings, /Aggiorna cambi ora/);
   assert.match(script, /saveOnline/);
+  assert.match(script, /\/api\/settings\/rates\/refresh/);
   assert.match(script, /product-margins/);
   assert.match(buybox, /loadOnlinePreferences/);
   assert.match(buybox, /saveOnlineProductMargin/);

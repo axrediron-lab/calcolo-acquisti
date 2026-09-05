@@ -20,7 +20,8 @@
     minimumMargin:"5",
     targetMargin:"7,50",
     usdRate:"0,92",
-    sekRate:"0,090"
+    sekRate:"0,090",
+    exchangeRateMode:"automatic"
   });
 
   function clone(value){ return JSON.parse(JSON.stringify(value)); }

@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { DriveError, drivePreview, driveStatus } from "./drive.js";
 import { PurchaseError } from "./ready-csv.js";
 import { purchaseRoute } from "./purchases.js";
-import { SettingsError, settingsRoute } from "./settings.js";
+import { refreshExchangeRates, SettingsError, settingsRoute } from "./settings.js";
 
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
 const CATALOG_TTL_SECONDS = 300;
@@ -464,5 +464,10 @@ export async function handleRequest(request, env, ctx = {}) {
 export default {
   fetch(request, env, ctx) {
     return handleRequest(request, env, ctx);
+  },
+  scheduled(_event, env, ctx) {
+    ctx.waitUntil(refreshExchangeRates(env).catch(error => {
+      console.error(JSON.stringify({ event: "exchange_rate_refresh_error", code: error?.code || "INTERNAL_ERROR" }));
+    }));
   },
 };

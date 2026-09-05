@@ -2,13 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
-import { DEFAULT_SETTINGS, settingsRoute } from "../src/settings.js";
+import { DEFAULT_SETTINGS, refreshExchangeRates, settingsRoute } from "../src/settings.js";
 import { handleRequest } from "../src/index.js";
 
 class D1Test {
   constructor() {
     this.db = new DatabaseSync(":memory:");
     this.db.exec(readFileSync(new URL("../migrations/0003_online_settings.sql", import.meta.url), "utf8"));
+    this.db.exec(readFileSync(new URL("../migrations/0004_exchange_rate_status.sql", import.meta.url), "utf8"));
   }
   prepare(sql) {
     const database = this.db;
@@ -96,4 +97,52 @@ test("API impostazioni protetta senza dipendere dalle credenziali Back Market", 
   const allowed = await handleRequest(new Request("https://test.local/api/settings", { headers: { "X-App-Key": env.APP_ACCESS_KEY } }), env);
   assert.equal(allowed.status, 200);
   assert.equal((await allowed.json()).exists, false);
+});
+
+test("aggiorna automaticamente USD ed SEK dalla BCE e salva fonte e data", async t => {
+  const { env, database } = setup(t);
+  const calls = [];
+  const fetcher = async url => {
+    calls.push(String(url));
+    const isUsd = String(url).includes("/USD/EUR");
+    return new Response(JSON.stringify({ date: "2026-09-04", base: isUsd ? "USD" : "SEK", quote: "EUR", rate: isUsd ? 0.861234 : 0.091234 }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  const result = await refreshExchangeRates(env, fetcher);
+  assert.equal(result.settings.usdRate, "0,861234");
+  assert.equal(result.settings.sekRate, "0,091234");
+  assert.equal(result.exchange_rates.status, "ok");
+  assert.equal(result.exchange_rates.reference_date, "2026-09-04");
+  assert.equal(result.exchange_rates.provider, "ECB via Frankfurter");
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every(url => url.includes("providers=ECB")));
+  assert.equal(database.db.prepare("SELECT count(*) count FROM app_settings_history").get().count, 1);
+});
+
+test("mantiene l'ultimo cambio valido quando Frankfurter non risponde", async t => {
+  const { env } = setup(t);
+  await refreshExchangeRates(env, async url => new Response(JSON.stringify({
+    date: "2026-09-04",
+    rate: String(url).includes("/USD/EUR") ? 0.86 : 0.09,
+  }), { status: 200, headers: { "Content-Type": "application/json" } }));
+  await assert.rejects(() => refreshExchangeRates(env, async () => new Response("", { status: 503 })), { code: "EXCHANGE_RATE_UNAVAILABLE" });
+  const result = await settingsRoute(request("/api/settings"), new URL("https://test.local/api/settings"), env);
+  assert.equal(result.settings.usdRate, "0,86");
+  assert.equal(result.settings.sekRate, "0,09");
+  assert.equal(result.exchange_rates.status, "error");
+  assert.equal(result.exchange_rates.reference_date, "2026-09-04");
+});
+
+test("la modalità manuale impedisce la sostituzione automatica dei cambi", async t => {
+  const { env } = setup(t);
+  const manual = { ...DEFAULT_SETTINGS, exchangeRateMode: "manual", usdRate: "0,95", sekRate: "0,095" };
+  await settingsRoute(request("/api/settings", { settings: manual, expected_revision: 0, confirm: true }), new URL("https://test.local/api/settings"), env);
+  let calls = 0;
+  const result = await refreshExchangeRates(env, async () => { calls += 1; return new Response("{}"); });
+  assert.equal(result.skipped, true);
+  assert.equal(result.reason, "manual");
+  assert.equal(result.settings.usdRate, "0,95");
+  assert.equal(calls, 0);
 });
