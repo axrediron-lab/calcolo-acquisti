@@ -58,7 +58,21 @@ test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", (
   assert.match(script, /automatic/);
   assert.match(script, /confirm\(/);
   assert.match(script, /Prezzi e BuyBox/);
+  assert.match(script, /Quantità magazzino/);
+  assert.match(script, /Costo articolo/);
+  assert.match(script, /work-table/);
   assert.match(read("buybox.js"), /\/api\/purchases\/costs/);
+});
+
+test("Acquisti filtra gli ordini per periodo e lavorazione", () => {
+  const html = read("acquisti.html");
+  const script = read("acquisti.js");
+  assert.match(html, /id="historyFrom"/);
+  assert.match(html, /id="historyTo"/);
+  assert.match(html, /value="pending">Da evadere/);
+  assert.match(html, /value="done">Evasi/);
+  assert.match(script, /params\.set\("status",historyState\)/);
+  assert.match(script, /Evaso/);
 });
 
 test("la Valutazione stock usa catalogo, profilo Acquisti e sole letture BuyBox", () => {

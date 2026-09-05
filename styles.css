@@ -2184,6 +2184,9 @@
 :where(.page-purchases) [hidden] { display: none !important; }
 :where(.page-purchases) .purchases-shell { width:min(1840px,98vw); margin:auto; padding:24px 0 48px; }
 :where(.page-purchases) header, :where(.page-purchases) nav, :where(.page-purchases) .purchases-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+:where(.page-purchases) .purchase-filters { display:grid; grid-template-columns:minmax(220px,1.4fr) repeat(3,minmax(145px,.7fr)) auto auto; align-items:end; gap:10px; margin:16px 0; }
+:where(.page-purchases) .purchase-filters label { display:grid; gap:6px; color:#354e64; font-size:12px; }
+:where(.page-purchases) .purchase-filters button { min-height:44px; }
 :where(.page-purchases) header { justify-content:space-between; margin-bottom:18px; }
 :where(.page-purchases) .heading-block { display:flex; align-items:center; gap:16px; }
 :where(.page-purchases) .header-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
@@ -2217,6 +2220,9 @@
 :where(.page-purchases) td button, :where(.page-purchases) td a { display: inline-block; margin: 2px 5px 5px 0; white-space: nowrap; }
 :where(.page-purchases) .table-action { border:1px solid var(--brand); background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; font-weight:800; text-decoration:none; border-radius:12px; padding:10px 12px; }
 :where(.page-purchases) .document-state { font-weight: 700; }
+:where(.page-purchases) .order-state, :where(.page-purchases) .item-state { display:inline-flex; align-items:center; min-height:27px; padding:5px 9px; border:1px solid #efd091; border-radius:999px; background:#fff7e5; color:#8a530b; font-size:11px; line-height:1.15; font-weight:800; white-space:nowrap; }
+:where(.page-purchases) .order-state.done, :where(.page-purchases) .item-state.done { border-color:#a9dbc8; background:#ecf9f3; color:#176b4b; }
+:where(.page-purchases) .item-state.blocked { border-color:#efb7b1; background:#fff1ef; color:#9a2c23; }
 :where(.page-purchases) #purchaseStatus { min-height: 24px; font-weight: 600; }
 :where(.page-purchases) dialog { width:min(1100px,94vw); max-height:90vh; border:1px solid var(--line); border-radius:18px; padding:24px; box-shadow:0 28px 80px rgba(15,23,42,.28); }
 :where(.page-purchases) dialog::backdrop { background:rgba(15,23,42,.48); backdrop-filter:blur(3px); }
@@ -2229,6 +2235,29 @@
 :where(.page-purchases) .dialog-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
 :where(.page-purchases) .form-error { color:var(--bad)!important; font-weight:800; }
 :where(.page-purchases) .work-grid { display:grid; gap:16px; }
+:where(.page-purchases) .work-document-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; margin-top:6px; }
+:where(.page-purchases) .work-document-head h2 { margin:0; font-size:25px; }
+:where(.page-purchases) .work-document-summary { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+:where(.page-purchases) .work-document-summary span { padding:6px 9px; border:1px solid var(--line); border-radius:999px; background:#fff; color:#354e64; font-size:11px; font-weight:800; }
+:where(.page-purchases) .compact-work-panel { padding:0; overflow:hidden; }
+:where(.page-purchases) .compact-work-panel .purchases-table-wrap { margin:0; }
+:where(.page-purchases) .work-table { table-layout:fixed; }
+:where(.page-purchases) .work-table th:nth-child(1) { width:29%; }
+:where(.page-purchases) .work-table th:nth-child(2), :where(.page-purchases) .work-table th:nth-child(3), :where(.page-purchases) .work-table th:nth-child(4), :where(.page-purchases) .work-table th:nth-child(5) { width:10%; }
+:where(.page-purchases) .work-table th:nth-child(6) { width:7%; }
+:where(.page-purchases) .work-table th:nth-child(7), :where(.page-purchases) .work-table th:nth-child(8) { width:12%; }
+:where(.page-purchases) .work-main-row td { padding:13px 10px 8px; border-bottom:0; vertical-align:middle; }
+:where(.page-purchases) .work-main-row td:first-child>strong, :where(.page-purchases) .work-main-row td:first-child>small { display:block; }
+:where(.page-purchases) .work-main-row td:first-child>small { margin:3px 0 0; line-height:1.25; }
+:where(.page-purchases) .compact-action { min-height:34px; padding:7px 10px; font-size:12px; }
+:where(.page-purchases) .work-action-row td { padding:0 10px 12px; background:#fff; }
+:where(.page-purchases) .work-action-row:not(:last-child) td { border-bottom:1px solid var(--line); }
+:where(.page-purchases) .work-inline-choice { display:grid; grid-template-columns:minmax(240px,360px) minmax(260px,1fr) auto; align-items:end; gap:12px; padding:11px 12px; border:1px solid #c9dce9; border-radius:12px; background:#f5f9fc; }
+:where(.page-purchases) .work-inline-choice label { display:grid; gap:5px; color:#354e64; font-size:11px; }
+:where(.page-purchases) .work-inline-choice select { min-height:39px; padding:7px 10px; }
+:where(.page-purchases) .work-inline-choice button { min-height:39px; }
+:where(.page-purchases) .work-inline-result { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:9px 12px; border:1px solid #b8e2d1; border-radius:12px; background:#effaf5; color:#176b4b; font-size:12px; }
+:where(.page-purchases) .work-inline-blocked { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 12px; border:1px solid #efb7b1; border-radius:12px; background:#fff1ef; color:#9a2c23; font-size:12px; }
 :where(.page-purchases) .work-card { margin:0; }
 :where(.page-purchases) .work-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
 :where(.page-purchases) .work-card-head h2 { margin:2px 0 0; }
@@ -2260,6 +2289,10 @@
   :where(.page-purchases) .safety-chip { white-space:normal; }
   :where(.page-purchases) .work-card-head { flex-direction:column; }
   :where(.page-purchases) .work-stats { grid-template-columns:1fr 1fr; }
+  :where(.page-purchases) .purchase-filters { grid-template-columns:1fr; }
+  :where(.page-purchases) .work-document-head { align-items:flex-start; flex-direction:column; }
+  :where(.page-purchases) .work-inline-choice { align-items:stretch; grid-template-columns:1fr; }
+  :where(.page-purchases) .work-document-summary { justify-content:flex-start; }
 }
 
 /* 08 - Valutazione stock BackMarket */

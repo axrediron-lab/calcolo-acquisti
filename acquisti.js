@@ -4,7 +4,7 @@
   var mode = document.body.dataset.mode;
   var byId = id => document.getElementById(id);
   var docs = [], catalog = null, currentMapping = null, sourceRequest = null, offset = null, historyRows = [], busy = false;
-  var memoryKey = "", historyQuery = "";
+  var memoryKey = "", historyQuery = "", historyFrom = "", historyTo = "", historyState = "pending";
   try { memoryKey = sessionStorage.getItem(config.accessSessionKey) || ""; } catch (_) {}
   var money = cents => (cents / 100).toLocaleString("it-IT", { style: "currency", currency: "EUR" });
   var esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -66,15 +66,24 @@
   }
   async function history(append) {
     var path = mode === "mappings" ? "/api/mappings" : "/api/purchases/documents";
-    if (!append) historyQuery = byId("historyQuery").value;
-    var data = await api(path + "?q=" + encodeURIComponent(historyQuery) + "&offset=" + (append ? offset : 0));
+    if (!append) {
+      historyQuery = byId("historyQuery").value;
+      if (mode === "purchases") {
+        historyFrom = byId("historyFrom").value;
+        historyTo = byId("historyTo").value;
+        historyState = byId("historyState").value;
+      }
+    }
+    var params = new URLSearchParams({ q:historyQuery, offset:String(append ? offset : 0) });
+    if (mode === "purchases") { params.set("from",historyFrom); params.set("to",historyTo); params.set("status",historyState); }
+    var data = await api(path + "?" + params.toString());
     historyRows = append ? historyRows.concat(data.results) : data.results;
     offset = data.next_offset; byId("historyMore").hidden = offset === null;
     if (!historyRows.length) { byId("purchaseHistory").textContent = "Nessun risultato."; return; }
     if (mode === "mappings") {
       byId("purchaseHistory").innerHTML = '<div class="purchases-table-wrap"><table><thead><tr><th>Codice Ready</th><th>Descrizione Ready</th><th>SKU Back Market</th><th>Ultima modifica</th><th>Azioni</th></tr></thead><tbody>' + historyRows.map(m => '<tr><td>' + esc(m.ready_code) + '</td><td>' + esc(m.ready_description) + '</td><td>' + esc(m.sku || "Rimosso — da abbinare alla prossima importazione") + '</td><td>' + esc(new Date(m.updated_at).toLocaleString("it-IT")) + '</td><td><button type="button" data-map="' + esc(m.ready_code) + '">Modifica</button>' + (m.listing_id ? '<button type="button" data-remove="' + esc(m.ready_code) + '" class="secondary">Rimuovi</button>' : '') + '<button type="button" data-audit="' + esc(m.ready_code) + '" class="secondary">Storico</button></td></tr>').join('') + '</tbody></table></div>';
     } else {
-      byId("purchaseHistory").innerHTML = '<div class="purchases-table-wrap"><table><thead><tr><th>Documento Ready</th><th>Data</th><th>Righe</th><th>Pezzi</th><th>Costo totale EUR</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>' + historyRows.map(d => { var state=!d.processed_items?'Da lavorare':d.processed_items<d.item_count||d.pending_items?'Lavorazione in corso':'Costi e quantità gestiti'; return '<tr><td>' + esc(d.document_number) + '</td><td>' + esc(d.document_date) + '</td><td>' + d.row_count + '</td><td>' + d.units + '</td><td>' + esc(money(d.total_cents)) + '</td><td>' + esc(state) + '</td><td><a class="table-action" href="lavorazione.html?key=' + encodeURIComponent(d.document_key) + '">Lavora</a><button type="button" data-document="' + esc(d.document_key) + '">Apri</button></td></tr>'; }).join('') + '</tbody></table></div>';
+      byId("purchaseHistory").innerHTML = '<div class="purchases-table-wrap"><table><thead><tr><th>Documento Ready</th><th>Data</th><th>Righe</th><th>Pezzi</th><th>Costo totale EUR</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>' + historyRows.map(d => { var complete=d.processed_items>=d.item_count&&!d.pending_items,state=complete?'Evaso':d.processed_items?'In lavorazione':'Da evadere'; return '<tr><td><strong>' + esc(d.document_number) + '</strong></td><td>' + esc(d.document_date) + '</td><td>' + d.row_count + '</td><td>' + d.units + '</td><td>' + esc(money(d.total_cents)) + '</td><td><span class="order-state '+(complete?'done':'pending')+'">' + esc(state) + '</span></td><td><a class="table-action" href="lavorazione.html?key=' + encodeURIComponent(d.document_key) + '">'+(complete?'Rivedi':'Lavora')+'</a><button type="button" data-document="' + esc(d.document_key) + '">Apri</button></td></tr>'; }).join('') + '</tbody></table></div>';
     }
   }
   function filterListings() {
@@ -109,6 +118,10 @@
   }); });
   byId("purchaseLogout").addEventListener("click", () => { if (!busy) { logout(); message("Disconnesso."); } });
   byId("historySearch").addEventListener("submit", event => { event.preventDefault(); run(() => history(false)); });
+  if (mode === "purchases") byId("historyReset").addEventListener("click", () => {
+    byId("historyQuery").value = ""; byId("historyFrom").value = ""; byId("historyTo").value = ""; byId("historyState").value = "pending";
+    run(() => history(false));
+  });
   byId("historyMore").addEventListener("click", () => run(() => history(true)));
   byId("listingSearch").addEventListener("input", filterListings);
   byId("mappingCancel").addEventListener("click", () => { if (!busy) byId("mappingDialog").close(); });

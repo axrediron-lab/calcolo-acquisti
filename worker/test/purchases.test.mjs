@@ -121,6 +121,25 @@ test('storico consultabile per numero riferimento e dettaglio immutabile', async
   const detail = new URL('https://test.local/api/purchases/document?key=2026:142');
   assert.equal((await purchaseRoute(new Request(detail),detail,env,listing)).lines[0].unit_cost_cents,1025);
 });
+test('storico ordini filtra per data e stato di lavorazione', async t => {
+  const {env}=setup(t); await saveMapping(mapping(),env,listing); const d=await preview(env); await confirmPurchase({token:d.token,confirm:true},env);
+  let url=new URL('https://test.local/api/purchases/documents?from=2026-09-01&to=2026-09-30&status=pending');
+  assert.equal((await purchaseRoute(new Request(url),url,env,listing)).results.length,1);
+  url=new URL('https://test.local/api/purchases/documents?to=2026-08-31&status=all');
+  assert.equal((await purchaseRoute(new Request(url),url,env,listing)).results.length,0);
+  await processPurchaseItem({document_key:'2026:142',listing_id:'listing-123',mode:'manual',expected_bm_quantity:2,confirm:true},env,{loadListing:async id=>({id,sku:'SKU-'+id,quantity:2}),updateQuantity:async()=>{}});
+  url=new URL('https://test.local/api/purchases/documents?status=done');
+  assert.equal((await purchaseRoute(new Request(url),url,env,listing)).results[0].document_number,'142');
+  url=new URL('https://test.local/api/purchases/documents?status=pending');
+  assert.equal((await purchaseRoute(new Request(url),url,env,listing)).results.length,0);
+});
+test('storico ordini rifiuta filtri data e stato non validi', async t => {
+  const {env}=setup(t);
+  for (const query of ['from=2026-99-99','from=2026-10-01&to=2026-09-01','status=unknown']) {
+    const url=new URL('https://test.local/api/purchases/documents?'+query);
+    await assert.rejects(() => purchaseRoute(new Request(url),url,env,listing));
+  }
+});
 test('API acquisti e abbinamenti protette, nessuna necessità di segreti Back Market per storico', async t => {
   const {env} = setup(t);
   for (const path of ['/api/purchases/status','/api/mappings']) {

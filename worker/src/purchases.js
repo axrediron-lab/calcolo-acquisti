@@ -134,8 +134,19 @@ export async function saveMapping(body, env, loadListing) {
 function searchParams(url) {
   const q = String(url.searchParams.get("q") || "").slice(0, 100);
   const offset = Number(url.searchParams.get("offset") || 0);
+  const from = String(url.searchParams.get("from") || "");
+  const to = String(url.searchParams.get("to") || "");
+  const status = String(url.searchParams.get("status") || "all");
   if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1000000) reject("INVALID_PAGE", "Pagina non valida", 400);
-  return { q, offset };
+  const validDate = value => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  };
+  if ((from && !validDate(from)) || (to && !validDate(to)) || (from && to && from > to)) reject("INVALID_DATE_FILTER", "Intervallo date non valido", 400);
+  if (!["all", "pending", "done"].includes(status)) reject("INVALID_STATUS_FILTER", "Stato documento non valido", 400);
+  return { q, offset, from, to, status };
 }
 function documentItems(saved) {
   let lines;
@@ -263,13 +274,16 @@ export async function purchaseRoute(request, url, env, operationInput) {
       return { results };
     }
     if (path === "/api/purchases/documents") {
-      const { q, offset } = searchParams(url);
-      const { results } = await database.prepare(`SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,
-        (SELECT count(DISTINCT json_extract(j.value,'$.mapping.listing_id')) FROM json_each(lines_json) j) AS item_count,
-        (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key) AS processed_items,
-        (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key AND p.quantity_status IN ('pending','applying')) AS pending_items
+      const { q, offset, from, to, status } = searchParams(url);
+      const { results } = await database.prepare(`SELECT * FROM (
+        SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,
+          (SELECT count(DISTINCT json_extract(j.value,'$.mapping.listing_id')) FROM json_each(lines_json) j) AS item_count,
+          (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key) AS processed_items,
+          (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key AND p.quantity_status IN ('pending','applying')) AS pending_items
         FROM purchase_documents WHERE instr(document_number,?)>0 OR instr(references_json,?)>0
-        ORDER BY document_date DESC,document_key LIMIT 51 OFFSET ?`).bind(q, q, offset).all();
+      ) WHERE (?='' OR document_date>=?) AND (?='' OR document_date<=?)
+        AND (?='all' OR (?='pending' AND (processed_items<item_count OR pending_items>0)) OR (?='done' AND processed_items>=item_count AND pending_items=0))
+        ORDER BY document_date DESC,document_key LIMIT 51 OFFSET ?`).bind(q, q, from, from, to, to, status, status, status, offset).all();
       return { results: results.slice(0, 50), next_offset: results.length > 50 ? offset + 50 : null };
     }
     if (path === "/api/purchases/document") {

@@ -16,8 +16,15 @@
     <section id="purchaseWorkspace" hidden>
       <div class="purchases-toolbar"><button id="readDrive" type="button">Leggi da Drive</button><label class="file-label">Oppure carica dal computer <input id="purchaseFile" type="file" accept=".csv,text/csv"></label><button id="purchaseLogout" class="secondary" type="button">Esci</button></div>
       <p id="previewSource"></p><div id="purchasePreview"></div>
-      <section class="purchases-panel"><h2>Documenti salvati</h2><p>Salvato non significa caricato su Back Market. Puoi cercare per numero Ready o riferimento d’origine.</p>
-        <form id="historySearch" class="purchases-toolbar"><label for="historyQuery">Cerca documento</label><input id="historyQuery" type="search"><button type="submit">Cerca</button></form>
+      <section class="purchases-panel"><h2>Ordini</h2><p>Filtra i documenti importati e riprendi rapidamente quelli ancora da lavorare.</p>
+        <form id="historySearch" class="purchase-filters">
+          <label>Cerca<input id="historyQuery" type="search" placeholder="Numero Ready o riferimento"></label>
+          <label>Dal<input id="historyFrom" type="date"></label>
+          <label>Al<input id="historyTo" type="date"></label>
+          <label>Stato<select id="historyState"><option value="pending">Da evadere</option><option value="done">Evasi</option><option value="all">Tutti</option></select></label>
+          <button type="submit">Applica filtri</button>
+          <button id="historyReset" type="button" class="secondary">Reimposta</button>
+        </form>
         <div id="purchaseHistory"></div><button id="historyMore" type="button" class="secondary" hidden>Carica altri</button>
       </section>
     </section>
