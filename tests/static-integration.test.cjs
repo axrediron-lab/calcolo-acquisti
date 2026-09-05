@@ -49,7 +49,7 @@ test("il Calcolo completo include Home e impostazioni condivise", () => {
   assert.match(html, /href="index\.html"[^>]*>← Home/);
   assert.match(html, /id="minimumMargin"/);
   assert.match(html, /id="shippingItaly"/);
-  assert.match(html, /<script src="shared-settings\.js"><\/script>/);
+  assert.match(html, /<script src="shared-settings\.js(?:\?v=[^"]+)?"><\/script>/);
 });
 
 test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
