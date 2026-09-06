@@ -7,6 +7,7 @@
 
   var GROUP_12 = ["IT","BE","ES","FR","GR","SK"];
   var GROUP_5 = ["AT","FI","IE","NL","PT","SE"];
+  var EXCLUDED_QUALITY_KEYS = ["correct","corretto","correcto","eco","economy"];
 
   function finitePositive(value){ return Number.isFinite(value) && value > 0; }
   function mean(values){
@@ -20,10 +21,17 @@
     return clean.length % 2 ? clean[middle] : (clean[middle-1] + clean[middle]) / 2;
   }
   function unique(values){ return Array.from(new Set(values)); }
+  function excludedFromValuation(listing){
+    var qualityKey = core.normalizeSearchText(listing && listing.quality || "");
+    return EXCLUDED_QUALITY_KEYS.indexOf(qualityKey) >= 0;
+  }
+  function eligibleForValuation(listing){
+    return Boolean(listing && listing.id && listing.eligibleForAggregation && !excludedFromValuation(listing));
+  }
 
   function groupFamilies(listings){
     var groups = {};
-    (listings || []).filter(function(listing){ return listing && listing.id && listing.eligibleForAggregation; }).forEach(function(listing){
+    (listings || []).filter(eligibleForValuation).forEach(function(listing){
       if(!groups[listing.familyKey]){
         groups[listing.familyKey] = {
           key:listing.familyKey,
@@ -78,7 +86,7 @@
   function buildVariantBenchmarks(listings,payloadById,settings){
     var buckets = {};
     (listings || []).forEach(function(listing){
-      if(!listing || !listing.eligibleForAggregation) return;
+      if(!eligibleForValuation(listing)) return;
       var payload = payloadById && payloadById[listing.id];
       var competitors = payload && Array.isArray(payload.competitors) ? payload.competitors : [];
       competitors.forEach(function(competitor){
@@ -186,6 +194,8 @@
     GROUP_5:GROUP_5,
     mean:mean,
     median:median,
+    excludedFromValuation:excludedFromValuation,
+    eligibleForValuation:eligibleForValuation,
     groupFamilies:groupFamilies,
     buildVariantBenchmarks:buildVariantBenchmarks,
     weightedMarkets:weightedMarkets,

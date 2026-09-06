@@ -30,6 +30,19 @@ test("raggruppa i colori ma separa configurazioni SIM", () => {
   assert.notEqual(black.familyKey, esim.familyKey);
 });
 
+test("esclude Corretto ed Eco dalla valutazione anche con batteria 100%", () => {
+  const excellent = listing("excellent", "Nero", "EXCELLENT");
+  const correct = listing("correct", "Blu", "CORRECT");
+  const economy100 = listing("economy-100", "Verde", "ECONOMY", "100%");
+  const groups = valuation.groupFamilies([excellent, correct, economy100]);
+
+  assert.equal(valuation.excludedFromValuation(correct), true);
+  assert.equal(valuation.excludedFromValuation(economy100), true);
+  assert.equal(groups.length, 1);
+  assert.deepEqual(groups[0].listings.map((item) => item.id), ["excellent"]);
+  assert.deepEqual(groups[0].variants.map((variant) => variant.quality), ["Eccellente"]);
+});
+
 test("usa la mediana dei colori e preferisce price_to_win", () => {
   const rows = [listing("a", "Nero"), listing("b", "Blu"), listing("c", "Verde")];
   const payloads = {

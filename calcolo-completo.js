@@ -52,7 +52,8 @@
       "BM 12%: "+(numeric.fee12*100).toFixed(2).replace(".",",")+"%",
       "BM 5%: "+(numeric.fee5*100).toFixed(2).replace(".",",")+"%",
       "Ingresso: "+euro(numeric.acquisitionImport+numeric.acquisitionShipping),
-      "1 SEK: "+numeric.sekRate.toFixed(3).replace(".",",")+" €"
+      "1 SEK: "+numeric.sekRate.toFixed(3).replace(".",",")+" €",
+      "Esclusi: Corretto · Economy"
     ].map(function(label){ return '<span>'+escapeHtml(label)+'</span>'; }).join("");
     byId("profileRules").innerHTML=[
       ["Fee extra",(numeric.investorFee+numeric.storfundFee+numeric.paymentFee)*100,"%"],
