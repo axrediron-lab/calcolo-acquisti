@@ -11,7 +11,7 @@ const reference = '"02/09/2026";"142";"";"Rif. Ord.f. N. 136 del 02/09/2026";"";
 const product = '"02/09/2026";"142";"00123";"Prodotto test";"2";"10,25"\r\n';
 const csv = header + reference + product;
 class D1Test {
-  constructor() { this.db = new DatabaseSync(':memory:'); this.db.exec(readFileSync(new URL('../migrations/0001_purchases.sql', import.meta.url), 'utf8')); this.db.exec(readFileSync(new URL('../migrations/0002_purchase_processing.sql', import.meta.url), 'utf8')); }
+  constructor() { this.db = new DatabaseSync(':memory:'); this.db.exec(readFileSync(new URL('../migrations/0001_purchases.sql', import.meta.url), 'utf8')); this.db.exec(readFileSync(new URL('../migrations/0002_purchase_processing.sql', import.meta.url), 'utf8')); this.db.exec(readFileSync(new URL('../migrations/0005_client_cancellations.sql', import.meta.url), 'utf8')); }
   prepare(sql) {
     const database = this.db;
     const statement = (params = []) => ({

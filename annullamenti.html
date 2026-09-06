@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="it" class="page-purchases page-cancellations">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Ordini cancellati</title><link rel="stylesheet" href="styles.css?v=ui-2">
+  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="annullamenti.js?v=cancel-1" defer></script>
+</head>
+<body><main class="purchases-shell page-shell">
+  <header class="topbar"><div class="heading-block"><a class="home-button" href="index.html">← Home</a><h1>Ordini cancellati</h1></div><nav class="header-actions"><a class="secondary-button" href="acquisti.html">Acquisti</a><a class="secondary-button" href="abbinamenti.html">Abbinamenti</a><a class="secondary-button" href="impostazioni.html">Impostazioni</a></nav></header>
+  <section class="purchases-notice settings-strip"><div><span class="eyebrow">Recupero quantità</span><strong>Solo annullamenti cliente comunicati da Back Market.</strong></div><span class="safety-chip">Nessun invio automatico</span></section>
+  <p id="cancellationStatus" role="status" aria-live="polite"></p>
+
+  <section id="activationPanel" class="purchases-panel cancellation-activation" hidden>
+    <div><span class="eyebrow">Punto di partenza</span><h2>Inizia dal tuo inventario attuale</h2><p>Le cancellazioni già presenti non verranno aggiunte. Da questo momento saranno proposte soltanto le nuove righe in stato 4.</p></div>
+    <button id="activateCancellations" type="button">Attiva da adesso</button>
+  </section>
+
+  <section id="cancellationWorkspace" hidden>
+    <div class="cancellation-commandbar">
+      <div><button id="syncCancellations" type="button">Cerca nuovi annullamenti</button><span id="lastSync" class="work-muted"></span></div>
+      <div class="cancellation-counts"><span><strong id="pendingCount">0</strong> da ripristinare</span><span><strong id="assignedCount">0</strong> già inseriti</span></div>
+    </div>
+
+    <section class="purchases-panel cancellations-panel">
+      <div class="cancellations-panel-head"><div><h2>Annullamenti cliente</h2><p>Seleziona le righe da raggruppare in un unico ordine di ripristino quantità.</p></div><button id="createRestore" type="button" disabled>Crea ordine di ripristino</button></div>
+      <form id="cancellationFilters" class="purchase-filters cancellation-filters">
+        <label>Cerca<input id="cancellationQuery" type="search" placeholder="Ordine, orderline, SKU o prodotto"></label>
+        <label>Dal<input id="cancellationFrom" type="date"></label>
+        <label>Al<input id="cancellationTo" type="date"></label>
+        <label>Stato<select id="cancellationState"><option value="pending">Da ripristinare</option><option value="assigned">Inseriti in un ordine</option><option value="all">Tutti</option></select></label>
+        <button type="submit">Applica filtri</button><button id="cancellationReset" type="button" class="secondary">Reimposta</button>
+      </form>
+      <div id="cancellationResults"></div><button id="cancellationMore" type="button" class="secondary" hidden>Carica altri</button>
+    </section>
+  </section>
+</main></body></html>

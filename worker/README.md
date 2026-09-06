@@ -14,6 +14,7 @@ I valori non devono essere salvati nel repository:
 
 - `GET /health`: stato della configurazione, senza mostrare i valori dei segreti.
 - `GET /api/catalog`: scarica tutte le inserzioni del merchant, seguendo la paginazione.
+- `GET /api/orders/diagnostic?days=7`: verifica in sola lettura gli ordini modificati nella finestra richiesta (1-90 giorni), senza salvare dati né mostrare dati cliente.
 - `GET /api/backbox/:listingId`: legge le BuyBox di tutti i mercati per una singola inserzione.
 - `GET /api/listings/:listingId?market=IT`: legge prezzo, minimo e quantità della singola inserzione nel mercato scelto.
 - `POST /api/listings/:listingId`: aggiorna quantità globale oppure prezzo minimo e target di un mercato.
@@ -126,6 +127,27 @@ automatico controllano la quantità corrente prima di ripetere la scrittura.
 I prezzi restano sempre separati: il Monitor BuyBox legge `/api/purchases/costs`
 e usa il costo online nei calcoli, ma ogni invio prezzo mantiene la propria
 conferma esistente.
+
+## Ripristino annullamenti cliente
+
+La migrazione `0005_client_cancellations.sql` aggiunge il monitoraggio
+incrementale delle righe ordine Back Market in stato `4`, gli ordini
+`quantity_only` e il relativo registro di lavorazione. Lo stato `5` e tutti gli
+altri stati vengono esclusi.
+
+- `POST /api/cancellations/activate` fissa il punto di partenza senza importare
+  lo storico e senza interrogare Back Market;
+- `POST /api/cancellations/sync` legge soltanto gli ordini modificati dal checkpoint
+  precedente, segue la paginazione a blocchi e salva le righe `4` deduplicandole
+  per `orderline_id`;
+- `GET /api/cancellations/items` espone ricerca, date e stato di lavorazione;
+- `POST /api/cancellations/restore` raggruppa gli SKU uguali e crea un solo ordine
+  “Ripristino annullamenti cliente”.
+
+Sincronizzazione e creazione dell’ordine non effettuano scritture su Back Market.
+Gli ordini compaiono nella pagina Acquisti senza costi e vengono inviati, oppure
+segnati come già gestiti manualmente, soltanto dalla lavorazione separata e dopo
+conferma. Una cancellazione già assegnata non può essere riutilizzata.
 
 ## Impostazioni online
 

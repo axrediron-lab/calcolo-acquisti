@@ -22,7 +22,7 @@ test("la Home gestisce l’unico accesso e le pagine protette vi ritornano", () 
   assert.match(auth, /\/api\/purchases\/status/);
   assert.match(auth, /sessionStorage\.setItem/);
   assert.match(guard, /index\.html\?return=/);
-  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","impostazioni.html","calcolo-completo.html","calcolo-light.html"]) {
+  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","annullamenti.html","impostazioni.html","calcolo-completo.html","calcolo-light.html"]) {
     assert.match(read(file), /app-auth-guard\.js/, file);
   }
 });
@@ -104,6 +104,7 @@ test("la lavorazione separa costo, quantità e prezzi con conferma esplicita", (
   assert.match(script, /compactProcessingLabel/);
   assert.match(script, /Quantità manuale/);
   assert.match(script, /&order=/);
+  assert.match(script, /!listing\|\|!Number\.isSafeInteger\(listing\.quantity\)/);
   assert.match(read("buybox.js"), /\/api\/purchases\/costs/);
 });
 
@@ -127,6 +128,24 @@ test("Acquisti filtra gli ordini per periodo e lavorazione", () => {
   assert.match(script, /params\.set\("status",historyState\)/);
   assert.match(script, /Completato/);
   assert.match(script, /Dettagli/);
+});
+
+test("Ordini cancellati crea solo ripristini quantità con conferma separata", () => {
+  const home = read("index.html");
+  const html = read("annullamenti.html");
+  const script = read("annullamenti.js");
+  const work = read("lavorazione.js");
+  assert.match(home, /href="annullamenti\.html"/);
+  assert.match(html, /Solo annullamenti cliente/);
+  assert.match(html, /Nessun invio automatico/);
+  assert.match(html, /Attiva da adesso/);
+  assert.match(script, /\/api\/cancellations\/sync/);
+  assert.match(script, /\/api\/cancellations\/restore/);
+  assert.match(script, /orderline_ids/);
+  assert.match(script, /non modifica prezzi o costi/);
+  assert.match(work, /document_type==="quantity_only"/);
+  assert.match(work, /Aggiungi quantità automaticamente/);
+  assert.doesNotMatch(html, /<style\b|\sstyle=/i);
 });
 
 test("Abbinamenti è un archivio compatto senza scorciatoia BuyBox", () => {
@@ -232,7 +251,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
 });
 
 test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
-  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js"];
+  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js", "annullamenti.html", "annullamenti.js"];
   for (const file of publicFiles) {
     const content = read(file);
     assert.doesNotMatch(content, /BACKMARKET_TOKEN\s*[:=]\s*["'][^"']+/i, file);
@@ -248,6 +267,7 @@ test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () =>
     "calcolo-completo.html",
     "impostazioni.html",
     "lavorazione.html",
+    "annullamenti.html",
   ];
   const protectedScripts = [
     "acquisti.js",
@@ -255,6 +275,7 @@ test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () =>
     "calcolo-completo.js",
     "impostazioni.js",
     "lavorazione.js",
+    "annullamenti.js",
   ];
 
   for (const file of protectedPages) {
@@ -282,6 +303,7 @@ test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
     "calcolo-light.html",
     "impostazioni.html",
     "lavorazione.html",
+    "annullamenti.html",
     "verifica-drive.html",
   ];
 

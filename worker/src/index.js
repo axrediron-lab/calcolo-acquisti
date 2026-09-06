@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { DriveError, drivePreview, driveStatus } from "./drive.js";
 import { PurchaseError } from "./ready-csv.js";
 import { purchaseRoute } from "./purchases.js";
+import { CancellationError, cancellationRoute } from "./cancellations.js";
 import { refreshExchangeRates, SettingsError, settingsRoute } from "./settings.js";
 
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
@@ -9,6 +10,7 @@ const CATALOG_TTL_SECONDS = 300;
 const BACKBOX_TTL_SECONDS = 60;
 const EMPTY_BACKBOX_TTL_SECONDS = 8;
 const MAX_CATALOG_PAGES = 100;
+const MAX_ORDER_DIAGNOSTIC_PAGES = 10;
 const MAX_REQUEST_BYTES = 16 * 1024;
 const MARKET_CONFIG = Object.freeze({
   IT: { locale: "it-it", currency: "EUR" },
@@ -363,6 +365,207 @@ async function updateListingResponse(request, listingId, env) {
   return jsonResponse({ ok: true, market: update.market, listing });
 }
 
+function diagnosticPageResponse() {
+  const html = `<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Verifica ordini Back Market</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#0b172a;background:#f3f7fb}
+    *{box-sizing:border-box}body{margin:0;padding:32px 18px}.card{max-width:820px;margin:auto;background:#fff;border:1px solid #d7e2ee;border-radius:22px;padding:28px;box-shadow:0 18px 48px rgba(29,55,86,.1)}
+    .eyebrow{margin:0 0 6px;color:#086796;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}h1{font-size:30px;line-height:1.15;margin:0 0 8px}p{color:#526985;line-height:1.5}label{display:block;font-weight:750;margin:18px 0 7px}input{width:100%;min-height:46px;border:1px solid #c9d8e7;border-radius:12px;padding:10px 12px;font:inherit}button{margin-top:20px;border:0;border-radius:12px;background:#086b9f;color:#fff;font:inherit;font-weight:800;padding:13px 18px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}.notice{border-left:4px solid #0877ac;background:#eaf6fc;padding:12px 14px;color:#17334c}pre{display:none;white-space:pre-wrap;overflow-wrap:anywhere;background:#f6f9fc;border:1px solid #d7e2ee;border-radius:14px;padding:16px;margin-top:22px;font-size:13px;line-height:1.5}.error{color:#a12a20}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="eyebrow">Diagnosi in sola lettura</p>
+    <h1>Verifica ordini Back Market</h1>
+    <p class="notice">Non salva dati, non crea ordini e non modifica quantità o prezzi.</p>
+    <form id="diagnosticForm">
+      <label for="accessKey">Codice di accesso</label>
+      <input id="accessKey" type="password" autocomplete="off" required>
+      <label for="days">Intervallo in giorni</label>
+      <input id="days" type="number" min="1" max="90" value="7" required>
+      <button id="submitButton" type="submit">Esegui verifica</button>
+    </form>
+    <pre id="result" aria-live="polite"></pre>
+  </main>
+  <script>
+    const form=document.getElementById("diagnosticForm"),result=document.getElementById("result"),button=document.getElementById("submitButton");
+    form.addEventListener("submit",async event=>{
+      event.preventDefault();button.disabled=true;result.style.display="block";result.className="";result.textContent="Lettura in corso…";
+      const key=document.getElementById("accessKey").value,days=document.getElementById("days").value;
+      try{
+        const response=await fetch("/api/orders/diagnostic?days="+encodeURIComponent(days),{headers:{"X-App-Key":key,"Accept":"application/json"},cache:"no-store",credentials:"omit"});
+        const payload=await response.json();
+        if(!response.ok)throw new Error(payload.error||"Verifica non riuscita");
+        result.textContent=JSON.stringify(payload,null,2);
+      }catch(error){result.className="error";result.textContent=error.message||"Verifica non riuscita"}
+      finally{document.getElementById("accessKey").value="";button.disabled=false}
+    });
+  </script>
+</body>
+</html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "private, no-store",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
+
+function diagnosticDays(url) {
+  const raw = String(url.searchParams.get("days") || "7");
+  if (!/^\d{1,2}$/.test(raw)) {
+    throw new HttpError(400, "Intervallo diagnostico non valido", "INVALID_DIAGNOSTIC_WINDOW");
+  }
+  const days = Number(raw);
+  if (!Number.isSafeInteger(days) || days < 1 || days > 90) {
+    throw new HttpError(400, "L’intervallo deve essere compreso tra 1 e 90 giorni", "INVALID_DIAGNOSTIC_WINDOW");
+  }
+  return days;
+}
+
+function cancellationActorEntries(value, path = "", depth = 0) {
+  if (!value || typeof value !== "object" || depth > 5) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap(item => cancellationActorEntries(item, `${path}[]`, depth + 1));
+  }
+  const matches = [];
+  for (const [key, nested] of Object.entries(value)) {
+    const nextPath = path ? `${path}.${key}` : key;
+    const normalizedKey = key.toLowerCase().replace(/[^a-z]/g, "");
+    if (normalizedKey === "canceledby" || normalizedKey === "cancelledby") {
+      matches.push({ path: nextPath, value: nested });
+    } else if (nested && typeof nested === "object") {
+      matches.push(...cancellationActorEntries(nested, nextPath, depth + 1));
+    }
+  }
+  return matches;
+}
+
+function actorCategory(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return "missing";
+  if (normalized.includes("client") || normalized.includes("customer")) return "client";
+  if (normalized.includes("merchant") || normalized.includes("marchant")) return "merchant";
+  return "other";
+}
+
+function diagnosticSample(order, orderline, actorEntries) {
+  return {
+    order_id: order?.order_id ?? null,
+    orderline_id: orderline?.id ?? null,
+    listing: String(orderline?.listing || "").slice(0, 160),
+    product: String(orderline?.product || "").slice(0, 240),
+    quantity: Number.isFinite(Number(orderline?.quantity)) ? Number(orderline.quantity) : null,
+    order_modified_at: order?.date_modification || null,
+    orderline_created_at: orderline?.date_creation || null,
+    canceled_by: actorEntries.length ? String(actorEntries[0].value ?? "").slice(0, 80) : null,
+  };
+}
+
+export async function fetchOrdersDiagnostic(url, env) {
+  const days = diagnosticDays(url);
+  const requestedAt = new Date();
+  const from = new Date(requestedAt.getTime() - days * 24 * 60 * 60 * 1000);
+  const firstPage = absoluteBackMarketUrl("/ws/orders", env);
+  firstPage.searchParams.set("date_modification", from.toISOString());
+  firstPage.searchParams.set("page-size", "50");
+
+  let nextUrl = firstPage;
+  let pages = 0;
+  let reportedCount = null;
+  let ordersRead = 0;
+  let orderlinesRead = 0;
+  let latestModifiedAt = null;
+  const states = {};
+  const actorPaths = new Set();
+  const orderlineFields = new Set();
+  const actors = { client: 0, merchant: 0, other: 0, missing: 0 };
+  const samples = [];
+
+  while (nextUrl && pages < MAX_ORDER_DIAGNOSTIC_PAGES) {
+    const payload = await backMarketJson(nextUrl, env);
+    const orders = Array.isArray(payload.results) ? payload.results : [];
+    if (Number.isFinite(Number(payload.count))) reportedCount = Number(payload.count);
+
+    for (const order of orders) {
+      ordersRead += 1;
+      const modifiedAt = typeof order?.date_modification === "string" ? order.date_modification : null;
+      if (modifiedAt && (!latestModifiedAt || modifiedAt > latestModifiedAt)) latestModifiedAt = modifiedAt;
+      const orderlines = Array.isArray(order?.orderlines) ? order.orderlines : [];
+      for (const orderline of orderlines) {
+        orderlinesRead += 1;
+        Object.keys(orderline || {}).forEach(field => orderlineFields.add(field));
+        const state = String(orderline?.state ?? "missing");
+        states[state] = (states[state] || 0) + 1;
+        if (state !== "4") continue;
+
+        const actorEntries = cancellationActorEntries(orderline);
+        actorEntries.forEach(entry => actorPaths.add(entry.path));
+        if (!actorEntries.length) actors.missing += 1;
+        else actors[actorCategory(actorEntries[0].value)] += 1;
+        if (samples.length < 10) samples.push(diagnosticSample(order, orderline, actorEntries));
+      }
+    }
+
+    nextUrl = payload.next ? absoluteBackMarketUrl(payload.next, env) : null;
+    pages += 1;
+  }
+
+  return {
+    read_only: true,
+    persisted: false,
+    backmarket_modified: false,
+    requested_at: requestedAt.toISOString(),
+    window: { days, from: from.toISOString(), to: requestedAt.toISOString() },
+    upstream: {
+      reported_orders: reportedCount,
+      pages_read: pages,
+      orders_read: ordersRead,
+      orderlines_read: orderlinesRead,
+      complete: !nextUrl,
+      latest_modified_at: latestModifiedAt,
+    },
+    orderline_states: states,
+    cancellations_state_4: {
+      count: states["4"] || 0,
+      canceled_by_field_present: actorPaths.size > 0,
+      actor_paths: [...actorPaths].sort(),
+      actors,
+      samples,
+    },
+    observed_orderline_fields: [...orderlineFields].sort(),
+  };
+}
+
+async function ordersDiagnosticResponse(url, env) {
+  return jsonResponse(await fetchOrdersDiagnostic(url, env));
+}
+
+async function fetchCancellationOrdersPage(input, env) {
+  let upstream;
+  if (input.nextUrl) {
+    upstream = absoluteBackMarketUrl(input.nextUrl, env);
+  } else {
+    upstream = absoluteBackMarketUrl("/ws/orders", env);
+    upstream.searchParams.set("date_modification", input.modifiedFrom);
+    upstream.searchParams.set("page-size", String(input.pageSize || 50));
+  }
+  const payload = await backMarketJson(upstream, env);
+  return {
+    ...payload,
+    next: payload.next ? absoluteBackMarketUrl(payload.next, env).href : null,
+  };
+}
+
 async function updateListingQuantity(listingId, quantity, env) {
   if (!validListingId(listingId) || !Number.isSafeInteger(quantity) || quantity < 0) {
     throw new HttpError(400, "Quantità non valida", "INVALID_QUANTITY");
@@ -405,10 +608,29 @@ export async function handleRequest(request, env, ctx = {}) {
     let response;
     if (url.pathname === "/health" && ["GET", "HEAD"].includes(request.method)) {
       response = jsonResponse({ ok: true, configured: configurationStatus(env) });
+    } else if (url.pathname === "/diagnostic-orders" && ["GET", "HEAD"].includes(request.method)) {
+      response = diagnosticPageResponse();
     } else if (url.pathname === "/api/settings" || url.pathname.startsWith("/api/settings/")) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);
       response = jsonResponse(await settingsRoute(request, url, env));
+    } else if (url.pathname.startsWith("/api/cancellations/")) {
+      if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
+      assertAuthorized(request, env);
+      response = jsonResponse(await cancellationRoute(request, url, env, {
+        fetchOrdersPage: input => {
+          assertConfigured(env);
+          return fetchCancellationOrdersPage(input, env);
+        },
+        loadListing: listingId => {
+          assertConfigured(env);
+          return backMarketJson(absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env), env, { locale: "it-it" });
+        },
+        updateQuantity: (listingId, quantity) => {
+          assertConfigured(env);
+          return updateListingQuantity(listingId, quantity, env);
+        },
+      }));
     } else if (url.pathname.startsWith("/api/purchases/") || url.pathname === "/api/mappings" || url.pathname.startsWith("/api/mappings/")) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);
@@ -432,6 +654,8 @@ export async function handleRequest(request, env, ctx = {}) {
       assertAuthorized(request, env);
       if (url.pathname === "/api/catalog" && ["GET", "HEAD"].includes(request.method)) {
         response = await catalogResponse(url, env, ctx);
+      } else if (url.pathname === "/api/orders/diagnostic" && ["GET", "HEAD"].includes(request.method)) {
+        response = await ordersDiagnosticResponse(url, env);
       } else if (url.pathname.startsWith("/api/backbox/") && ["GET", "HEAD"].includes(request.method)) {
         const listingId = decodeURIComponent(url.pathname.slice("/api/backbox/".length));
         response = await backboxResponse(url, listingId, env, ctx);
@@ -451,7 +675,7 @@ export async function handleRequest(request, env, ctx = {}) {
       ? new Response(null, { status: finalResponse.status, headers: finalResponse.headers })
       : finalResponse;
   } catch (error) {
-    if (error instanceof DriveError || error instanceof PurchaseError || error instanceof SettingsError) error = new HttpError(error.status, error.publicMessage, error.code);
+    if (error instanceof DriveError || error instanceof PurchaseError || error instanceof SettingsError || error instanceof CancellationError) error = new HttpError(error.status, error.publicMessage, error.code);
     const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof HttpError ? error.publicMessage : "Errore interno del servizio";
     const code = error instanceof HttpError ? error.code : "INTERNAL_ERROR";

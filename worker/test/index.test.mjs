@@ -75,6 +75,103 @@ test("scarica tutte le pagine delle listings usando soltanto GET", async () => {
   }
 });
 
+test("espone la pagina diagnostica senza incorporare credenziali", async () => {
+  const response = await handleRequest(new Request("https://worker.test/diagnostic-orders"), env);
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("Content-Type"), /text\/html/);
+  assert.match(response.headers.get("Content-Security-Policy"), /connect-src 'self'/);
+  assert.match(html, /Verifica ordini Back Market/);
+  assert.match(html, /\/api\/orders\/diagnostic/);
+  assert.doesNotMatch(html, /test-token|a-long-test-access-key|test@example/);
+});
+
+test("la diagnosi ordini legge solo la finestra richiesta e non salva dati", async () => {
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), options });
+    const pageTwo = String(url).includes("page=2");
+    return new Response(JSON.stringify(pageTwo ? {
+      count: 2,
+      next: null,
+      results: [{
+        order_id: 102,
+        date_modification: "2026-09-06T11:00:00Z",
+        orderlines: [{ id: 1002, state: 5, listing: "SKU-B", product: "Prodotto B", quantity: 1 }],
+      }],
+    } : {
+      count: 2,
+      next: "/ws/orders?page=2&date_modification=2026-08-30T12%3A00%3A00.000Z&page-size=50",
+      results: [{
+        order_id: 101,
+        date_modification: "2026-09-06T10:00:00Z",
+        orderlines: [{ id: 1001, state: 4, listing: "SKU-A", product: "Prodotto A", quantity: 2, canceled_by: "Client" }],
+      }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  const response = await handleRequest(new Request("https://worker.test/api/orders/diagnostic?days=7", {
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.read_only, true);
+  assert.equal(payload.persisted, false);
+  assert.equal(payload.backmarket_modified, false);
+  assert.equal(payload.upstream.pages_read, 2);
+  assert.equal(payload.upstream.orders_read, 2);
+  assert.equal(payload.orderline_states[4], 1);
+  assert.equal(payload.orderline_states[5], 1);
+  assert.equal(payload.cancellations_state_4.canceled_by_field_present, true);
+  assert.equal(payload.cancellations_state_4.actors.client, 1);
+  assert.equal(payload.cancellations_state_4.samples[0].orderline_id, 1001);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].url, /\/ws\/orders\?/);
+  assert.match(calls[0].url, /date_modification=/);
+  assert.match(calls[0].url, /page-size=50/);
+  for (const call of calls) assert.equal(call.options.method, "GET");
+});
+
+test("la diagnosi ordini non espone indirizzi o il payload completo", async () => {
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    count: 1,
+    next: null,
+    results: [{
+      order_id: 101,
+      date_modification: "2026-09-06T10:00:00Z",
+      shipping_address: { firstName: "Mario", lastName: "Rossi", street: "Via privata" },
+      orderlines: [{ id: 1001, state: 4, listing: "SKU-A", product: "Prodotto A", quantity: 1 }],
+    }],
+  }), { status: 200, headers: { "Content-Type": "application/json" } });
+
+  const response = await handleRequest(new Request("https://worker.test/api/orders/diagnostic?days=7", {
+    headers: { "X-App-Key": env.APP_ACCESS_KEY },
+  }), env);
+  const text = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.doesNotMatch(text, /Mario|Rossi|Via privata|shipping_address/);
+});
+
+test("la diagnosi ordini rifiuta finestre e metodi non consentiti", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => { calls += 1; return new Response("{}"); };
+  const headers = { "X-App-Key": env.APP_ACCESS_KEY };
+
+  const invalid = await handleRequest(new Request("https://worker.test/api/orders/diagnostic?days=365", { headers }), env);
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).code, "INVALID_DIAGNOSTIC_WINDOW");
+
+  const post = await handleRequest(new Request("https://worker.test/api/orders/diagnostic", { method: "POST", headers }), env);
+  assert.equal(post.status, 404);
+  assert.equal(calls, 0);
+});
+
 test("legge la BackBox della singola listing e inoltra il mercato", async () => {
   let capturedUrl = "";
   globalThis.fetch = async (url) => {

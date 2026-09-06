@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { parseReady, reject, hash } from "./ready-csv.js";
 import { drivePreview } from "./drive.js";
+import { processQuantityOrderItem, workQuantityOrder } from "./cancellations.js";
 
 const MAX_BODY = 3 * 1024 * 1024;
 const MAX_DOC_BYTES = 600 * 1024;
@@ -265,10 +266,16 @@ export async function purchaseRoute(request, url, env, operationInput) {
   const path = url.pathname;
   if (request.method === "GET") {
     if (path === "/api/purchases/status") {
-      const row = await database.prepare("SELECT count(*) AS documents FROM purchase_documents").first();
-      return { configured: true, documents: row.documents, document_save_writes_stock: false, processing_quantity_writes_enabled: true };
+      const [purchases, restorations] = await Promise.all([
+        database.prepare("SELECT count(*) AS documents FROM purchase_documents").first(),
+        database.prepare("SELECT count(*) AS documents FROM quantity_orders").first(),
+      ]);
+      return { configured: true, documents: Number(purchases.documents) + Number(restorations.documents), purchase_documents: purchases.documents, quantity_orders: restorations.documents, document_save_writes_stock: false, processing_quantity_writes_enabled: true };
     }
-    if (path === "/api/purchases/work") return workDocument(url.searchParams.get("key") || "", env);
+    if (path === "/api/purchases/work") {
+      const key = url.searchParams.get("key") || "";
+      return await workQuantityOrder(key, env) || workDocument(key, env);
+    }
     if (path === "/api/purchases/costs") {
       const { results } = await database.prepare("SELECT listing_id,sku_snapshot,average_cost_cents,revision,updated_at FROM product_costs ORDER BY listing_id LIMIT 5000").all();
       return { results };
@@ -276,18 +283,26 @@ export async function purchaseRoute(request, url, env, operationInput) {
     if (path === "/api/purchases/documents") {
       const { q, offset, from, to, status } = searchParams(url);
       const { results } = await database.prepare(`SELECT * FROM (
-        SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,
+        SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,'purchase' AS document_type,'Ordine Ready' AS document_label,
           (SELECT count(DISTINCT json_extract(j.value,'$.mapping.listing_id')) FROM json_each(lines_json) j) AS item_count,
           (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key) AS processed_items,
           (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key AND p.quantity_status IN ('pending','applying')) AS pending_items
         FROM purchase_documents WHERE instr(document_number,?)>0 OR instr(references_json,?)>0
+        UNION ALL
+        SELECT order_key,order_number,document_date,line_count,units,NULL,created_at,'not_sent',order_type,title,line_count,
+          (SELECT count(*) FROM quantity_order_processing p WHERE p.order_key=quantity_orders.order_key),
+          (SELECT count(*) FROM quantity_order_processing p WHERE p.order_key=quantity_orders.order_key AND p.quantity_status='applying')
+        FROM quantity_orders WHERE instr(order_number,?)>0 OR instr(lower(title),lower(?))>0
       ) WHERE (?='' OR document_date>=?) AND (?='' OR document_date<=?)
         AND (?='all' OR (?='pending' AND (processed_items<item_count OR pending_items>0)) OR (?='done' AND processed_items>=item_count AND pending_items=0))
-        ORDER BY document_date DESC,document_key LIMIT 51 OFFSET ?`).bind(q, q, from, from, to, to, status, status, status, offset).all();
+        ORDER BY document_date DESC,document_key LIMIT 51 OFFSET ?`).bind(q, q, q, q, from, from, to, to, status, status, status, offset).all();
       return { results: results.slice(0, 50), next_offset: results.length > 50 ? offset + 50 : null };
     }
     if (path === "/api/purchases/document") {
-      const saved = await database.prepare("SELECT * FROM purchase_documents WHERE document_key=?").bind(url.searchParams.get("key") || "").first();
+      const key = url.searchParams.get("key") || "";
+      const quantityOrder = await workQuantityOrder(key, env);
+      if (quantityOrder) return { ...quantityOrder.document, lines: quantityOrder.items, row_count: quantityOrder.items.length, units: quantityOrder.items.reduce((sum, item) => sum + item.incoming_quantity, 0), total_cents: null };
+      const saved = await database.prepare("SELECT * FROM purchase_documents WHERE document_key=?").bind(key).first();
       if (!saved) reject("DOCUMENT_NOT_FOUND", "Documento non trovato", 404);
       return { ...saved, source: JSON.parse(saved.source_json), references: JSON.parse(saved.references_json), lines: JSON.parse(saved.lines_json), source_json: undefined, references_json: undefined, lines_json: undefined };
     }
@@ -306,7 +321,12 @@ export async function purchaseRoute(request, url, env, operationInput) {
   if (request.method === "POST") {
     if (path === "/api/purchases/preview") return previewPurchases(await purchaseBody(request), env);
     if (path === "/api/purchases/confirm") return confirmPurchase(await purchaseBody(request), env);
-    if (path === "/api/purchases/process") return processPurchaseItem(await purchaseBody(request), env, operations);
+    if (path === "/api/purchases/process") {
+      const payload = await purchaseBody(request);
+      return String(payload.document_key || "").startsWith("cancel-")
+        ? processQuantityOrderItem(payload, env, operations)
+        : processPurchaseItem(payload, env, operations);
+    }
     if (path === "/api/mappings/save") return saveMapping(await purchaseBody(request), env, operations.loadListing);
   }
   reject("NOT_FOUND", "Operazione non disponibile", 404);
