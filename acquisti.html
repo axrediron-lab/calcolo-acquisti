@@ -5,8 +5,8 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Acquisti</title>
-  <link rel="stylesheet" href="styles.css?v=workflow-1">
-  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="acquisti.js?v=cleanup-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=ui-2">
+  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="acquisti.js?v=ui-2" defer></script>
 </head>
 <body data-mode="purchases">
   <main class="purchases-shell page-shell">
@@ -21,7 +21,7 @@
           <label>Cerca<input id="historyQuery" type="search" placeholder="Numero Ready o riferimento"></label>
           <label>Dal<input id="historyFrom" type="date"></label>
           <label>Al<input id="historyTo" type="date"></label>
-          <label>Stato<select id="historyState"><option value="pending">Da evadere</option><option value="done">Evasi</option><option value="all">Tutti</option></select></label>
+          <label>Stato<select id="historyState"><option value="pending">Da lavorare</option><option value="done">Completati</option><option value="all">Tutti</option></select></label>
           <button type="submit">Applica filtri</button>
           <button id="historyReset" type="button" class="secondary">Reimposta</button>
         </form>

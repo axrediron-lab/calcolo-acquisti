@@ -7,7 +7,7 @@
 
   var GROUP_12 = ["IT","BE","ES","FR","GR","SK"];
   var GROUP_5 = ["AT","FI","IE","NL","PT","SE"];
-  var EXCLUDED_QUALITY_KEYS = ["correct","corretto","correcto","eco","economy"];
+  var EXCLUDED_QUALITY_KEYS = ["correct","corretto","correcto","eco","economy","discreto","fair","stallone"];
 
   function finitePositive(value){ return Number.isFinite(value) && value > 0; }
   function mean(values){

@@ -552,7 +552,7 @@
   }
 
   function controlStackHtml(content,message,statusClass){
-    return '<div class="control-stack"><div class="control-main">'+content+'</div><small class="control-status '+escapeHtml(statusClass || "")+'">'+(message ? escapeHtml(message) : '&nbsp;')+'</small></div>';
+    return '<div class="control-stack'+(message?' has-status':'')+'"><div class="control-main">'+content+'</div>'+(message?'<small class="control-status '+escapeHtml(statusClass || "")+'">'+escapeHtml(message)+'</small>':'')+'</div>';
   }
 
   function purchaseFieldHtml(listing){

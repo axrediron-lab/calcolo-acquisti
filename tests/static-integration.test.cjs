@@ -50,9 +50,11 @@ test("il Calcolatore Mobile usa profili online e Personalizzato solo in sessione
   assert.doesNotMatch(script, /settingsApi\.saveOnline/);
 });
 
-test("la Home sostituisce la verifica tecnica Drive con la lavorazione ordini", () => {
+test("la Home espone soltanto destinazioni utilizzabili senza un ordine selezionato", () => {
   const html = read("index.html");
-  assert.match(html, /href="lavorazione\.html"/);
+  assert.doesNotMatch(html, /href="lavorazione\.html"/);
+  assert.match(html, /href="calcolo-completo\.html"/);
+  assert.match(html, /href="acquisti\.html"/);
   assert.doesNotMatch(html, /href="verifica-drive\.html"/);
 });
 
@@ -120,10 +122,11 @@ test("Acquisti filtra gli ordini per periodo e lavorazione", () => {
   const script = read("acquisti.js");
   assert.match(html, /id="historyFrom"/);
   assert.match(html, /id="historyTo"/);
-  assert.match(html, /value="pending">Da evadere/);
-  assert.match(html, /value="done">Evasi/);
+  assert.match(html, /value="pending">Da lavorare/);
+  assert.match(html, /value="done">Completati/);
   assert.match(script, /params\.set\("status",historyState\)/);
-  assert.match(script, /Evaso/);
+  assert.match(script, /Completato/);
+  assert.match(script, /Dettagli/);
 });
 
 test("Abbinamenti è un archivio compatto senza scorciatoia BuyBox", () => {
@@ -154,8 +157,8 @@ test("la Valutazione stock usa catalogo, profilo Acquisti e sole letture BuyBox"
   assert.match(html, /<script src="shared-settings\.js(?:\?v=[^"]+)?"><\/script>/);
   assert.match(html, /stock-valuation-core\.js/);
   assert.match(script, /resolveProfile\(state\.settings,"purchases"\)/);
-  assert.match(script, /Esclusi: Corretto · Economy/);
-  assert.match(html, /I gradi Corretto ed Eco\/Economy sono sempre esclusi/);
+  assert.match(script, /Esclusi: Corretto · Economy · Discreto · Stallone/);
+  assert.match(html, /I gradi Corretto, Eco\/Economy, Discreto e Stallone sono sempre esclusi/);
   assert.match(script, /\/api\/catalog/);
   assert.match(script, /\/api\/backbox\//);
   assert.doesNotMatch(script, /\/api\/listings\//);
@@ -218,7 +221,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.doesNotMatch(script, /<th>Invia<\/th>/);
   assert.doesNotMatch(script, /Prezzi per Paese/);
   assert.doesNotMatch(script, /class="market-panel-title"/);
-  assert.match(css, /width:\s*min\(1840px,98vw\)/);
+  assert.match(css, /width:\s*min\(1840px,calc\(100% - 40px\)\)/);
   assert.match(css, /\.product-detail-page \.market-panel\s*\{\s*width:\s*100%/);
   assert.match(css, /\.filter-dropdown-menu/);
   assert.match(css, /\.control-status/);
@@ -284,7 +287,16 @@ test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
 
   for (const file of pages) {
     const html = read(file);
-    assert.match(html, /href="styles\.css\?v=workflow-1"/, file);
+    assert.match(html, /href="styles\.css\?v=ui-2"/, file);
     assert.doesNotMatch(html, /<style\b|\sstyle=/i, file);
   }
+});
+
+test("la tipografia condivisa usa il font locale e non conserva microtesti legacy", () => {
+  const css = read("styles.css");
+  assert.match(css, /@font-face[\s\S]*InterVariable\.woff2/);
+  assert.match(css, /--font-ui:\s*"Inter Web"/);
+  assert.doesNotMatch(css, /font-size:\s*(?:9|10)px/);
+  assert.doesNotMatch(css, /font-weight:\s*(?:850|950)/);
+  assert.equal(fs.existsSync(path.join(root, "assets", "fonts", "InterVariable.woff2")), true);
 });
