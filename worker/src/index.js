@@ -168,9 +168,13 @@ function cacheAvailable() {
   return typeof caches !== "undefined" && caches && caches.default;
 }
 
-async function readCache(cacheKey) {
+async function readCachedResponse(cacheKey) {
   if (!cacheAvailable()) return null;
-  const response = await caches.default.match(new Request(cacheKey));
+  return (await caches.default.match(new Request(cacheKey))) || null;
+}
+
+async function readCache(cacheKey) {
+  const response = await readCachedResponse(cacheKey);
   if (!response) return null;
   try {
     return await response.json();
@@ -236,8 +240,8 @@ async function catalogResponse(url, env, ctx) {
   const refresh = url.searchParams.get("refresh") === "1";
   const cacheKey = "https://calcolo-cache.internal/catalog";
   if (!refresh) {
-    const cached = await readCache(cacheKey);
-    if (cached) return jsonResponse(cached);
+    const cachedResponse = await readCachedResponse(cacheKey);
+    if (cachedResponse) return cachedResponse;
   }
   const payload = await fetchCatalog(env);
   writeCache(cacheKey, payload, CATALOG_TTL_SECONDS, ctx);

@@ -40,8 +40,117 @@ test("rifiuta richieste catalogo senza codice applicativo", async () => {
   assert.equal((await response.json()).code, "ACCESS_REQUIRED");
 });
 
+test("restituisce il catalogo cached senza parse e nuova serializzazione", async () => {
+  let cachedJsonReads = 0;
+  let upstreamCalls = 0;
+  const cachedPayload = {
+    updated_at: "2026-09-06T12:00:00.000Z",
+    total: 1,
+    pages: 1,
+    results: [{ id: "listing-cached", sku: "CACHE" }],
+  };
+  globalThis.caches = {
+    default: {
+      match: async () => {
+        const response = new Response(JSON.stringify(cachedPayload), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+          },
+        });
+        response.json = async () => {
+          cachedJsonReads += 1;
+          throw new Error("Il catalogo cached non deve essere deserializzato");
+        };
+        return response;
+      },
+      put: async () => undefined,
+      delete: async () => true,
+    },
+  };
+  globalThis.fetch = async () => {
+    upstreamCalls += 1;
+    return new Response("{}");
+  };
+
+  const response = await handleRequest(new Request("https://worker.test/api/catalog", {
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), cachedPayload);
+  assert.equal(cachedJsonReads, 0);
+  assert.equal(upstreamCalls, 0);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://axrediron-lab.github.io");
+  assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+  assert.equal(response.headers.get("Content-Type"), "application/json; charset=utf-8");
+  assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
+  assert.equal(response.headers.get("Referrer-Policy"), "no-referrer");
+});
+
+test("HEAD del catalogo cached conserva status e header senza body", async () => {
+  let cachedJsonReads = 0;
+  globalThis.caches = {
+    default: {
+      match: async () => {
+        const response = new Response('{"total":1}', {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+          },
+        });
+        response.json = async () => {
+          cachedJsonReads += 1;
+          throw new Error("HEAD non deve deserializzare il catalogo cached");
+        };
+        return response;
+      },
+      put: async () => undefined,
+      delete: async () => true,
+    },
+  };
+
+  const response = await handleRequest(new Request("https://worker.test/api/catalog", {
+    method: "HEAD",
+    headers: {
+      Origin: "https://axrediron-lab.github.io",
+      "X-App-Key": env.APP_ACCESS_KEY,
+    },
+  }), env);
+
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "");
+  assert.equal(cachedJsonReads, 0);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://axrediron-lab.github.io");
+  assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+  assert.equal(response.headers.get("Content-Type"), "application/json; charset=utf-8");
+  assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
+  assert.equal(response.headers.get("Referrer-Policy"), "no-referrer");
+});
+
 test("scarica tutte le pagine delle listings usando soltanto GET", async () => {
   const calls = [];
+  let cacheReads = 0;
+  let cacheWrites = 0;
+  globalThis.caches = {
+    default: {
+      match: async () => {
+        cacheReads += 1;
+        return new Response('{"results":[{"id":"stale"}]}');
+      },
+      put: async () => { cacheWrites += 1; },
+      delete: async () => true,
+    },
+  };
   globalThis.fetch = async (url, options) => {
     calls.push({ url: String(url), options });
     const pageTwo = String(url).includes("page=2");
@@ -68,6 +177,8 @@ test("scarica tutte le pagine delle listings usando soltanto GET", async () => {
   assert.equal(payload.results.length, 2);
   assert.equal(payload.pages, 2);
   assert.equal(calls.length, 2);
+  assert.equal(cacheReads, 0);
+  assert.equal(cacheWrites, 1);
   for (const call of calls) {
     assert.equal(call.options.method, "GET");
     assert.equal(call.options.headers.Authorization, "Basic test-token");

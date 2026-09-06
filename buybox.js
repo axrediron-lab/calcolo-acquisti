@@ -4,6 +4,7 @@
   var config = window.BUYBOX_CONFIG;
   var core = window.BuyboxCore;
   var settingsApi = window.CalcoloSettings;
+  var CATALOG_PAGE_SIZE = 10;
   var state = {
     listings:[],
     settings:settingsApi.load(),
@@ -22,6 +23,7 @@
     loadingFamilies:{},
     detailListingId:new URLSearchParams(window.location.search).get("listing") || "",
     catalogScrollY:0,
+    catalogPage:1,
     updatedAt:null,
     source:"live"
   };
@@ -612,7 +614,19 @@
       '</button>'+
       '<div class="family-body"><table class="variant-table"><colgroup><col><col><col><col><col><col><col><col><col><col></colgroup><thead><tr>'+
         '<th>Prodotto</th><th>Specifiche</th><th>Quantità</th><th class="header-win">Vinte</th><th class="header-loss">Perse</th><th>Costo</th><th>Min %</th><th>Target %</th><th aria-label="Ricalcolo"></th><th aria-label="BuyBox"></th>'+
-      '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
+    '</tr></thead><tbody>'+items.map(variantRow).join("")+'</tbody></table></div></article>';
+  }
+
+  function renderCatalogPagination(totalFamilies,totalPages,pageStart,pageEnd){
+    var pagination = byId("catalogPagination");
+    if(totalFamilies <= CATALOG_PAGE_SIZE){
+      pagination.hidden = true;
+      return;
+    }
+    pagination.hidden = false;
+    byId("catalogPreviousPage").disabled = state.catalogPage <= 1;
+    byId("catalogNextPage").disabled = state.catalogPage >= totalPages;
+    byId("catalogPageSummary").textContent = "Pagina "+state.catalogPage+" di "+totalPages+" · famiglie "+(pageStart+1)+"–"+pageEnd+" di "+totalFamilies;
   }
 
   function renderCatalog(){
@@ -622,6 +636,7 @@
     document.body.classList.toggle("detail-mode",Boolean(state.detailListingId));
     byId("catalog").classList.toggle("detail-catalog",Boolean(state.detailListingId));
     if(state.detailListingId){
+      byId("catalogPagination").hidden = true;
       byId("catalog").innerHTML = detailListing
         ? productDetailHtml(detailListing)
         : state.listings.length
@@ -631,11 +646,28 @@
       bindRenderedCatalog();
       return;
     }
-    byId("resultCount").textContent = filtered.length + (filtered.length === 1 ? " inserzione" : " inserzioni");
-    byId("catalog").innerHTML = groups.map(function(group){ return familyCard(group[0],group[1]); }).join("");
+    var totalPages = Math.max(1,Math.ceil(groups.length/CATALOG_PAGE_SIZE));
+    state.catalogPage = Math.min(Math.max(1,state.catalogPage),totalPages);
+    var pageStart = (state.catalogPage-1)*CATALOG_PAGE_SIZE;
+    var pageEnd = Math.min(pageStart+CATALOG_PAGE_SIZE,groups.length);
+    var visibleGroups = groups.slice(pageStart,pageEnd);
+    byId("resultCount").textContent = filtered.length + (filtered.length === 1 ? " inserzione" : " inserzioni") + " · " + groups.length + (groups.length === 1 ? " famiglia" : " famiglie");
+    byId("catalog").innerHTML = visibleGroups.map(function(group){ return familyCard(group[0],group[1]); }).join("");
     byId("emptyState").hidden = groups.length > 0;
     if(groups.length === 0 && state.listings.length > 0){ byId("emptyMessage").textContent = "Nessuna variante corrisponde ai filtri selezionati."; }
+    renderCatalogPagination(groups.length,totalPages,pageStart,pageEnd);
     bindRenderedCatalog();
+  }
+
+  function renderCatalogFromFirstPage(){
+    state.catalogPage = 1;
+    renderCatalog();
+  }
+
+  function changeCatalogPage(delta){
+    state.catalogPage += delta;
+    renderCatalog();
+    byId("catalog").scrollIntoView({behavior:"auto",block:"start"});
   }
 
   function bindRenderedCatalog(){
@@ -1102,7 +1134,7 @@
 
   function bindStaticControls(){
     ["searchInput","brandFilter","capacityFilter","colorFilter","qualityFilter","batteryFilter"].forEach(function(id){
-      byId(id).addEventListener(id === "searchInput" ? "input" : "change",renderCatalog);
+      byId(id).addEventListener(id === "searchInput" ? "input" : "change",renderCatalogFromFirstPage);
     });
     byId("clearFilters").addEventListener("click",function(){
       byId("searchInput").value="";
@@ -1110,8 +1142,10 @@
         byId(id).value="";
         renderCustomSelect(byId(id));
       });
-      renderCatalog();
+      renderCatalogFromFirstPage();
     });
+    byId("catalogPreviousPage").addEventListener("click",function(){ changeCatalogPage(-1); });
+    byId("catalogNextPage").addEventListener("click",function(){ changeCatalogPage(1); });
     byId("refreshCatalog").addEventListener("click",function(){ loadCatalog(true); });
     window.addEventListener(settingsApi.EVENT_NAME,function(event){
       state.settings = event.detail || settingsApi.load();

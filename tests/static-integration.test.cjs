@@ -222,6 +222,11 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(script, /core\.matchesSearch/);
   assert.match(script, /initializeCustomSelects/);
   assert.match(script, /filter-dropdown-option/);
+  assert.match(html, /id="catalogPagination"/);
+  assert.match(script, /CATALOG_PAGE_SIZE\s*=\s*10/);
+  assert.match(script, /groups\.slice\(pageStart,pageEnd\)/);
+  assert.match(script, /renderCatalogFromFirstPage/);
+  assert.match(css, /\.catalog-pagination/);
   assert.match(script, /draft\.sending = true/);
   assert.match(script, /if\(askConfirmation\) renderCatalog\(\)/);
   assert.match(script, /controlStackHtml/);
@@ -309,7 +314,7 @@ test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
 
   for (const file of pages) {
     const html = read(file);
-    assert.match(html, /href="styles\.css\?v=ui-2"/, file);
+    assert.match(html, /href="styles\.css\?v=ui-3"/, file);
     assert.doesNotMatch(html, /<style\b|\sstyle=/i, file);
   }
 });

@@ -601,6 +601,50 @@
   display: block;
 }
 
+:where(.page-buybox) .catalog-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0 4px;
+}
+
+:where(.page-buybox) .catalog-pagination[hidden] {
+  display: none;
+}
+
+:where(.page-buybox) .pagination-button {
+  min-width: 112px;
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+:where(.page-buybox) .pagination-button:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+:where(.page-buybox) .pagination-button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+:where(.page-buybox) .pagination-summary {
+  min-width: 250px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+  text-align: center;
+}
+
 :where(.page-buybox) .family-card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -1371,7 +1415,8 @@
 
 :where(.page-buybox) .detail-mode .settings-strip,
 :where(.page-buybox) .detail-mode .filter-panel,
-:where(.page-buybox) .detail-mode .status-row {
+:where(.page-buybox) .detail-mode .status-row,
+:where(.page-buybox) .detail-mode .catalog-pagination {
   display: none;
 }
 
@@ -1714,6 +1759,17 @@
 
   :where(.page-buybox) .header-actions {
     display: grid;
+  }
+
+  :where(.page-buybox) .catalog-pagination {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  :where(.page-buybox) .pagination-summary {
+    grid-column: 1/-1;
+    grid-row: 1;
+    min-width: 0;
   }
 }
 
