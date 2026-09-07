@@ -5,13 +5,13 @@
   var core=window.BuyboxCore;
   var SESSION_KEY="mobile_calculator_session_v1";
   var CUSTOM_FIELDS=["fee12","fee5","investorFee","storfundFee","paymentFee","importFee","shipping","shippingItaly","minimumMargin","targetMargin"];
-  var state={settings:settingsApi.load(),profileId:"backmarket",custom:{},customFromSession:false,profile:null};
+  var state={settings:settingsApi.load(),profileId:"backmarket",custom:{},customFromSession:false,profile:null,conversionSource:"usd"};
 
   function byId(id){return document.getElementById(id);}
   function accessKey(){try{return sessionStorage.getItem(config.accessSessionKey)||"";}catch(error){return "";}}
   function sessionData(){try{var raw=sessionStorage.getItem(SESSION_KEY);return raw?JSON.parse(raw):{};}catch(error){return {};}}
   function saveSession(){
-    try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({profileId:state.profileId,custom:state.custom,customDirty:state.customFromSession,salePrice:byId("salePrice").value,purchasePrice:byId("purchasePrice").value,usdPrice:byId("usdPrice").value}));}catch(error){}
+    try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({profileId:state.profileId,custom:state.custom,customDirty:state.customFromSession,salePrice:byId("salePrice").value,purchasePrice:byId("purchasePrice").value,usdPrice:byId("usdPrice").value,eurPrice:byId("eurPrice").value,conversionSource:state.conversionSource}));}catch(error){}
   }
   function money(value){return Number.isFinite(value)?core.formatMoney(value,"EUR"):"—";}
   function percent(value){return Number.isFinite(value)?core.formatPercent(value):"—";}
@@ -49,7 +49,7 @@
     byId("fee12Label").textContent=decimal(numeric.fee12*100)+"%";
     byId("fee5Label").textContent=decimal(numeric.fee5*100)+"%";
     var usdRate=core.toNumber(profileValue("usdRate"));
-    byId("usdRateLabel").textContent=usdRate>0?"1 USD = "+usdRate.toFixed(4).replace(".",",")+" EUR":"Cambio non disponibile";
+    byId("usdRateLabel").textContent=usdRate>0?"1 USD = "+usdRate.toFixed(4).replace(".",",")+" EUR · 1 EUR = "+(1/usdRate).toFixed(4).replace(".",",")+" USD":"Cambio non disponibile";
   }
   function prepareCustom(){
     if(Object.keys(state.custom).length)return;
@@ -97,29 +97,35 @@
     renderMarket("5","AT",sale,purchase);
     saveSession();
   }
-  function convert(){
+  function convert(source){
     if(!state.profile)return;
-    var usd=core.toNumber(byId("usdPrice").value);
     var rate=core.toNumber(profileValue("usdRate"));
-    var converted=usd>0&&rate>0?usd*rate:null;
-    byId("eurResult").textContent=money(converted);
-    byId("useConvertedPurchase").disabled=!Number.isFinite(converted);
+    state.conversionSource=source||state.conversionSource||"usd";
+    if(state.conversionSource==="eur"){
+      var eur=core.toNumber(byId("eurPrice").value);
+      byId("usdPrice").value=eur>0&&rate>0?(eur/rate).toFixed(2).replace(".",","):"";
+    }else{
+      var usd=core.toNumber(byId("usdPrice").value);
+      byId("eurPrice").value=usd>0&&rate>0?(usd*rate).toFixed(2).replace(".",","):"";
+    }
+    byId("useConvertedPurchase").disabled=!(core.toNumber(byId("eurPrice").value)>0&&rate>0);
     saveSession();
   }
   function bind(){
     document.querySelectorAll("[data-profile]").forEach(function(button){button.addEventListener("click",function(){selectProfile(button.dataset.profile);});});
     ["salePrice","purchasePrice"].forEach(function(id){byId(id).addEventListener("input",calculate);});
-    byId("usdPrice").addEventListener("input",convert);
+    byId("usdPrice").addEventListener("input",function(){convert("usd");});
+    byId("eurPrice").addEventListener("input",function(){convert("eur");});
     document.querySelectorAll("#customProfilePanel input").forEach(function(input){input.addEventListener("input",function(){state.customFromSession=true;state.custom[input.name]=input.value;state.profile=settingsApi.resolveProfile(state.settings,"custom",state.custom);renderRules();calculate();convert();});});
     byId("useConvertedPurchase").addEventListener("click",function(){
-      var converted=core.toNumber(byId("usdPrice").value)*core.toNumber(profileValue("usdRate"));
+      var converted=core.toNumber(byId("eurPrice").value);
       if(converted<=0)return;
       byId("purchasePrice").value=converted.toFixed(2).replace(".",",");calculate();
     });
     byId("resetCalculator").addEventListener("click",function(){
       if(!confirm("Pulire i valori del calcolatore e il profilo personalizzato di questa sessione?"))return;
       try{sessionStorage.removeItem(SESSION_KEY);}catch(error){}
-      state.custom={};state.customFromSession=false;byId("salePrice").value="";byId("purchasePrice").value="";byId("usdPrice").value="";selectProfile("backmarket");
+      state.custom={};state.customFromSession=false;state.conversionSource="usd";byId("salePrice").value="";byId("purchasePrice").value="";byId("usdPrice").value="";byId("eurPrice").value="";selectProfile("backmarket");
     });
   }
   async function loadOnline(){
@@ -145,6 +151,8 @@
     byId("salePrice").value=saved.salePrice||"";
     byId("purchasePrice").value=saved.purchasePrice||"";
     byId("usdPrice").value=saved.usdPrice||"";
+    byId("eurPrice").value=saved.eurPrice||"";
+    state.conversionSource=saved.conversionSource==="eur"?"eur":"usd";
     bind();selectProfile(state.profileId);loadOnline();
   }
   start();

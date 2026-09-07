@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Centro operativo</title>
-  <link rel="stylesheet" href="styles.css?v=ui-4">
+  <link rel="stylesheet" href="styles.css?v=ui-5">
   <script src="buybox-config.js" defer></script>
   <script src="app-auth.js?v=access-1" defer></script>
 </head>
@@ -15,7 +15,7 @@
     <section class="access-card">
       <span class="eyebrow">Area riservata</span>
       <h1>Accedi al Centro operativo</h1>
-      <p>Un solo accesso per acquisti, catalogo, BuyBox e impostazioni.</p>
+      <p>Un solo accesso per carichi, catalogo, BuyBox e impostazioni.</p>
       <form id="accessLogin" autocomplete="off">
         <label for="homeAccessKey">Codice di accesso</label>
         <input id="homeAccessKey" type="password" autocomplete="off" required autofocus>
@@ -32,17 +32,23 @@
       <button id="appLogout" class="logout-button" type="button">Esci</button>
     </header>
     <section class="home-section">
-      <div class="section-heading"><h2>Operatività</h2><span>Ordini e catalogo</span></div>
+      <div class="section-heading"><h2>Carichi e ripristini</h2></div>
       <div class="home-grid primary-grid">
-        <a href="calcolo-completo.html"><span class="title">Valutazione stock</span><span class="desc">Valuta proposte fornitore per famiglia e composizione.</span></a>
-        <a href="acquisti.html"><span class="title">Acquisti</span><span class="desc">Importa gli ordini Ready e riprendi quelli da lavorare.</span></a>
+        <a href="acquisti.html"><span class="title">Carico acquisti</span><span class="desc">Importa gli ordini Ready con quantità e costi.</span></a>
+        <a href="resi.html"><span class="title">Carico resi</span><span class="desc">Prepara le quantità della merce resa e già controllata.</span></a>
         <a href="annullamenti.html"><span class="title">Ordini cancellati</span><span class="desc">Recupera le quantità degli annullamenti cliente.</span></a>
+      </div>
+    </section>
+    <section class="home-section">
+      <div class="section-heading"><h2>Prezzi e BuyBox</h2></div>
+      <div class="home-grid">
+        <a href="calcolo-completo.html"><span class="title">Valutazione stock</span><span class="desc">Valuta proposte fornitore per famiglia e composizione.</span></a>
         <a href="rilevazione-buybox.html"><span class="title">Rilevazione BuyBox</span><span class="desc">Rileva riferimenti competitivi per inserzioni esaurite.</span></a>
         <a href="buybox.html"><span class="title">Monitor BuyBox</span><span class="desc">Controlla catalogo, prezzi e BuyBox per variante.</span></a>
       </div>
     </section>
     <section class="home-section">
-      <div class="section-heading"><h2>Analisi e gestione</h2><span>Strumenti di supporto</span></div>
+      <div class="section-heading"><h2>Strumenti e configurazione</h2></div>
       <div class="home-grid">
         <a href="calcolo-light.html"><span class="title">Calcolatore Mobile</span><span class="desc">Calcolo rapido su un singolo prodotto.</span></a>
         <a href="abbinamenti.html"><span class="title">Abbinamenti</span><span class="desc">Gestisci codici Ready e inserzioni Back Market.</span></a>

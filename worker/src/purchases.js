@@ -283,13 +283,13 @@ export async function purchaseRoute(request, url, env, operationInput) {
     if (path === "/api/purchases/documents") {
       const { q, offset, from, to, status } = searchParams(url);
       const { results } = await database.prepare(`SELECT * FROM (
-        SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,'purchase' AS document_type,'Ordine Ready' AS document_label,
+        SELECT document_key,document_number,document_date,row_count,units,total_cents,recorded_at,stock_status,'purchase' AS document_type,NULL AS document_subtype,'Ordine Ready' AS document_label,
           (SELECT count(DISTINCT json_extract(j.value,'$.mapping.listing_id')) FROM json_each(lines_json) j) AS item_count,
           (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key) AS processed_items,
           (SELECT count(*) FROM purchase_processing p WHERE p.document_key=purchase_documents.document_key AND p.quantity_status IN ('pending','applying')) AS pending_items
         FROM purchase_documents WHERE instr(document_number,?)>0 OR instr(references_json,?)>0
         UNION ALL
-        SELECT order_key,order_number,document_date,line_count,units,NULL,created_at,'not_sent',order_type,title,line_count,
+        SELECT order_key,order_number,document_date,line_count,units,NULL,created_at,'not_sent',order_type,source_type,title,line_count,
           (SELECT count(*) FROM quantity_order_processing p WHERE p.order_key=quantity_orders.order_key),
           (SELECT count(*) FROM quantity_order_processing p WHERE p.order_key=quantity_orders.order_key AND p.quantity_status='applying')
         FROM quantity_orders WHERE instr(order_number,?)>0 OR instr(lower(title),lower(?))>0
@@ -323,7 +323,7 @@ export async function purchaseRoute(request, url, env, operationInput) {
     if (path === "/api/purchases/confirm") return confirmPurchase(await purchaseBody(request), env);
     if (path === "/api/purchases/process") {
       const payload = await purchaseBody(request);
-      return String(payload.document_key || "").startsWith("cancel-")
+      return /^(?:cancel|return)-/.test(String(payload.document_key || ""))
         ? processQuantityOrderItem(payload, env, operations)
         : processPurchaseItem(payload, env, operations);
     }

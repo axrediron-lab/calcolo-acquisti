@@ -4,6 +4,7 @@ import { Buffer } from "node:buffer";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const FILES_URL = "https://www.googleapis.com/drive/v3/files";
 const MAX_BYTES = 2 * 1024 * 1024;
+const PURCHASE_HEADER = '"Data";"N.Doc.";"Cod.";"Descrizione";"Quant.";"Pr.sc."';
 
 export class DriveError extends Error {
   constructor(status, code, message) {
@@ -15,12 +16,12 @@ export class DriveError extends Error {
   }
 }
 
-export function driveStatus(env) {
+export function driveStatus(env, settings = {}) {
   return {
     folder: Boolean(env.DRIVE_FOLDER_ID),
     service_account: Boolean(env.DRIVE_SERVICE_ACCOUNT_EMAIL),
     private_key: Boolean(env.DRIVE_PRIVATE_KEY),
-    file_name: env.DRIVE_FILE_NAME || "acquisti.CSV",
+    file_name: settings.fileName || env.DRIVE_FILE_NAME || "acquisti.CSV",
     read_only: true,
   };
 }
@@ -125,10 +126,11 @@ async function accessToken(env) {
   return token.access_token;
 }
 
-export async function drivePreview(env) {
+export async function drivePreview(env, settings = {}) {
   const token = await accessToken(env);
   const options = { method: "GET", headers: { Authorization: `Bearer ${token}` } };
-  const name = env.DRIVE_FILE_NAME || "acquisti.CSV";
+  const name = settings.fileName || env.DRIVE_FILE_NAME || "acquisti.CSV";
+  const expectedHeader = settings.expectedHeader || PURCHASE_HEADER;
   const escapeQuery = value => value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   const query = new URL(FILES_URL);
   query.search = new URLSearchParams({
@@ -160,7 +162,7 @@ export async function drivePreview(env) {
   try { csv = new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
   catch { csv = new TextDecoder("windows-1252").decode(bytes); }
   csv = csv.replace(/^\uFEFF/, "");
-  if (csv.split(/\r?\n/, 1)[0].trim() !== '"Data";"N.Doc.";"Cod.";"Descrizione";"Quant.";"Pr.sc."' || csv.includes("\0")) {
+  if (csv.split(/\r?\n/, 1)[0].trim() !== expectedHeader || csv.includes("\0")) {
     fail("DRIVE_INVALID_CSV", "Intestazione CSV diversa dall’esportazione Ready prevista", 422);
   }
   return {

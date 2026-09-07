@@ -90,3 +90,53 @@ export function parseReady(csv) {
   }
   return [...docs.values()];
 }
+
+export function parseReadyReturns(csv) {
+  const rows = csvRows(csv);
+  if (JSON.stringify(rows.shift()?.cells) !== JSON.stringify(["Data", "N.Doc.", "Cod.", "Descrizione", "Quant."])) {
+    reject("INVALID_HEADER", "Intestazione resi attesa: Data; N.Doc.; Cod.; Descrizione; Quant.");
+  }
+  if (!rows.length) reject("CSV_LIMIT", "Il file resi non contiene prodotti");
+
+  let loadDate = null;
+  let units = 0;
+  const grouped = new Map();
+  const sourceDocuments = new Set();
+  const fingerprintRows = [];
+  for (const { row, cells } of rows) {
+    if (cells.length !== 5) reject("INVALID_COLUMNS", `Servono cinque colonne alla riga ${row}`);
+    const [rawDate, documentRaw, codeRaw, descriptionRaw, quantityRaw] = cells.map(cell => cell.trim());
+    const currentDate = date(rawDate, row);
+    if (loadDate && currentDate !== loadDate) reject("MULTIPLE_RETURN_DATES", "Il file resi deve contenere una sola data di carico");
+    loadDate = currentDate;
+    const sourceDocument = identifier(documentRaw, row);
+    const code = identifier(codeRaw, row);
+    const description = descriptionRaw;
+    if (!description || description.length > 2000) reject("INVALID_DESCRIPTION", `Descrizione non valida alla riga ${row}`);
+    if (!/^\d+$/.test(quantityRaw) || Number(quantityRaw) < 1 || !Number.isSafeInteger(Number(quantityRaw))) {
+      reject("INVALID_QUANTITY", `Quantità non valida alla riga ${row}`);
+    }
+    const quantity = Number(quantityRaw);
+    const current = grouped.get(code) || { ready_code: code, description, quantity: 0, source_rows: [], source_documents: [] };
+    if (current.description !== description) reject("RETURN_PRODUCT_CONFLICT", `Codice ${code}: descrizioni diverse nello stesso file`);
+    current.quantity += quantity;
+    units += quantity;
+    if (!Number.isSafeInteger(current.quantity) || !Number.isSafeInteger(units)) reject("CSV_LIMIT", "Totali troppo grandi");
+    current.source_rows.push(row);
+    if (!current.source_documents.includes(sourceDocument)) current.source_documents.push(sourceDocument);
+    sourceDocuments.add(sourceDocument);
+    grouped.set(code, current);
+    fingerprintRows.push(JSON.stringify([currentDate, sourceDocument, code, description, quantity]));
+  }
+  if (grouped.size > 1000) reject("CSV_LIMIT", "Il file resi supera 1.000 articoli distinti");
+  const lines = [...grouped.values()].sort((a, b) => a.ready_code.localeCompare(b.ready_code, "it"));
+  return {
+    date: loadDate,
+    row_count: rows.length,
+    line_count: lines.length,
+    units,
+    source_documents: [...sourceDocuments].sort((a, b) => a.localeCompare(b, "it", { numeric: true })),
+    lines,
+    hash: hash(JSON.stringify([loadDate, fingerprintRows.sort()])),
+  };
+}

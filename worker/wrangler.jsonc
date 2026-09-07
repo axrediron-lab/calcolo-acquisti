@@ -19,6 +19,7 @@
   "vars": {
     "DRIVE_FOLDER_ID": "1p46QtfodU6g8piuuuUY5F0Z3GeuOZ_HZ",
     "DRIVE_FILE_NAME": "acquisti.CSV",
+    "DRIVE_RETURNS_FILE_NAME": "resi.CSV",
     "DRIVE_SERVICE_ACCOUNT_EMAIL": "importazione-acquisti@liquid-agility-466309-f5.iam.gserviceaccount.com",
     "BACKMARKET_API_BASE": "https://www.backmarket.fr",
     "BACKMARKET_USER_AGENT": "Axrediron",

@@ -4,19 +4,19 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Acquisti</title>
-  <link rel="stylesheet" href="styles.css?v=ui-4">
+  <title>Carico acquisti</title>
+  <link rel="stylesheet" href="styles.css?v=ui-5">
   <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="acquisti.js?v=ui-2" defer></script>
 </head>
 <body data-mode="purchases">
   <main class="purchases-shell page-shell">
-    <header class="topbar"><div class="heading-block"><a class="home-button" href="index.html">← Home</a><h1>Acquisti</h1></div><nav class="header-actions"><a class="secondary-button" href="annullamenti.html">Ordini cancellati</a><a class="secondary-button" href="abbinamenti.html">Abbinamenti</a><a class="secondary-button" href="impostazioni.html">Impostazioni</a><a class="secondary-button" href="buybox.html">Monitor BuyBox</a></nav></header>
+    <header class="topbar"><div class="heading-block"><a class="home-button" href="index.html">← Home</a><h1>Carico acquisti</h1></div><nav class="header-actions"><a class="secondary-button" href="resi.html">Carico resi</a><a class="secondary-button" href="annullamenti.html">Ordini cancellati</a><a class="secondary-button" href="abbinamenti.html">Abbinamenti</a><a class="secondary-button" href="impostazioni.html">Impostazioni</a></nav></header>
     <section class="purchases-notice settings-strip"><div><span class="eyebrow">Archivio online</span><strong>Documenti, costi EUR e abbinamenti pronti per il lavoro sulle BuyBox.</strong></div><span class="safety-chip">Quantità e prezzi non vengono modificati</span></section>
     <p id="purchaseStatus" role="status" aria-live="polite"></p>
     <section id="purchaseWorkspace" hidden>
       <div class="purchases-toolbar"><button id="readDrive" type="button">Leggi da Drive</button><label class="file-label">Oppure carica dal computer <input id="purchaseFile" type="file" accept=".csv,text/csv"></label></div>
       <p id="previewSource"></p><div id="purchasePreview"></div>
-      <section class="purchases-panel"><h2>Ordini</h2><p>Ordini Ready e ripristini quantità, riuniti nello stesso flusso di lavorazione.</p>
+      <section class="purchases-panel"><h2>Ordini</h2><p>Acquisti, carichi resi e ripristini quantità riuniti nello stesso flusso di lavorazione.</p>
         <form id="historySearch" class="purchase-filters">
           <label>Cerca<input id="historyQuery" type="search" placeholder="Numero Ready o riferimento"></label>
           <label>Dal<input id="historyFrom" type="date"></label>

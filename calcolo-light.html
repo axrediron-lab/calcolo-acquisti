@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Calcolatore Mobile</title>
-  <link rel="stylesheet" href="styles.css?v=ui-4">
+  <link rel="stylesheet" href="styles.css?v=ui-5">
   <script src="buybox-config.js"></script>
   <script src="app-auth-guard.js?v=access-1"></script>
 </head>
@@ -100,11 +100,12 @@
           <div><span class="eyebrow">Cambio condiviso</span><h2>Conversione fornitore</h2></div>
           <span id="usdRateLabel" class="safety-chip">1 USD = — EUR</span>
         </div>
-        <div class="mobile-main-fields">
-          <label>Prezzo fornitore USD<input id="usdPrice" type="text" inputmode="decimal" placeholder="es. 450"></label>
-          <div class="mobile-conversion-output"><span>Valore convertito</span><strong id="eurResult">—</strong></div>
+        <div class="mobile-main-fields mobile-currency-fields">
+          <label>Importo USD<input id="usdPrice" type="text" inputmode="decimal" placeholder="es. 450"></label>
+          <span class="currency-direction" aria-hidden="true">⇄</span>
+          <label>Importo EUR<input id="eurPrice" type="text" inputmode="decimal" placeholder="es. 405"></label>
         </div>
-        <button id="useConvertedPurchase" class="primary-button" type="button" disabled>Usa come costo articolo</button>
+        <button id="useConvertedPurchase" class="primary-button" type="button" disabled>Usa l’importo EUR come costo articolo</button>
         <p>Il cambio proviene dalle impostazioni online. Per aggiornarlo o passare alla gestione manuale usa la pagina Impostazioni.</p>
         <a class="secondary-button" href="impostazioni.html">Apri Impostazioni</a>
       </div>
@@ -113,6 +114,6 @@
 
   <script src="shared-settings.js?v=profiles-1"></script>
   <script src="buybox-core.js?v=mobile-1"></script>
-  <script src="calcolo-light.js?v=mobile-1"></script>
+  <script src="calcolo-light.js?v=mobile-2"></script>
 </body>
 </html>

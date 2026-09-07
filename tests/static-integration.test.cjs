@@ -22,7 +22,7 @@ test("la Home gestisce l’unico accesso e le pagine protette vi ritornano", () 
   assert.match(auth, /\/api\/purchases\/status/);
   assert.match(auth, /sessionStorage\.setItem/);
   assert.match(guard, /index\.html\?return=/);
-  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","annullamenti.html","impostazioni.html","calcolo-completo.html","calcolo-light.html","rilevazione-buybox.html"]) {
+  for (const file of ["buybox.html","acquisti.html","resi.html","abbinamenti.html","lavorazione.html","annullamenti.html","impostazioni.html","calcolo-completo.html","calcolo-light.html","rilevazione-buybox.html"]) {
     assert.match(read(file), /app-auth-guard\.js/, file);
   }
 });
@@ -47,6 +47,10 @@ test("il Calcolatore Mobile usa profili online e Personalizzato solo in sessione
   assert.match(script, /suggestedPurchaseForMargin/);
   assert.match(script, /calculateMargin/);
   assert.match(script, /sessionStorage\.setItem/);
+  assert.match(html, /id="usdPrice"/);
+  assert.match(html, /id="eurPrice"/);
+  assert.match(script, /eur\/rate/);
+  assert.match(script, /usd\*rate/);
   assert.doesNotMatch(script, /settingsApi\.saveOnline/);
 });
 
@@ -56,6 +60,26 @@ test("la Home espone soltanto destinazioni utilizzabili senza un ordine selezion
   assert.match(html, /href="calcolo-completo\.html"/);
   assert.match(html, /href="acquisti\.html"/);
   assert.doesNotMatch(html, /href="verifica-drive\.html"/);
+  assert.match(html, /href="resi\.html"/);
+  assert.match(html, /Carichi e ripristini/);
+  assert.match(html, /Prezzi e BuyBox/);
+  assert.match(html, /Strumenti e configurazione/);
+});
+
+test("Carico resi usa abbinamenti condivisi e separa salvataggio da invio quantità", () => {
+  const html = read("resi.html");
+  const script = read("resi.js");
+  const work = read("lavorazione.js");
+  assert.match(html, /Merce già controllata/);
+  assert.match(html, /Nessun costo o prezzo modificato/);
+  assert.match(script, /\/api\/returns\/preview/);
+  assert.match(script, /\/api\/returns\/confirm/);
+  assert.match(script, /\/api\/mappings\/save/);
+  assert.match(script, /Le quantità Back Market NON saranno ancora aggiornate/);
+  assert.match(work, /data-process-all/);
+  assert.match(work, /document_subtype==="ready_return"/);
+  assert.match(work, /Nessun prezzo o costo sarà modificato/);
+  assert.doesNotMatch(html, /<style\b|\sstyle=/i);
 });
 
 test("la Home e le pagine operative collegano le impostazioni online", () => {
@@ -276,7 +300,7 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
 });
 
 test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
-  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js", "annullamenti.html", "annullamenti.js", "rilevazione-buybox.html", "rilevazione-buybox.js"];
+  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js", "annullamenti.html", "annullamenti.js", "resi.html", "resi.js", "rilevazione-buybox.html", "rilevazione-buybox.js"];
   for (const file of publicFiles) {
     const content = read(file);
     assert.doesNotMatch(content, /BACKMARKET_TOKEN\s*[:=]\s*["'][^"']+/i, file);
@@ -287,6 +311,7 @@ test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
 test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () => {
   const protectedPages = [
     "acquisti.html",
+    "resi.html",
     "abbinamenti.html",
     "buybox.html",
     "calcolo-completo.html",
@@ -297,6 +322,7 @@ test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () =>
   ];
   const protectedScripts = [
     "acquisti.js",
+    "resi.js",
     "buybox.js",
     "calcolo-completo.js",
     "impostazioni.js",
@@ -332,12 +358,13 @@ test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
     "lavorazione.html",
     "annullamenti.html",
     "verifica-drive.html",
+    "resi.html",
     "rilevazione-buybox.html",
   ];
 
   for (const file of pages) {
     const html = read(file);
-    assert.match(html, /href="styles\.css\?v=ui-4"/, file);
+    assert.match(html, /href="styles\.css\?v=ui-5"/, file);
     assert.doesNotMatch(html, /<style\b|\sstyle=/i, file);
   }
 });

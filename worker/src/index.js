@@ -5,6 +5,7 @@ import { purchaseRoute } from "./purchases.js";
 import { CancellationError, cancellationRoute } from "./cancellations.js";
 import { BuyboxCaptureError, buyboxCaptureRoute } from "./buybox-capture.js";
 import { refreshExchangeRates, SettingsError, settingsRoute } from "./settings.js";
+import { returnRoute } from "./returns.js";
 
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
 const CATALOG_TTL_SECONDS = 300;
@@ -652,6 +653,10 @@ export async function handleRequest(request, env, ctx = {}) {
         updateQuantity: (listingId, quantity) => { assertConfigured(env); return updateListingQuantity(listingId, quantity, env); },
         loadBackbox: listingId => { assertConfigured(env); return loadBackboxDirect(listingId, env); },
       }));
+    } else if (url.pathname.startsWith("/api/returns/")) {
+      if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
+      assertAuthorized(request, env);
+      response = jsonResponse(await returnRoute(request, url, env));
     } else if (url.pathname.startsWith("/api/cancellations/")) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);

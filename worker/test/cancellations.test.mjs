@@ -8,7 +8,7 @@ import { purchaseRoute } from "../src/purchases.js";
 class D1Test {
   constructor() {
     this.db = new DatabaseSync(":memory:");
-    for (const name of ["0001_purchases.sql", "0002_purchase_processing.sql", "0005_client_cancellations.sql"]) this.db.exec(readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
+    for (const name of ["0001_purchases.sql", "0002_purchase_processing.sql", "0005_client_cancellations.sql", "0007_return_loads.sql"]) this.db.exec(readFileSync(new URL("../migrations/" + name, import.meta.url), "utf8"));
   }
   prepare(sql) {
     const database = this.db;

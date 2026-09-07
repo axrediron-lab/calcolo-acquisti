@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync, verify } from "node:crypto";
 import { handleRequest } from "../src/index.js";
+import { drivePreview } from "../src/drive.js";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const env = {
@@ -25,7 +26,7 @@ function request(path = "preview", headers = {}, method = "GET") {
     method, headers: { Origin: "https://site.test", "X-App-Key": env.APP_ACCESS_KEY, ...headers },
   });
 }
-function mockGoogle({ listing = { files: [file] }, content = csv, after = listing, tokenResponse } = {}) {
+function mockGoogle({ listing = { files: [file] }, content = csv, after = listing, tokenResponse, expectedName = "acquisti.CSV" } = {}) {
   const calls = [];
   let lists = 0;
   globalThis.fetch = async (input, options) => {
@@ -53,7 +54,7 @@ function mockGoogle({ listing = { files: [file] }, content = csv, after = listin
     if (url.searchParams.get("alt") === "media") return new Response(content);
     assert.equal(url.pathname, "/drive/v3/files");
     assert.match(url.searchParams.get("q"), /'folder-test' in parents/);
-    assert.match(url.searchParams.get("q"), /name = 'acquisti.CSV'/);
+    assert.match(url.searchParams.get("q"), new RegExp("name = '" + expectedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "'"));
     return json(lists++ ? after : listing);
   };
   return calls;
@@ -78,6 +79,15 @@ test("Drive: stato locale senza richieste Google, indipendente da Back Market", 
   globalThis.fetch = () => { throw new Error("Non deve usare la rete"); };
   const response = await handleRequest(request("status"), { APP_ACCESS_KEY: env.APP_ACCESS_KEY, ALLOWED_ORIGINS: env.ALLOWED_ORIGINS });
   assert.deepEqual(await response.json(), { folder: false, service_account: false, private_key: false, file_name: "acquisti.CSV", read_only: true });
+});
+
+test("Drive: può leggere il file resi con intestazione dedicata", async () => {
+  const returnsCsv='"Data";"N.Doc.";"Cod.";"Descrizione";"Quant."\r\n"07/09/2026";"3094";"13317";"Prodotto reso";"1"\r\n';
+  const returnsFile={...file,name:"resi.CSV",size:String(Buffer.byteLength(returnsCsv)),md5Checksum:createHash("md5").update(returnsCsv).digest("hex")};
+  mockGoogle({listing:{files:[returnsFile]},after:{files:[returnsFile]},content:returnsCsv,expectedName:"resi.CSV"});
+  const result=await drivePreview(env,{fileName:"resi.CSV",expectedHeader:'"Data";"N.Doc.";"Cod.";"Descrizione";"Quant."'});
+  assert.equal(result.file.name,"resi.CSV");
+  assert.equal(result.csv,returnsCsv);
 });
 
 for (const [label, req, config, status, code] of [

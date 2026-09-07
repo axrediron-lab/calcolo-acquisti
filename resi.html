@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it" class="page-purchases page-returns">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Carico resi</title>
+  <link rel="stylesheet" href="styles.css?v=ui-5">
+  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script><script src="resi.js?v=returns-1" defer></script>
+</head>
+<body>
+  <main class="purchases-shell page-shell">
+    <header class="topbar"><div class="heading-block"><a class="home-button" href="index.html">← Home</a><h1>Carico resi</h1></div><nav class="header-actions"><a class="secondary-button" href="acquisti.html">Carico acquisti</a><a class="secondary-button" href="annullamenti.html">Ordini cancellati</a><a class="secondary-button" href="abbinamenti.html">Abbinamenti</a><a class="secondary-button" href="impostazioni.html">Impostazioni</a></nav></header>
+    <section class="purchases-notice settings-strip"><div><span class="eyebrow">Merce già controllata</span><strong>Importa il file Ready e prepara un unico carico quantità.</strong></div><span class="safety-chip">Nessun costo o prezzo modificato</span></section>
+    <p id="returnStatus" role="status" aria-live="polite"></p>
+    <section id="returnWorkspace" hidden>
+      <div class="purchases-toolbar"><button id="readReturnsDrive" type="button">Leggi resi da Drive</button><label class="file-label">Oppure carica dal computer <input id="returnFile" type="file" accept=".csv,text/csv"></label></div>
+      <p id="returnPreviewSource"></p><div id="returnPreview"></div>
+      <section class="purchases-panel">
+        <div class="returns-panel-head"><div><span class="eyebrow">Archivio online</span><h2>Carichi resi salvati</h2><p>Il salvataggio non aggiorna Back Market. Apri un carico per confermare le quantità.</p></div><a class="secondary-button" href="acquisti.html">Vedi tutti gli ordini</a></div>
+        <div id="returnHistory"></div><button id="returnHistoryMore" type="button" class="secondary" hidden>Carica altri</button>
+      </section>
+    </section>
+  </main>
+  <dialog id="returnMappingDialog"><form id="returnMappingForm">
+    <h2>Abbina codice Ready</h2><p id="returnMappingContext"></p><p id="returnMappingCurrent"></p>
+    <p>Lo stesso abbinamento sarà disponibile anche nel Carico acquisti.</p>
+    <label for="returnListingSearch">Cerca SKU o descrizione Back Market</label><input id="returnListingSearch" type="search" autocomplete="off">
+    <label for="returnListingChoice">Seleziona lo SKU esatto</label><select id="returnListingChoice" size="7" required></select><small id="returnListingCount"></small>
+    <p id="returnMappingError" role="alert"></p><div class="purchases-toolbar"><button type="submit">Conferma abbinamento</button><button id="returnMappingCancel" type="button" class="secondary">Annulla</button></div>
+  </form></dialog>
+  <dialog id="returnDetailDialog"><h2 id="returnDetailTitle"></h2><div id="returnDetailContent"></div><button id="returnDetailClose" type="button">Chiudi</button></dialog>
+</body></html>

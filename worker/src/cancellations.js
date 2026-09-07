@@ -251,13 +251,14 @@ export async function workQuantityOrder(key, env) {
     FROM quantity_order_lines l LEFT JOIN quantity_order_processing p ON p.order_key=l.order_key AND p.listing_id=l.listing_id
     WHERE l.order_key=? ORDER BY l.product_snapshot,l.sku_snapshot`).bind(key).all();
   return {
-    document: { document_key: order.order_key, document_number: order.order_number, document_date: order.document_date, document_type: order.order_type, document_label: order.title },
+    document: { document_key: order.order_key, document_number: order.order_number, document_date: order.document_date, document_type: order.order_type, document_subtype: order.source_type || "client_cancellation", document_label: order.title },
     items: results.map(row => ({
       listing_id: row.listing_id,
       sku_snapshot: row.sku_snapshot,
       description: row.product_snapshot,
       incoming_quantity: row.quantity,
-      source_orderline_ids: JSON.parse(row.source_orderline_ids_json),
+      source_references: JSON.parse(row.source_orderline_ids_json),
+      source_orderline_ids: order.source_type === "ready_return" ? [] : JSON.parse(row.source_orderline_ids_json),
       processing: row.quantity_status ? {
         document_key: key,
         listing_id: row.listing_id,
@@ -289,7 +290,7 @@ export async function processQuantityOrderItem(payload, env, operations) {
   const key = text(payload.document_key);
   const listingId = text(payload.listing_id);
   const mode = text(payload.mode);
-  if (!key.startsWith("cancel-") || !/^[A-Za-z0-9-]{6,100}$/.test(listingId) || !["manual", "automatic"].includes(mode) || payload.confirm !== true || !Number.isSafeInteger(payload.expected_bm_quantity) || payload.expected_bm_quantity < 0) reject("INVALID_PROCESSING", "Scelta di lavorazione non valida");
+  if (!/^(?:cancel|return)-/.test(key) || !/^[A-Za-z0-9-]{6,100}$/.test(listingId) || !["manual", "automatic"].includes(mode) || payload.confirm !== true || !Number.isSafeInteger(payload.expected_bm_quantity) || payload.expected_bm_quantity < 0) reject("INVALID_PROCESSING", "Scelta di lavorazione non valida");
   const existing = await database.prepare("SELECT * FROM quantity_order_processing WHERE order_key=? AND listing_id=?").bind(key, listingId).first();
   if (existing) {
     if (existing.quantity_status === "applying") return completeAutomatic(existing, database, operations);

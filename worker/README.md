@@ -149,6 +149,28 @@ Gli ordini compaiono nella pagina Acquisti senza costi e vengono inviati, oppure
 segnati come già gestiti manualmente, soltanto dalla lavorazione separata e dopo
 conferma. Una cancellazione già assegnata non può essere riutilizzata.
 
+## Carico resi Ready
+
+La migrazione `0007_return_loads.sql` aggiunge i carichi resi all’archivio ordini
+`quantity_only`, mantenendoli distinti dai ripristini degli annullamenti cliente.
+Il file dedicato nella stessa cartella Drive è `resi.CSV` e contiene soltanto
+`Data; N.Doc.; Cod.; Descrizione; Quant.`.
+
+- `POST /api/returns/preview` legge Drive o un upload, raggruppa i codici Ready
+  ripetuti e usa gli stessi abbinamenti online del Carico acquisti;
+- `POST /api/returns/confirm` salva un unico carico con progressivo
+  `CR-AAAA-MM-GG-NNN`, senza chiamare Back Market;
+- `GET /api/returns/status` e `/api/returns/loads` espongono disponibilità e
+  storico dei carichi resi.
+
+Il contenuto del file impedisce doppi carichi. La lavorazione successiva riusa il
+registro idempotente delle quantità: il caricamento può essere effettuato riga per
+riga oppure con un’unica conferma e può essere ripreso dopo un’interruzione. Costi
+e prezzi non vengono mai letti dal CSV resi né modificati.
+
+Il Calcolatore Mobile converte inoltre in entrambe le direzioni USD/EUR usando lo
+stesso cambio online configurato nella pagina Impostazioni.
+
 ## Impostazioni online
 
 La migrazione `0003_online_settings.sql` aggiunge la configurazione economica
@@ -172,6 +194,3 @@ modificano prezzi o quantità.
 
 Verifiche dalla radice: `node --test tests/*.test.cjs worker/test/*.test.mjs`.
 I test usano dati sintetici e SQLite in memoria, senza modifiche in produzione.
-
-Attività successiva concordata: pulizia delle regole CSS obsolete dopo
-l'implementazione delle nuove funzionalità, mantenendo il Mobile escluso.
