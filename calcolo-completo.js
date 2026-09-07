@@ -40,6 +40,23 @@
     if(!response.ok) throw new Error(payload && payload.error ? payload.error : "Servizio non disponibile");
     return payload;
   }
+  function hasCompetitiveReference(payload){
+    return Boolean(payload && Array.isArray(payload.competitors) && payload.competitors.some(function(item){
+      if(!item || item.is_winning !== false) return false;
+      var winner=item.winner_price&&item.winner_price.amount!==undefined?item.winner_price.amount:item.winner_price;
+      var toWin=item.price_to_win&&item.price_to_win.amount!==undefined?item.price_to_win.amount:item.price_to_win;
+      return number(winner)>0 || number(toWin)>0;
+    }));
+  }
+  async function mergeStoredCaptures(listings){
+    var ids=listings.filter(function(item){return !hasCompetitiveReference(state.payloads[item.id]);}).map(function(item){return item.id;});
+    var merged=0;
+    for(var offset=0;offset<ids.length;offset+=50){
+      var data=await apiFetch("/api/buybox-captures/stock?listing_ids="+encodeURIComponent(ids.slice(offset,offset+50).join(",")));
+      Object.keys(data.results||{}).forEach(function(id){if(!hasCompetitiveReference(state.payloads[id])&&hasCompetitiveReference(data.results[id])){state.payloads[id]=data.results[id];merged+=1;}});
+    }
+    return merged;
+  }
   function euro(value){ return core.formatMoney(value,"EUR"); }
   function pct(value){ return core.formatPercent(value); }
   function number(value){ return core.toNumber(value); }
@@ -199,10 +216,12 @@
       await runQueue(missing.map(function(listing){ return async function(){ state.payloads[listing.id]=await apiFetch("/api/backbox/"+encodeURIComponent(listing.id)); }; }),4,function(done,total){
         byId("analysisProgress").textContent="Lettura BuyBox: "+done+" / "+total;
       });
+      var restoredReferences=0;
+      try{ restoredReferences=await mergeStoredCaptures(listings); }catch(captureError){ restoredReferences=0; }
       writeJson(CACHE_KEY,state.payloads);
       state.analyzedVariantKeys=keys;
       state.benchmarks=valuation.buildVariantBenchmarks(listings,state.payloads,state.profile);
-      byId("analysisProgress").textContent="BuyBox lette. I calcoli ora si aggiornano in tempo reale.";
+      byId("analysisProgress").textContent="BuyBox lette. I calcoli ora si aggiornano in tempo reale."+(restoredReferences?" "+restoredReferences+" inserzioni usano una rilevazione online ripristinata.":"");
       renderResults();
     }catch(error){
       if(error.code==="ACCESS_REQUIRED") showAccessDialog();

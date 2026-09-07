@@ -10,8 +10,9 @@
  * 05 - Acquisti e lavorazione (.page-purchases)
  * 06 - Abbinamenti (.page-mappings)
  * 07 - Valutazione stock BackMarket (.page-stock-valuation)
- * 08 - Impostazioni online (.page-settings)
- * 09 - Calcolatore Mobile (.page-mobile-calculator)
+ * 08 - Rilevazione BuyBox (.page-buybox-capture)
+ * 09 - Impostazioni online (.page-settings)
+ * 10 - Calcolatore Mobile (.page-mobile-calculator)
  *
  * :where() delimita le regole alla pagina senza aumentarne la specificita.
  * Ordine, valori e breakpoint originali sono mantenuti per preservare la resa.
@@ -64,12 +65,12 @@
   --space-6: 32px;
 }
 
-:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-settings, .page-mobile-calculator),
-:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-settings, .page-mobile-calculator) * {
+:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-buybox-capture, .page-settings, .page-mobile-calculator),
+:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-buybox-capture, .page-settings, .page-mobile-calculator) * {
   box-sizing: border-box;
 }
 
-:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-settings, .page-mobile-calculator) body {
+:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-buybox-capture, .page-settings, .page-mobile-calculator) body {
   color: var(--text);
   font-family: var(--font-ui);
   font-size: var(--type-body);
@@ -79,7 +80,7 @@
   text-rendering: optimizeLegibility;
 }
 
-:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-settings, .page-mobile-calculator) :is(button,input,select,textarea) {
+:where(.page-home, .page-buybox, .page-drive-check, .page-purchases, .page-mappings, .page-stock-valuation, .page-buybox-capture, .page-settings, .page-mobile-calculator) :is(button,input,select,textarea) {
   font: inherit;
 }
 
@@ -2230,7 +2231,70 @@
 }
 @media (max-width:430px) { :where(.page-purchases) .work-stats { grid-template-columns:1fr; } }
 
-/* 08 - Impostazioni online: stessa struttura di Acquisti e Monitor BuyBox. */
+/* 08 - Rilevazione BuyBox */
+:where(.page-buybox-capture) body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); }
+:where(.page-buybox-capture) [hidden] { display:none!important; }
+:where(.page-buybox-capture) .capture-shell { width:min(1840px,calc(100% - 40px)); margin:auto; padding:20px 0 40px; }
+:where(.page-buybox-capture) .capture-topbar, :where(.page-buybox-capture) .capture-heading, :where(.page-buybox-capture) .header-actions, :where(.page-buybox-capture) .capture-actions { display:flex; align-items:center; gap:12px; }
+:where(.page-buybox-capture) .capture-topbar { justify-content:space-between; margin-bottom:14px; }
+:where(.page-buybox-capture) .capture-heading h1 { margin:0; font-size:var(--type-page-title); line-height:1.12; letter-spacing:-.035em; }
+:where(.page-buybox-capture) .eyebrow { display:block; margin-bottom:4px; color:#36546b; font-size:var(--type-eyebrow); font-weight:800; letter-spacing:.07em; line-height:1.2; text-transform:uppercase; }
+:where(.page-buybox-capture) :is(.home-button,.secondary-button,.capture-actions button,.capture-panel-head button,.capture-listings button,.recovery-panel button,.table-link) { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:8px 13px; border:1px solid var(--line); border-radius:999px; background:#fff; color:var(--text); font:inherit; font-size:var(--type-table); font-weight:750; text-decoration:none; white-space:nowrap; cursor:pointer; }
+:where(.page-buybox-capture) :is(.capture-actions button:not(.secondary-button):not(.danger-secondary),.capture-listings [data-prepare],.recovery-panel #resumeCapture) { border-color:var(--brand); background:var(--brand); color:#fff; }
+:where(.page-buybox-capture) button:disabled { opacity:.52; cursor:not-allowed; }
+:where(.page-buybox-capture) .danger-secondary { border-color:#efb7b1!important; color:var(--bad)!important; }
+:where(.page-buybox-capture) .capture-notice { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 16px; border:1px solid #bfe2f2; border-radius:var(--radius); background:var(--brand-soft); }
+:where(.page-buybox-capture) .safety-chip { padding:6px 10px; border:1px solid #cce4f0; border-radius:999px; background:#fff; color:#244157; font-size:var(--type-small); font-weight:800; white-space:nowrap; }
+:where(.page-buybox-capture) .capture-message { min-height:22px; margin:12px 2px; color:var(--muted); font-size:var(--type-meta); font-weight:650; }
+:where(.page-buybox-capture) .capture-message[data-tone="ok"] { color:var(--ok); }
+:where(.page-buybox-capture) .capture-message[data-tone="warn"] { color:var(--warn); }
+:where(.page-buybox-capture) .capture-message[data-tone="bad"] { color:var(--bad); }
+:where(.page-buybox-capture) .capture-panel { border:1px solid var(--line); border-radius:var(--radius); background:#fff; box-shadow:var(--shadow); }
+:where(.page-buybox-capture) .recovery-panel { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:17px 19px; margin-bottom:14px; border-color:#edb7b1; background:var(--bad-soft); }
+:where(.page-buybox-capture) :is(h2,p) { margin:0; }
+:where(.page-buybox-capture) h2 { font-size:var(--type-section-title); line-height:1.2; letter-spacing:-.02em; }
+:where(.page-buybox-capture) p { color:var(--muted); }
+:where(.page-buybox-capture) .recovery-panel p, :where(.page-buybox-capture) .capture-panel-head p { margin-top:4px; font-size:var(--type-meta); }
+:where(.page-buybox-capture) .capture-layout { display:grid; grid-template-columns:minmax(430px, .78fr) minmax(620px,1.22fr); align-items:start; gap:14px; }
+:where(.page-buybox-capture) .capture-selector, :where(.page-buybox-capture) .capture-operation { padding:19px; }
+:where(.page-buybox-capture) .capture-panel-head, :where(.page-buybox-capture) .capture-job-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+:where(.page-buybox-capture) label { display:block; margin:16px 0 7px; color:#354e64; font-size:var(--type-meta); font-weight:750; }
+:where(.page-buybox-capture) input { width:100%; min-height:44px; padding:9px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; color:var(--text); }
+:where(.page-buybox-capture) input:focus { border-color:var(--brand); box-shadow:0 0 0 3px rgba(3,90,139,.12); outline:none; }
+:where(.page-buybox-capture) .capture-families { display:grid; gap:7px; max-height:460px; margin-top:10px; overflow:auto; }
+:where(.page-buybox-capture) .capture-families button { display:grid; gap:2px; width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; color:var(--text); font:inherit; text-align:left; cursor:pointer; }
+:where(.page-buybox-capture) .capture-families button:hover { border-color:#8cc7e2; background:#f5fbfe; }
+:where(.page-buybox-capture) .capture-families span, :where(.page-buybox-capture) table small { display:block; margin-top:2px; color:var(--muted); font-size:var(--type-small); font-weight:500; }
+:where(.page-buybox-capture) .capture-family-head { display:flex; align-items:center; gap:12px; padding:10px 0; }
+:where(.page-buybox-capture) .capture-family-head button { min-height:34px; padding:6px 10px; border:0; background:transparent; color:var(--brand); }
+:where(.page-buybox-capture) .capture-table-wrap, :where(.page-buybox-capture) .capture-listing-table, :where(.page-buybox-capture) .capture-history-table { overflow:auto; }
+:where(.page-buybox-capture) table { width:100%; border-collapse:collapse; font-size:var(--type-table); }
+:where(.page-buybox-capture) th { padding:9px 10px; background:#edf3f8; color:#354e64; font-size:var(--type-meta); font-weight:800; text-align:left; white-space:nowrap; }
+:where(.page-buybox-capture) td { padding:10px; border-top:1px solid var(--line); vertical-align:middle; }
+:where(.page-buybox-capture) td:last-child { text-align:right; }
+:where(.page-buybox-capture) .capture-empty { min-height:360px; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; }
+:where(.page-buybox-capture) .capture-empty h2 { margin:4px 0 6px; }
+:where(.page-buybox-capture) .capture-job-head { margin-bottom:14px; }
+:where(.page-buybox-capture) .capture-job-head p { margin-top:4px; font-size:var(--type-meta); }
+:where(.page-buybox-capture) .capture-status { display:inline-flex; padding:6px 9px; border-radius:999px; background:#eef2f6; color:#41586c; font-size:var(--type-small); font-weight:800; white-space:nowrap; }
+:where(.page-buybox-capture) .capture-status.active, :where(.page-buybox-capture) .capture-status.restore_required { background:var(--bad-soft); color:var(--bad); }
+:where(.page-buybox-capture) .capture-status.restored { background:var(--ok-soft); color:var(--ok); }
+:where(.page-buybox-capture) .capture-summary { display:grid; gap:2px; padding:12px 14px; margin:14px 0; border:1px solid #cce4f0; border-radius:13px; background:var(--brand-soft); }
+:where(.page-buybox-capture) .capture-summary span { color:#36546b; font-size:var(--type-meta); }
+:where(.page-buybox-capture) .capture-history { margin-top:14px; overflow:hidden; }
+:where(.page-buybox-capture) .capture-history>.capture-panel-head { padding:17px 19px 12px; }
+:where(.page-buybox-capture) .capture-history table td:first-child { width:60%; }
+:where(.page-buybox-capture) .table-link { min-height:34px; padding:6px 10px; color:var(--brand); }
+:where(.page-buybox-capture) .capture-empty-row { padding:22px; text-align:center; font-size:var(--type-meta); }
+:where(.page-buybox-capture) .inline-status { min-height:20px; margin-top:9px; font-size:var(--type-small); font-weight:650; }
+@media (max-width:1050px) { :where(.page-buybox-capture) .capture-layout { grid-template-columns:1fr; } }
+@media (max-width:720px) {
+  :where(.page-buybox-capture) .capture-shell { width:100%; padding:14px; }
+  :where(.page-buybox-capture) .capture-topbar, :where(.page-buybox-capture) .capture-heading, :where(.page-buybox-capture) .capture-notice, :where(.page-buybox-capture) .recovery-panel, :where(.page-buybox-capture) .capture-panel-head, :where(.page-buybox-capture) .capture-job-head { align-items:flex-start; flex-direction:column; }
+  :where(.page-buybox-capture) .capture-actions { flex-wrap:wrap; }
+}
+
+/* 09 - Impostazioni online: stessa struttura di Acquisti e Monitor BuyBox. */
 :where(.page-settings) .settings-form { display:grid; gap:16px; }
 :where(.page-settings) .settings-tabs { display:flex; gap:6px; margin:0 0 16px; padding:6px; overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:#fff; }
 :where(.page-settings) .settings-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:9px 16px; border:0; border-radius:10px; background:transparent; color:#41586c; font-size:14px; font-weight:700; white-space:nowrap; }
@@ -2280,7 +2344,7 @@
   :where(.page-settings) .settings-savebar button { width:100%; }
 }
 
-/* 09 - Calcolatore Mobile */
+/* 10 - Calcolatore Mobile */
 :where(.page-mobile-calculator) body { background:linear-gradient(180deg,#f8fbfd 0,#f4f7fb 260px); }
 :where(.page-mobile-calculator) .mobile-shell { width:min(860px,calc(100% - 28px)); padding-top:18px; }
 :where(.page-mobile-calculator) .mobile-topbar { align-items:flex-start; }

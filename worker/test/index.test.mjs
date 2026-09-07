@@ -40,6 +40,17 @@ test("rifiuta richieste catalogo senza codice applicativo", async () => {
   assert.equal((await response.json()).code, "ACCESS_REQUIRED");
 });
 
+test("protegge e instrada gli endpoint di rilevazione BuyBox", async () => {
+  let upstreamCalls = 0;
+  globalThis.fetch = async () => { upstreamCalls += 1; return new Response("{}"); };
+  const unauthorized = await handleRequest(new Request("https://worker.test/api/buybox-captures/status"), env);
+  assert.equal(unauthorized.status, 401);
+  const unavailable = await handleRequest(new Request("https://worker.test/api/buybox-captures/status", { headers: { "X-App-Key": env.APP_ACCESS_KEY } }), env);
+  assert.equal(unavailable.status, 503);
+  assert.equal((await unavailable.json()).code, "DATABASE_NOT_CONFIGURED");
+  assert.equal(upstreamCalls, 0);
+});
+
 test("restituisce il catalogo cached senza parse e nuova serializzazione", async () => {
   let cachedJsonReads = 0;
   let upstreamCalls = 0;

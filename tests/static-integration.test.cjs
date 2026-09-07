@@ -22,7 +22,7 @@ test("la Home gestisce l’unico accesso e le pagine protette vi ritornano", () 
   assert.match(auth, /\/api\/purchases\/status/);
   assert.match(auth, /sessionStorage\.setItem/);
   assert.match(guard, /index\.html\?return=/);
-  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","annullamenti.html","impostazioni.html","calcolo-completo.html","calcolo-light.html"]) {
+  for (const file of ["buybox.html","acquisti.html","abbinamenti.html","lavorazione.html","annullamenti.html","impostazioni.html","calcolo-completo.html","calcolo-light.html","rilevazione-buybox.html"]) {
     assert.match(read(file), /app-auth-guard\.js/, file);
   }
 });
@@ -180,9 +180,23 @@ test("la Valutazione stock usa catalogo, profilo Acquisti e sole letture BuyBox"
   assert.match(html, /I gradi Corretto, Eco\/Economy, Discreto e Stallone sono sempre esclusi/);
   assert.match(script, /\/api\/catalog/);
   assert.match(script, /\/api\/backbox\//);
+  assert.match(script, /\/api\/buybox-captures\/stock/);
   assert.doesNotMatch(script, /\/api\/listings\//);
   assert.doesNotMatch(script, /method\s*:\s*["']POST["']/);
   assert.doesNotMatch(html, /style=/);
+});
+
+test("la rilevazione BuyBox separa preparazione, attivazione, lettura e ripristino", () => {
+  const html = read("rilevazione-buybox.html");
+  const script = read("rilevazione-buybox.js");
+  assert.match(html, /Conferma richiesta a ogni passaggio/);
+  assert.match(html, /id="restoreNow"/);
+  assert.match(script, /\/api\/buybox-captures\/prepare/);
+  assert.match(script, /\/api\/buybox-captures\/activate/);
+  assert.match(script, /\/api\/buybox-captures\/capture/);
+  assert.match(script, /\/api\/buybox-captures\/restore/);
+  assert.match(script, /Number\(item\.quantity\)===0/);
+  assert.doesNotMatch(html, /<style\b|\sstyle=/i);
 });
 
 test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
@@ -253,10 +267,11 @@ test("la pagina BuyBox usa dati API e protegge gli aggiornamenti", () => {
   assert.match(css, /\.detail-stock \.detail-label\s*\{\s*text-align:\s*center;?\s*\}/);
   assert.doesNotMatch(css, /width:\s*min\(100%,1600px\)/);
   assert.doesNotMatch(script, /mock|demoListings|sampleProducts/i);
+  assert.doesNotMatch(script, /buybox-captures/);
 });
 
 test("nessuna credenziale Back Market è incorporata nei file pubblici", () => {
-  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js", "annullamenti.html", "annullamenti.js"];
+  const publicFiles = ["index.html", "app-auth.js", "app-auth-guard.js", "calcolo-completo.html", "calcolo-light.html", "calcolo-light.js", "buybox.html", "buybox.js", "buybox-config.js", "annullamenti.html", "annullamenti.js", "rilevazione-buybox.html", "rilevazione-buybox.js"];
   for (const file of publicFiles) {
     const content = read(file);
     assert.doesNotMatch(content, /BACKMARKET_TOKEN\s*[:=]\s*["'][^"']+/i, file);
@@ -273,6 +288,7 @@ test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () =>
     "impostazioni.html",
     "lavorazione.html",
     "annullamenti.html",
+    "rilevazione-buybox.html",
   ];
   const protectedScripts = [
     "acquisti.js",
@@ -281,6 +297,7 @@ test("l'accesso centralizzato non lascia modali o gestori login obsoleti", () =>
     "impostazioni.js",
     "lavorazione.js",
     "annullamenti.js",
+    "rilevazione-buybox.js",
   ];
 
   for (const file of protectedPages) {
@@ -310,11 +327,12 @@ test("tutte le pagine caricano il foglio stile unico aggiornato", () => {
     "lavorazione.html",
     "annullamenti.html",
     "verifica-drive.html",
+    "rilevazione-buybox.html",
   ];
 
   for (const file of pages) {
     const html = read(file);
-    assert.match(html, /href="styles\.css\?v=ui-3"/, file);
+    assert.match(html, /href="styles\.css\?v=ui-4"/, file);
     assert.doesNotMatch(html, /<style\b|\sstyle=/i, file);
   }
 });

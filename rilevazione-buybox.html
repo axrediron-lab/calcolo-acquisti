@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="it" class="page-buybox-capture">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://calcolo-acquisti-api.axrediron-lab.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Rilevazione BuyBox</title><link rel="stylesheet" href="styles.css?v=ui-4">
+  <script src="buybox-config.js"></script><script src="app-auth-guard.js?v=access-1"></script>
+</head>
+<body><main class="capture-shell page-shell">
+  <header class="capture-topbar">
+    <div class="capture-heading"><a class="home-button" href="index.html">← Home</a><div><span class="eyebrow">Supporto acquisti</span><h1>Rilevazione BuyBox</h1></div></div>
+    <nav class="header-actions"><a class="secondary-button" href="calcolo-completo.html">Valutazione stock</a><a class="secondary-button" href="buybox.html">Monitor BuyBox</a></nav>
+  </header>
+  <section class="capture-notice"><div><span class="eyebrow">Operazione temporanea</span><strong>Attiva soltanto le inserzioni esaurite selezionate e le ripristina dopo la lettura.</strong></div><span class="safety-chip">Conferma richiesta a ogni passaggio</span></section>
+  <p id="captureMessage" class="capture-message" role="status" aria-live="polite"></p>
+
+  <section id="recoveryPanel" class="capture-panel recovery-panel" hidden>
+    <div><span class="eyebrow">Ripristino prioritario</span><h2>Esiste un’operazione incompleta</h2><p id="recoveryDescription"></p></div>
+    <div class="capture-actions"><button id="resumeCapture" type="button">Apri operazione</button><button id="restoreNow" class="danger-secondary" type="button">Ripristina subito</button></div>
+  </section>
+
+  <div class="capture-layout">
+    <section class="capture-panel capture-selector">
+      <div class="capture-panel-head"><div><span class="eyebrow">1 · Inserzione</span><h2>Scegli una famiglia</h2><p>Sono mostrate soltanto le inserzioni con quantità zero.</p></div><button id="refreshCaptureCatalog" class="secondary-button" type="button">Aggiorna catalogo</button></div>
+      <label for="captureSearch">Cerca famiglia o SKU</label><input id="captureSearch" type="search" placeholder="es. iPhone 17 Pro Max 2000GB">
+      <div id="captureFamilies" class="capture-families"></div>
+      <div id="captureListings" class="capture-listings" hidden></div>
+      <p id="captureCatalogStatus" class="inline-status">Connessione al catalogo…</p>
+    </section>
+
+    <section class="capture-panel capture-operation">
+      <div id="captureEmpty" class="capture-empty"><span class="eyebrow">Operazione</span><h2>Nessuna inserzione selezionata</h2><p>Prima prepariamo e verifichiamo i prezzi originali. Nessuna modifica parte senza la tua conferma.</p></div>
+      <div id="captureJob" hidden>
+        <div class="capture-job-head"><div><span class="eyebrow">2 · Controllo e ripristino</span><h2 id="captureJobTitle"></h2><p id="captureJobSku"></p></div><span id="captureJobStatus" class="capture-status"></span></div>
+        <div id="captureMarketTable" class="capture-table-wrap"></div>
+        <div id="captureSummary" class="capture-summary"></div>
+        <div class="capture-actions">
+          <button id="activateCapture" type="button" hidden>Attiva temporaneamente</button>
+          <button id="readCapture" type="button" hidden>Leggi BuyBox e ripristina</button>
+          <button id="manualRestore" class="danger-secondary" type="button" hidden>Ripristina senza leggere</button>
+          <button id="closeCapture" class="secondary-button" type="button">Chiudi</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="capture-panel capture-history"><div class="capture-panel-head"><div><span class="eyebrow">Ultime operazioni</span><h2>Rilevazioni salvate online</h2></div></div><div id="captureHistory"></div></section>
+</main>
+<script src="buybox-core.js?v=stock-1"></script><script src="stock-valuation-core.js?v=grades-2"></script><script src="rilevazione-buybox.js?v=capture-1" defer></script>
+</body></html>

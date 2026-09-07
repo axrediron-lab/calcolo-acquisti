@@ -3,6 +3,7 @@ import { DriveError, drivePreview, driveStatus } from "./drive.js";
 import { PurchaseError } from "./ready-csv.js";
 import { purchaseRoute } from "./purchases.js";
 import { CancellationError, cancellationRoute } from "./cancellations.js";
+import { BuyboxCaptureError, buyboxCaptureRoute } from "./buybox-capture.js";
 import { refreshExchangeRates, SettingsError, settingsRoute } from "./settings.js";
 
 const DEFAULT_API_BASE = "https://www.backmarket.fr";
@@ -580,6 +581,30 @@ async function updateListingQuantity(listingId, quantity, env) {
   return listing;
 }
 
+async function loadListingMarket(listingId, market, env) {
+  if (!validListingId(listingId) || !MARKET_CONFIG[market]) throw new HttpError(400, "Inserzione o mercato non valido", "INVALID_LISTING_MARKET");
+  return backMarketJson(absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env), env, { locale: MARKET_CONFIG[market].locale });
+}
+
+async function updateListingMarketPrice(listingId, market, price, minimum, currency, env) {
+  if (!validListingId(listingId) || !MARKET_CONFIG[market]) throw new HttpError(400, "Inserzione o mercato non valido", "INVALID_LISTING_MARKET");
+  const validated = updatePayload({ market, price, min_price: minimum, currency });
+  return backMarketJson(absoluteBackMarketUrl(`/ws/listings/${encodeURIComponent(listingId)}`, env), env, {
+    method: "POST", locale: MARKET_CONFIG[market].locale, body: validated.output,
+  });
+}
+
+async function loadBackboxDirect(listingId, env) {
+  if (!validListingId(listingId)) throw new HttpError(400, "Identificativo inserzione non valido", "INVALID_LISTING_ID");
+  try {
+    const payload = await backMarketJson(absoluteBackMarketUrl(`/ws/backbox/v1/competitors/${encodeURIComponent(listingId)}`, env), env);
+    return Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    if (error instanceof HttpError && error.details.upstream_status === 404) return [];
+    throw error;
+  }
+}
+
 function preflightResponse(request, env) {
   if (!isAllowedOrigin(request, env)) {
     return jsonResponse({ error: "Origine non autorizzata", code: "ORIGIN_DENIED" }, 403);
@@ -618,6 +643,15 @@ export async function handleRequest(request, env, ctx = {}) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);
       response = jsonResponse(await settingsRoute(request, url, env));
+    } else if (url.pathname.startsWith("/api/buybox-captures/")) {
+      if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
+      assertAuthorized(request, env);
+      response = jsonResponse(await buyboxCaptureRoute(request, url, env, {
+        loadListing: (listingId, market) => { assertConfigured(env); return loadListingMarket(listingId, market, env); },
+        updatePrice: (listingId, market, price, minimum, currency) => { assertConfigured(env); return updateListingMarketPrice(listingId, market, price, minimum, currency, env); },
+        updateQuantity: (listingId, quantity) => { assertConfigured(env); return updateListingQuantity(listingId, quantity, env); },
+        loadBackbox: listingId => { assertConfigured(env); return loadBackboxDirect(listingId, env); },
+      }));
     } else if (url.pathname.startsWith("/api/cancellations/")) {
       if (!env.APP_ACCESS_KEY) throw new HttpError(503, "Servizio non ancora configurato", "NOT_CONFIGURED");
       assertAuthorized(request, env);
@@ -679,7 +713,7 @@ export async function handleRequest(request, env, ctx = {}) {
       ? new Response(null, { status: finalResponse.status, headers: finalResponse.headers })
       : finalResponse;
   } catch (error) {
-    if (error instanceof DriveError || error instanceof PurchaseError || error instanceof SettingsError || error instanceof CancellationError) error = new HttpError(error.status, error.publicMessage, error.code);
+    if (error instanceof DriveError || error instanceof PurchaseError || error instanceof SettingsError || error instanceof CancellationError || error instanceof BuyboxCaptureError) error = new HttpError(error.status, error.publicMessage, error.code);
     const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof HttpError ? error.publicMessage : "Errore interno del servizio";
     const code = error instanceof HttpError ? error.code : "INTERNAL_ERROR";
