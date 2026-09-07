@@ -2203,6 +2203,16 @@
 :where(.page-stock-valuation) .result-card p { margin:8px 0 0; font-size:var(--type-small); }
 :where(.page-stock-valuation) .result-card.unavailable { min-height:170px; }
 :where(.page-stock-valuation) .result-card.unavailable>strong { display:block; margin-top:20px; color:var(--muted); }
+:where(.page-stock-valuation) .reference-panel { margin-top:12px; overflow:hidden; box-shadow:none; }
+:where(.page-stock-valuation) .reference-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:16px 18px 12px; }
+:where(.page-stock-valuation) .reference-head p { margin:4px 0 0; color:var(--muted); font-size:var(--type-meta); }
+:where(.page-stock-valuation) .reference-table-wrap { overflow:auto; }
+:where(.page-stock-valuation) .reference-table { width:100%; border-collapse:collapse; font-size:var(--type-table); }
+:where(.page-stock-valuation) .reference-table th { padding:9px 12px; background:#edf3f8; color:#354e64; font-size:var(--type-meta); font-weight:800; text-align:left; white-space:nowrap; }
+:where(.page-stock-valuation) .reference-table td { padding:10px 12px; border-top:1px solid var(--line); vertical-align:middle; white-space:nowrap; }
+:where(.page-stock-valuation) .reference-table tbody th { border-top:1px solid var(--line); background:#fff; color:var(--text); }
+:where(.page-stock-valuation) .reference-table td:last-child { color:var(--muted); }
+:where(.page-stock-valuation) .reference-table .reference-missing :is(th,td) { color:#84909b; background:#fafbfc; }
 :where(.page-stock-valuation) .coverage-panel { margin-top:12px; padding:17px 19px; box-shadow:none; }
 :where(.page-stock-valuation) .coverage-head { display:flex; justify-content:space-between; gap:12px; }
 :where(.page-stock-valuation) .coverage-head span { color:var(--muted); font-size:12px; }

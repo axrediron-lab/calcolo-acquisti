@@ -50,16 +50,40 @@ test("esclude Corretto, Eco, Discreto e Stallone dalla valutazione", () => {
 test("usa la mediana dei colori e preferisce price_to_win", () => {
   const rows = [listing("a", "Nero"), listing("b", "Blu"), listing("c", "Verde")];
   const payloads = {
-    a: { competitors: [competitor("FR", 400)] },
-    b: { competitors: [competitor("FR", 410)] },
+    a: { competitors: [{ market: "FR", winner_price: { amount: "405", currency: "EUR" }, price_to_win: { amount: "400", currency: "EUR" } }] },
+    b: { competitors: [{ market: "FR", winner_price: { amount: "415", currency: "EUR" }, price_to_win: { amount: "410", currency: "EUR" } }] },
     c: { competitors: [competitor("FR", 900), competitor("IT", 390, "EUR", "winner_price")] },
   };
   const benchmarks = valuation.buildVariantBenchmarks(rows, payloads, settings);
   const variant = benchmarks[rows[0].variantKey];
   assert.equal(variant.markets.FR.value, 410);
+  assert.equal(variant.markets.FR.winnerValue, 410);
+  assert.equal(variant.markets.FR.priceToWinValue, 410);
   assert.equal(variant.markets.FR.colors, 3);
   assert.equal(variant.markets.FR.priceToWin, 3);
   assert.equal(variant.markets.IT.value, 390);
+});
+
+test("mantiene distinti BuyBox attuale, prezzo per vincere e valore usato", () => {
+  const row = listing("captured", "Nero");
+  const benchmarks = valuation.buildVariantBenchmarks([row], {
+    captured: {
+      captured_at: "2026-09-07T07:03:09.773Z",
+      competitors: [{
+        market: "AT",
+        winner_price: { amount: "2347", currency: "EUR" },
+        price_to_win: { amount: "2371", currency: "EUR" },
+        source: "temporary_capture",
+      }],
+    },
+  }, settings);
+  const composed = valuation.weightedMarkets(benchmarks, [{ variantKey: row.variantKey, weight: 1 }]);
+
+  assert.equal(composed.markets.AT.winnerValue, 2347);
+  assert.equal(composed.markets.AT.priceToWinValue, 2371);
+  assert.equal(composed.markets.AT.value, 2371);
+  assert.deepEqual(composed.markets.AT.origins, ["stored"]);
+  assert.equal(composed.markets.AT.capturedAt, "2026-09-07T07:03:09.773Z");
 });
 
 test("calcola il mix noto con pesi e non trasforma i mancanti in zero", () => {

@@ -175,6 +175,9 @@ test("la Valutazione stock usa catalogo, profilo Acquisti e sole letture BuyBox"
   assert.match(html, /data-mode="uncertain"/);
   assert.match(html, /<script src="shared-settings\.js(?:\?v=[^"]+)?"><\/script>/);
   assert.match(html, /stock-valuation-core\.js/);
+  assert.match(html, /id="marketReferences"/);
+  assert.match(html, /Riferimenti BuyBox utilizzati/);
+  assert.match(script, /renderMarketReferences/);
   assert.match(script, /resolveProfile\(state\.settings,"purchases"\)/);
   assert.match(script, /Esclusi: Corretto · Economy · Discreto · Stallone/);
   assert.match(html, /I gradi Corretto, Eco\/Economy, Discreto e Stallone sono sempre esclusi/);

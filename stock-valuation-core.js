@@ -83,6 +83,17 @@
     return finitePositive(euro) ? {euro:euro,source:field} : null;
   }
 
+  function fieldPriceInEuro(competitor,field,listing,settings){
+    var amount = moneyAmount(competitor,field);
+    if(!finitePositive(amount)) return null;
+    var euro = core.amountToEuro(amount,moneyCurrency(competitor,field,listing.currency),settings);
+    return finitePositive(euro) ? euro : null;
+  }
+
+  function latestTimestamp(values){
+    return (values || []).filter(Boolean).sort().pop() || null;
+  }
+
   function buildVariantBenchmarks(listings,payloadById,settings){
     var buckets = {};
     (listings || []).forEach(function(listing){
@@ -96,7 +107,16 @@
         if(!price) return;
         buckets[listing.variantKey] = buckets[listing.variantKey] || {};
         buckets[listing.variantKey][market] = buckets[listing.variantKey][market] || [];
-        buckets[listing.variantKey][market].push({value:price.euro,listingId:listing.id,color:listing.color,source:price.source});
+        buckets[listing.variantKey][market].push({
+          value:price.euro,
+          winnerValue:fieldPriceInEuro(competitor,"winner_price",listing,settings),
+          priceToWinValue:fieldPriceInEuro(competitor,"price_to_win",listing,settings),
+          listingId:listing.id,
+          color:listing.color,
+          source:price.source,
+          origin:competitor.source === "temporary_capture" ? "stored" : "live",
+          capturedAt:payload && payload.captured_at || null
+        });
       });
     });
     var output = {};
@@ -106,10 +126,14 @@
         var observations = buckets[variantKey][market];
         output[variantKey].markets[market] = {
           value:median(observations.map(function(item){ return item.value; })),
+          winnerValue:median(observations.map(function(item){ return item.winnerValue; })),
+          priceToWinValue:median(observations.map(function(item){ return item.priceToWinValue; })),
           colors:unique(observations.map(function(item){ return item.color; })).length,
           listings:unique(observations.map(function(item){ return item.listingId; })).length,
           priceToWin:observations.filter(function(item){ return item.source === "price_to_win"; }).length,
-          total:observations.length
+          total:observations.length,
+          origins:unique(observations.map(function(item){ return item.origin; })),
+          capturedAt:latestTimestamp(observations.map(function(item){ return item.capturedAt; }))
         };
       });
     });
@@ -127,11 +151,20 @@
       }).filter(Boolean);
       var coveredWeight = available.reduce(function(total,item){ return total + item.weight; },0);
       if(!coveredWeight) return;
+      function weightedField(field){
+        var rows = available.filter(function(item){ return finitePositive(item.entry[field]); });
+        var weight = rows.reduce(function(total,item){ return total + item.weight; },0);
+        return weight ? rows.reduce(function(total,item){ return total + item.entry[field] * item.weight; },0) / weight : null;
+      }
       markets[market] = {
         value:available.reduce(function(total,item){ return total + item.entry.value * item.weight; },0) / coveredWeight,
+        winnerValue:weightedField("winnerValue"),
+        priceToWinValue:weightedField("priceToWinValue"),
         coverage:totalWeight ? coveredWeight / totalWeight : 0,
         colors:available.reduce(function(total,item){ return total + item.entry.colors; },0),
-        variants:available.length
+        variants:available.length,
+        origins:unique(available.reduce(function(values,item){ return values.concat(item.entry.origins || []); },[])),
+        capturedAt:latestTimestamp(available.map(function(item){ return item.entry.capturedAt; }))
       };
     });
     return {markets:markets,totalWeight:totalWeight};
@@ -145,11 +178,20 @@
       if(!entries.length) return;
       var values = entries.map(function(entry){ return entry.value; });
       var value = mode === "conservative" ? Math.min.apply(Math,values) : mode === "favorable" ? Math.max.apply(Math,values) : median(values);
+      function scenarioField(field){
+        var fieldValues = entries.map(function(entry){ return entry[field]; }).filter(finitePositive);
+        if(!fieldValues.length) return null;
+        return mode === "conservative" ? Math.min.apply(Math,fieldValues) : mode === "favorable" ? Math.max.apply(Math,fieldValues) : median(fieldValues);
+      }
       markets[market] = {
         value:value,
+        winnerValue:scenarioField("winnerValue"),
+        priceToWinValue:scenarioField("priceToWinValue"),
         coverage:entries.length / Math.max((variantKeys || []).length,1),
         colors:entries.reduce(function(total,item){ return total + item.colors; },0),
-        variants:entries.length
+        variants:entries.length,
+        origins:unique(entries.reduce(function(values,item){ return values.concat(item.origins || []); },[])),
+        capturedAt:latestTimestamp(entries.map(function(item){ return item.capturedAt; }))
       };
     });
     return {markets:markets,totalWeight:1};

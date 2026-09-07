@@ -256,6 +256,20 @@
     var status=result.margin>=target?"ok":result.margin>=target-.02?"warn":"bad";
     return '<article class="result-card '+status+'"><div class="result-card-head"><div><span class="result-label">'+escapeHtml(label)+'</span><small>'+escapeHtml(description)+'</small></div><strong>'+escapeHtml(euro(result.salePrice))+'</strong></div><dl><div><dt>Margine netto</dt><dd>'+escapeHtml(pct(result.margin))+'</dd></div><div><dt>Utile / unità</dt><dd>'+escapeHtml(euro(result.profit))+'</dd></div><div><dt>Utile stock</dt><dd>'+escapeHtml(euro(result.totalProfit))+'</dd></div><div><dt>Acquisto massimo</dt><dd>'+escapeHtml(euro(result.maximumPurchase))+'</dd></div></dl><p>'+result.markets+' Paesi · copertura '+Math.round(result.coverage*100)+'%</p></article>';
   }
+  function referenceOrigin(entry){
+    var origins=entry&&Array.isArray(entry.origins)?entry.origins:[];
+    if(origins.includes("stored")&&origins.includes("live")) return "Live + salvata";
+    if(origins.includes("stored")) return "Rilevazione salvata";
+    return "Lettura live";
+  }
+  function referenceMoney(value){ return number(value)>0?euro(value):"—"; }
+  function renderMarketReferences(composed){
+    byId("marketReferences").innerHTML=Object.keys(core.MARKET_RULES).map(function(market){
+      var entry=composed.markets[market];
+      if(!entry) return '<tr class="reference-missing"><th scope="row">'+market+'</th><td>—</td><td>—</td><td>Escluso</td><td>Nessun riferimento competitivo</td></tr>';
+      return '<tr><th scope="row">'+market+'</th><td>'+escapeHtml(referenceMoney(entry.winnerValue))+'</td><td>'+escapeHtml(referenceMoney(entry.priceToWinValue))+'</td><td><strong>'+escapeHtml(referenceMoney(entry.value))+'</strong></td><td>'+escapeHtml(referenceOrigin(entry))+'</td></tr>';
+    }).join("");
+  }
   function renderResults(){
     if(!state.benchmarks){ resetResults(); return; }
     var purchase=number(byId("supplierPrice").value);
@@ -274,6 +288,7 @@
       resultCard("Media Paesi 12%","Italia, Belgio, Spagna, Francia, Grecia, Slovacchia",group12,target),
       resultCard("Media Paesi 5%","Austria, Finlandia, Irlanda, Paesi Bassi, Portogallo, Svezia",group5,target)
     ].join("");
+    renderMarketReferences(composed);
     var badge=byId("decisionBadge");
     if(!purchase){ badge.className="decision-badge neutral"; badge.textContent="Inserisci il prezzo fornitore"; }
     else if(results.length && results.every(function(item){ return item.margin>=target; })){ badge.className="decision-badge ok"; badge.textContent="Conveniente"; }
@@ -287,7 +302,7 @@
     }).join("");
     byId("benchmarkTimestamp").textContent="Calcolato "+new Intl.DateTimeFormat("it-IT",{timeStyle:"short"}).format(new Date());
   }
-  function resetResults(){ byId("resultsEmpty").hidden=false; byId("resultsContent").hidden=true; }
+  function resetResults(){ byId("resultsEmpty").hidden=false; byId("resultsContent").hidden=true; byId("marketReferences").innerHTML=""; }
 
   function bind(){
     byId("familySearch").addEventListener("input",renderFamilyResults);

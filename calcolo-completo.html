@@ -102,6 +102,18 @@
             </select>
           </div>
           <div id="resultCards" class="result-cards"></div>
+          <section class="stock-panel reference-panel">
+            <div class="reference-head">
+              <div><h3>Riferimenti BuyBox utilizzati</h3><p>Valori API aggregati sui colori selezionati. Il calcolo preferisce il prezzo per vincere.</p></div>
+              <span class="read-only-chip">Solo lettura</span>
+            </div>
+            <div class="reference-table-wrap">
+              <table class="reference-table">
+                <thead><tr><th>Mercato</th><th>BuyBox attuale</th><th>Prezzo per vincere</th><th>Usato nel calcolo</th><th>Origine</th></tr></thead>
+                <tbody id="marketReferences"></tbody>
+              </table>
+            </div>
+          </section>
           <section class="stock-panel coverage-panel">
             <div class="coverage-head"><h3>Copertura dei dati</h3><span id="benchmarkTimestamp"></span></div>
             <p id="coverageSummary"></p>
@@ -115,7 +127,7 @@
 
   <script src="shared-settings.js?v=settings-1"></script>
   <script src="buybox-core.js?v=stock-1"></script>
-  <script src="stock-valuation-core.js?v=grades-2"></script>
-  <script src="calcolo-completo.js?v=capture-2"></script>
+  <script src="stock-valuation-core.js?v=references-1"></script>
+  <script src="calcolo-completo.js?v=references-1"></script>
 </body>
 </html>
