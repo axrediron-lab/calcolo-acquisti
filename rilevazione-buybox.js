@@ -40,6 +40,7 @@
     var valid=observations.filter(function(row){return row.classification==="competitive";}).length, excluded=observations.length-valid;
     byId("captureSummary").innerHTML=observations.length?'<strong>'+valid+' mercati con riferimento competitivo</strong><span>'+excluded+' esclusi perché senza dato valido o con nostra offerta vincente.</span>':'<strong>Snapshot originale salvato online</strong><span>I prezzi temporanei non saranno mai usati come riferimento economico.</span>';
     byId("activateCapture").hidden=status!=="prepared";byId("readCapture").hidden=status!=="active";byId("manualRestore").hidden=!(["active","capturing","restoring","restore_required"].includes(status));
+    byId("openStockValuation").hidden=!(status==="restored"&&valid>0);byId("openStockValuation").href="calcolo-completo.html?listing="+encodeURIComponent(job.listing_id);
   }
   async function openJob(jobId){var data=await api("/api/buybox-captures/status?job_id="+encodeURIComponent(jobId));renderJob(data);}
   async function prepareListing(listingId){if(state.busy)return;if(!confirm("Preparare la rilevazione? Questa fase legge e salva i prezzi originali, ma non modifica Back Market."))return;setBusy(true);message("Controllo dei 12 mercati…");try{var data=await api("/api/buybox-captures/prepare",{method:"POST",body:{listing_id:listingId,confirm:true}});await openJob(data.job_id);message("Controllo completato: nessuna modifica effettuata.","ok");await loadStatus();}catch(error){message(error.message,"bad");}finally{setBusy(false);}}

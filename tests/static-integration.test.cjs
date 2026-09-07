@@ -195,6 +195,8 @@ test("la rilevazione BuyBox separa preparazione, attivazione, lettura e ripristi
   assert.match(script, /\/api\/buybox-captures\/activate/);
   assert.match(script, /\/api\/buybox-captures\/capture/);
   assert.match(script, /\/api\/buybox-captures\/restore/);
+  assert.match(html, /id="openStockValuation"/);
+  assert.match(script, /calcolo-completo\.html\?listing=/);
   assert.match(script, /Number\(item\.quantity\)===0/);
   assert.doesNotMatch(html, /<style\b|\sstyle=/i);
 });

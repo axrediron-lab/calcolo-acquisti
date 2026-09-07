@@ -6,6 +6,7 @@
   var valuation = window.StockValuationCore;
   var settingsApi = window.CalcoloSettings;
   var CACHE_KEY = "calcolo_stock_backbox_v1";
+  var requestedListingId = new URLSearchParams(location.search).get("listing") || "";
   var state = {
     settings:settingsApi.load(),
     profile:null,
@@ -90,6 +91,7 @@
     var time=new Intl.DateTimeFormat("it-IT",{dateStyle:"short",timeStyle:"short"}).format(new Date(state.updatedAt));
     byId("catalogStatus").textContent=(source==="cache"?"Ultima copia salvata · ":"Catalogo aggiornato · ")+time+" · "+state.families.length+" famiglie";
     renderFamilyResults();
+    openRequestedListing();
   }
   async function loadCatalog(force){
     byId("refreshCatalog").disabled=true;
@@ -148,6 +150,21 @@
     byId("familySearch").hidden=false; byId("familySearch").value="";
     byId("selectedFamily").hidden=true; byId("stockDetailsPanel").hidden=true; byId("compositionPanel").hidden=true;
     resetResults(); renderFamilyResults(); byId("familySearch").focus();
+  }
+
+  function openRequestedListing(){
+    if(!requestedListingId || state.selected) return;
+    var listing=state.listings.find(function(item){return item.id===requestedListingId;});
+    var family=listing&&state.families.find(function(group){return group.listings.some(function(item){return item.id===listing.id;});});
+    if(!listing||!family){byId("catalogStatus").textContent="La listing rilevata non è disponibile nel catalogo corrente.";requestedListingId="";return;}
+    selectFamily(family.key);
+    setMode("uniform");
+    var variant=byId("uniformVariant");
+    if(variant) variant.value=listing.variantKey;
+    requestedListingId="";
+    history.replaceState(null,"",location.pathname);
+    byId("analysisProgress").textContent="Variante rilevata selezionata: lettura dei dati salvati online…";
+    analyze();
   }
 
   function variantOptions(){
